@@ -12,10 +12,31 @@
   "activationEvents": [],
   "main": "./out/extension.js",
   "contributes": {
+    "configuration": {
+      "title": "Epictl Configuration",
+      "properties": {
+        "epictl.command_path": {
+          "type": "string",
+          "default": ""
+        }
+      }
+    },
     "commands": [
       {
-        "command": "epictl-vscode.helloWorld",
-        "title": "Hello World"
+        "command": "epictl: helloWorld",
+        "title": "epictl: helloWorld"
+      },
+      {
+        "command": "epictl: testCommand",
+        "title": "epictl: testCommand"
+      },
+      {
+        "command": "epictl: setExecPath",
+        "title": "epictl: setExecPath"
+      },
+      {
+        "command": "epictl: getExecPath",
+        "title": "epictl: getExecPath"
       }
     ]
   },
