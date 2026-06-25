@@ -37,6 +37,42 @@
       {
         "command": "epictl: getExecPath",
         "title": "epictl: getExecPath"
+      },
+      {
+        "command": "epictl: deleteExecPath",
+        "title": "epictl: deleteExecPath"
+      },
+      {
+        "command": "epictl: init-manifest",
+        "title": "epictl: init-manifest"
+      },
+      {
+        "command": "epictl: clone-manifest",
+        "title": "epictl: clone-manifest"
+      },
+      {
+        "command": "epictl: getBoms",
+        "title": "epictl: getBoms"
+      },
+      {
+        "command": "epictl: getTables",
+        "title": "epictl: getTables"
+      },
+      {
+        "command": "epictl: describeBom",
+        "title": "epictl: describeBom"
+      },
+      {
+        "command": "epictl: describeTable",
+        "title": "epictl: describeTable"
+      },
+      {
+        "command": "epictl: describeBpm",
+        "title": "epictl: describeBpm"
+      },
+      {
+        "command": "epictl: applyManifest",
+        "title": "epictl: applyManifest"
       }
     ]
   },
