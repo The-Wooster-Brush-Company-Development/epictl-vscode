@@ -164,8 +164,6 @@ export const initManifest = async (): Promise<any> =>{
     manifestPath = path.join(MANIFEST_DIR_PATH as string, manifestPath);
   }
 
-  console.log("MANIFEST PATH:", manifestPath);
-
   return new Promise((resolve, reject) => {
     const command = `${EXPORT_PATH} init-manifest ${entityType} ${parentId} --file ${manifestPath} --output json`;
     exec(command, (error, stdout, stderr) => {
@@ -468,9 +466,6 @@ export const describeBpm = async (): Promise<any> => {
   return new Promise((resolve, reject) => {
     const command = `${EXPORT_PATH} describe bpm ${bpmId} --parent-type ${entityType} --parent-id ${parentId} --output ${outputType}`;
     exec(command, (error, stdout, stderr) => {
-      console.log("ERROR.MESSAGE:", error?.message);
-      console.log("STDOUT:", stdout);
-      console.log("STDERR:", stderr);
       if (stderr) {
         
         reject(`Error describing bpm: ${stderr}`);
@@ -508,7 +503,6 @@ export const applyBpm = async (): Promise<any> => {
     filePath = path.join(MANIFEST_DIR_PATH as string, filePath);
   }
 
-  console.log("FILE PATH:", filePath);
 
   return new Promise((resolve, reject) => {
     const command = `${EXPORT_PATH} apply bpm --file ${filePath} --output json`;
@@ -544,7 +538,6 @@ export const updateBpm = async (): Promise<any> => {
     filePath = path.join(MANIFEST_DIR_PATH as string, filePath);
   }
 
-  console.log("FILE PATH:", filePath);
 
 
   const flagsWithCmds: string[] = [];
@@ -558,7 +551,6 @@ export const updateBpm = async (): Promise<any> => {
     throw new Error("No fields selected");
   }
 
-  console.log("SELECTED FIELDS:", selectedFields);
 
   for (const field of selectedFields) {
     const value = await vscode.window.showInputBox({
@@ -573,20 +565,14 @@ export const updateBpm = async (): Promise<any> => {
    
   }
 
-  console.log("COMMANDS AFTER LOOP", flagsWithCmds);
-
   return new Promise((resolve, reject) => {
     let command = `${EXPORT_PATH} update bpm --file ${filePath}`;
     for (const field of flagsWithCmds) {
       command += ` ${field}`
     }
     command += " --output json";
-    console.log("COMMAND:", command);
 
     exec(command, (error, stdout, stderr) => {
-      console.log("ERROR:", error);
-      console.log("STDERR:", stderr);
-      console.log("STDOUT:", stdout);
       if (stderr) { 
         reject(`Error updating bpm: ${stderr}`);
         return;
@@ -618,14 +604,9 @@ export const deleteBpm = async (): Promise<any> => {
     manifestPath = path.join(MANIFEST_DIR_PATH as string, manifestPath);
   }
 
-  console.log("MANIFEST PATH:", manifestPath);
-
   return new Promise((resolve, reject) => {
     const command = `${EXPORT_PATH} delete bpm --file ${manifestPath} --output json`;
     exec(command, (error, stdout, stderr) => {
-      console.log("ERROR:", error);
-      console.log("STDERR:", stderr);
-      console.log("STDOUT:", stdout);
       if (stderr) {
         reject(`Error deleting bpm: ${stderr}`);
         return;

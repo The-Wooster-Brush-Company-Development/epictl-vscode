@@ -289,9 +289,7 @@ export const commands = [
     callback: async () => {
       const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
-        console.log("DELETING BPM");
         const result = JSON.parse(await deleteBpm());
-        console.log("RESULT:", result);
         if (result.success) {
           vscode.window.showInformationMessage("Bpm deleted successfully");
           outputChannel.appendLine(result.message);
