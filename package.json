@@ -79,8 +79,16 @@
         "title": "epictl: describeBpm"
       },
       {
-        "command": "epictl: applyManifest",
-        "title": "epictl: applyManifest"
+        "command": "epictl: applyBpm",
+        "title": "epictl: applyBpm"
+      },
+      {
+        "command": "epictl: updateBpm",
+        "title": "epictl: updateBpm"
+      },
+      {
+        "command": "epictl: deleteBpm",
+        "title": "epictl: deleteBpm"
       }
     ]
   },

@@ -24,7 +24,10 @@ import {
 
   describeBpm,
 
-  applyManifest,
+  applyBpm,
+  updateBpm, 
+
+  deleteBpm,
 } from "./commandHandlers";
 
 
@@ -76,22 +79,19 @@ export const commands = [
     callback: async () => {
       const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
-        let result = await initManifest();
-        result = JSON.parse(result);
+        const result = JSON.parse(await initManifest());
         // console.log(`duplicate: ${result["duplicate"]}`);
-        if (result["success"]) {
+        if (result.success) {
           vscode.window.showInformationMessage("Manifest initialized successfully");
-          outputChannel.append(result["message"]);
-          outputChannel.show();
-        } else if (result["duplicate"]) {
-          outputChannel.append(result["message"]);
-          outputChannel.show();
+          outputChannel.append(result.message);
+        } else if (result.duplicate) {
+          outputChannel.append(result.message);
           vscode.window.showErrorMessage("Manifest already initialized");
         } else {
-          outputChannel.append(result["message"]);
-          outputChannel.show();
+          outputChannel.append(result.message);
           vscode.window.showErrorMessage("Failed to initialize manifest");
         }
+        outputChannel.show();
       } catch (err) {
         outputChannel.appendLine(`Error initializing manifest: ${err}`);
         outputChannel.show();
@@ -240,19 +240,18 @@ export const commands = [
   }, 
 
   {
-    "name": "epictl: applyManifest",
+    "name": "epictl: applyBpm",
     callback: async () => {
       const outputChannel = vscode.window.createOutputChannel("Epictl"); 
       try { 
-        const result = await applyManifest();
+        const result = JSON.parse(await applyBpm());
         console.log("RESULT:", result);
-        return;
-        if (result) {
+        if (result.success) {
           vscode.window.showInformationMessage("Manifest applied successfully");
-          outputChannel.appendLine(result);
+          outputChannel.appendLine(result.message);
         } else {
           vscode.window.showErrorMessage("Failed to apply manifest");
-          outputChannel.appendLine(result);
+          outputChannel.appendLine(result.message);
         }
         outputChannel.show();
       } catch (err) {
@@ -262,5 +261,50 @@ export const commands = [
       }
     }
   }, 
+
+  {
+    "name": "epictl: updateBpm",
+    callback: async () => {
+      const outputChannel = vscode.window.createOutputChannel("Epictl");
+      try {
+        const result = JSON.parse(await updateBpm());
+        if (result.success) {
+          vscode.window.showInformationMessage("Bpm updated successfully");
+          outputChannel.appendLine(result.message);
+        } else {
+          vscode.window.showErrorMessage("Failed to update bpm");
+          outputChannel.appendLine(result.message);
+        }
+        outputChannel.show();
+      } catch (err) {
+        outputChannel.appendLine(`Error updating bpm: ${err}`);
+        vscode.window.showErrorMessage(`Error updating bpm: ${err}`);
+        outputChannel.show();
+      }
+    }
+  },
+
+  {
+    "name": "epictl: deleteBpm", 
+    callback: async () => {
+      const outputChannel = vscode.window.createOutputChannel("Epictl");
+      try {
+        console.log("DELETING BPM");
+        const result = JSON.parse(await deleteBpm());
+        console.log("RESULT:", result);
+        if (result.success) {
+          vscode.window.showInformationMessage("Bpm deleted successfully");
+          outputChannel.appendLine(result.message);
+        } else {
+          vscode.window.showErrorMessage("Failed to delete bpm");
+          outputChannel.appendLine(result.message);
+        }
+      } catch (err) {
+        outputChannel.appendLine(`Error deleting bpm: ${err}`);
+        vscode.window.showErrorMessage(`Error deleting bpm: ${err}`);
+        outputChannel.show();
+      }
+    }
+  },
 
 ];
