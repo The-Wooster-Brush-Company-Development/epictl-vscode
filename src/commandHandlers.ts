@@ -6,7 +6,7 @@ import { checkManifestDirPath, formatCommand, fields } from "./utils/handlerUtil
 const CONFIG_SECTION = "epictl";
 const CONFIG_KEY_EXEC_PATH = "command_path";
 const CONFIG_KEY_MANIFEST_DIR_PATH = "manifest_dir_path";
-const EXPORT_PATH = vscode.workspace.getConfiguration(CONFIG_SECTION).get<string>(CONFIG_KEY_EXEC_PATH);
+const EXEC_PATH = vscode.workspace.getConfiguration(CONFIG_SECTION).get<string>(CONFIG_KEY_EXEC_PATH);
 const MANIFEST_DIR_PATH = vscode.workspace.getConfiguration(CONFIG_SECTION).get<string>(CONFIG_KEY_MANIFEST_DIR_PATH);
 
 
@@ -39,8 +39,8 @@ export const setExecPath = async () => {
 
 export const getExecPath = async () => {
     const outputChannel = vscode.window.createOutputChannel("Epictl");
-    if (EXPORT_PATH) {
-       outputChannel.appendLine(`Epictl executable path: ${EXPORT_PATH}`);
+    if (EXEC_PATH) {
+       outputChannel.appendLine(`Epictl executable path: ${EXEC_PATH}`);
        vscode.window.showInformationMessage("Epictl executable path found");
 
     }
@@ -123,7 +123,7 @@ export const deleteManifestDirPath = () => {
  */
 
 export const initManifest = async (): Promise<any> =>{
-  if (!EXPORT_PATH) {
+  if (!EXEC_PATH) {
     throw new Error("No executable path set");
   }
   // get the entity type
@@ -165,7 +165,7 @@ export const initManifest = async (): Promise<any> =>{
   }
 
   return new Promise((resolve, reject) => {
-    const command = `${EXPORT_PATH} init-manifest ${entityType} ${parentId} --file ${manifestPath} --output json`;
+    const command = `${EXEC_PATH} init-manifest ${entityType} ${parentId} --file ${manifestPath} --output json`;
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
         reject(`Error initializing manifest: ${error}`);
@@ -181,7 +181,7 @@ export const initManifest = async (): Promise<any> =>{
 }
 
 export const cloneManifest = async (): Promise<any> => {
-  if (!EXPORT_PATH) {
+  if (!EXEC_PATH) {
     throw new Error("No executable path set");
   }
 
@@ -230,7 +230,7 @@ export const cloneManifest = async (): Promise<any> => {
   }
 
   return new Promise((resolve, reject) => {
-    const command = `${EXPORT_PATH} clone-manifest ${entityType} ${bpmId} ${parentId} --file ${manifestPath} --output json`;
+    const command = `${EXEC_PATH} clone-manifest ${entityType} ${bpmId} ${parentId} --file ${manifestPath} --output json`;
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
         reject(`Error cloning manifest: ${stderr}`);
@@ -251,7 +251,7 @@ export const cloneManifest = async (): Promise<any> => {
  */
 
 export const getBoms = async(): Promise<any> => {
-  if (!EXPORT_PATH) {
+  if (!EXEC_PATH) {
     throw new Error("No executable path set");
   }
 
@@ -268,7 +268,7 @@ export const getBoms = async(): Promise<any> => {
   }
 
   return new Promise((resolve, reject) => {
-    const command = `${EXPORT_PATH} get boms --output ${outputType}`;
+    const command = `${EXEC_PATH} get boms --output ${outputType}`;
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
         reject(`Error getting boms: ${stderr}`);
@@ -284,7 +284,7 @@ export const getBoms = async(): Promise<any> => {
 };
 
 export const getTables = async (): Promise<any> => {
-  if (!EXPORT_PATH) {
+  if (!EXEC_PATH) {
       throw new Error("No executable path set");
     }
   let outputType: string | undefined;
@@ -299,7 +299,7 @@ export const getTables = async (): Promise<any> => {
     throw new Error("No output type selected");
   }
   return new Promise((resolve, reject) => {
-    const command = `${EXPORT_PATH} get tables --output ${outputType}`;
+    const command = `${EXEC_PATH} get tables --output ${outputType}`;
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
         reject(`Error getting tables: ${stderr}`);
@@ -320,7 +320,7 @@ export const getTables = async (): Promise<any> => {
  */
 
  export const describeBom = async (): Promise<any> => {
-  if (!EXPORT_PATH) {
+  if (!EXEC_PATH) {
     throw new Error("No executable path set");
   }
 
@@ -346,7 +346,7 @@ export const getTables = async (): Promise<any> => {
   }
 
   return new Promise((resolve, reject) => {
-    const command = `${EXPORT_PATH} describe bom ${bomId} --output ${outputType}`;
+    const command = `${EXEC_PATH} describe bom ${bomId} --output ${outputType}`;
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
         reject(`Error describing bom: ${stderr}`);
@@ -363,7 +363,7 @@ export const getTables = async (): Promise<any> => {
 
  
  export const describeTable = async (): Promise<any> => {
-  if (!EXPORT_PATH) {
+  if (!EXEC_PATH) {
     throw new Error("No executable path set");
   }
 
@@ -389,7 +389,7 @@ export const getTables = async (): Promise<any> => {
   }
 
   return new Promise((resolve, reject) => {
-    const command = `${EXPORT_PATH} describe table ${tableId} --output ${outputType}`;
+    const command = `${EXEC_PATH} describe table ${tableId} --output ${outputType}`;
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
         reject(`Error describing table: ${stderr}`);
@@ -411,19 +411,29 @@ export const getTables = async (): Promise<any> => {
  */
 
 export const describeBpm = async (): Promise<any> => {
-  if (!EXPORT_PATH) {
+  if (!EXEC_PATH) {
     throw new Error("No executable path set");
   }
 
-  let bpmId: string | undefined;
-  try {
-    bpmId = await vscode.window.showInputBox({
-      prompt: "Enter the bpm id",
-      ignoreFocusOut: true,
-    });
-  } catch (error) {
-    throw new Error(`Error getting bpm id: ${error}`);
+  let manifestPath: string | undefined;
+  manifestPath = await vscode.window.showInputBox({
+    prompt: "Enter path to manifest file, leave blank to skip", 
+    ignoreFocusOut: true
+  }) 
+
+  if (manifestPath) {
+    if (checkManifestDirPath()) {
+      manifestPath = path.join(MANIFEST_DIR_PATH as string, manifestPath);
+    }
   }
+
+
+  let bpmId: string | undefined;
+  bpmId = await vscode.window.showInputBox({
+    prompt: "Enter the bpm id",
+    ignoreFocusOut: true,
+  });
+
   if (!bpmId) {
     throw new Error("No bpm id provided");
   }
@@ -435,18 +445,14 @@ export const describeBpm = async (): Promise<any> => {
   ], {
   placeHolder: "Select the entity type",
   });
-  if (!entityType) {
-    throw new Error("No entity type selected");
-  }
+
 
   let parentId: string | undefined;
   parentId = await vscode.window.showInputBox({
     prompt: "Enter the parent id",
     ignoreFocusOut: true,
   });
-  if (!parentId) {
-    throw new Error("No parent id provided");
-  }
+
 
   let outputType: string | undefined;
   outputType = await vscode.window.showQuickPick([
@@ -459,13 +465,23 @@ export const describeBpm = async (): Promise<any> => {
   if (!outputType) {
     throw new Error("No output type selected");
   }
-
+  
   //TODO: should be able to describe a bpm from a manifest file
   // need to add a new prompt to accept an optional manifest file path (maybe at beginning of function)
 
   return new Promise((resolve, reject) => {
-    const command = `${EXPORT_PATH} describe bpm ${bpmId} --parent-type ${entityType} --parent-id ${parentId} --output ${outputType}`;
+    let command: string;
+    if (!manifestPath) {
+      command = `${EXEC_PATH} describe bpm ${bpmId} --parent-type ${entityType} --parent-id ${parentId} --output ${outputType}`;
+    } else {
+      command = `${EXEC_PATH} describe bpm ${bpmId} --file ${manifestPath}`
+    }
+
+    console.log("command", command)
     exec(command, (error, stdout, stderr) => {
+      console.log("stdout", stdout)
+      console.log("stderr", stderr)
+      console.log("error", error)
       if (stderr) {
         
         reject(`Error describing bpm: ${stderr}`);
@@ -486,7 +502,7 @@ export const describeBpm = async (): Promise<any> => {
  */
 
 export const applyBpm = async (): Promise<any> => {
-  if (!EXPORT_PATH) {
+  if (!EXEC_PATH) {
     throw new Error("No executable path set");
   }
 
@@ -505,7 +521,7 @@ export const applyBpm = async (): Promise<any> => {
 
 
   return new Promise((resolve, reject) => {
-    const command = `${EXPORT_PATH} apply bpm --file ${filePath} --output json`;
+    const command = `${EXEC_PATH} apply bpm --file ${filePath} --output json`;
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
         reject(`Error applying manifest: ${stderr}`);
@@ -521,7 +537,7 @@ export const applyBpm = async (): Promise<any> => {
 }
 
 export const updateBpm = async (): Promise<any> => {
-  if (!EXPORT_PATH) {
+  if (!EXEC_PATH) {
     throw new Error("No executable path set");
   }
 
@@ -566,7 +582,7 @@ export const updateBpm = async (): Promise<any> => {
   }
 
   return new Promise((resolve, reject) => {
-    let command = `${EXPORT_PATH} update bpm --file ${filePath}`;
+    let command = `${EXEC_PATH} update bpm --file ${filePath}`;
     for (const field of flagsWithCmds) {
       command += ` ${field}`
     }
@@ -587,7 +603,7 @@ export const updateBpm = async (): Promise<any> => {
 }
 
 export const deleteBpm = async (): Promise<any> => {
-  if (!EXPORT_PATH) {
+  if (!EXEC_PATH) {
     throw new Error("No executable path set");
   }
 
@@ -605,7 +621,7 @@ export const deleteBpm = async (): Promise<any> => {
   }
 
   return new Promise((resolve, reject) => {
-    const command = `${EXPORT_PATH} delete bpm --file ${manifestPath} --output json`;
+    const command = `${EXEC_PATH} delete bpm --file ${manifestPath} --output json`;
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
         reject(`Error deleting bpm: ${stderr}`);
