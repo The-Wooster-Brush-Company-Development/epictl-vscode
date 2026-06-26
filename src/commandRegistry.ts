@@ -12,6 +12,10 @@ import {
   initManifest,
   cloneManifest,
 
+  setManifestDirPath,
+  getManifestDirPath,
+  deleteManifestDirPath,
+
   getBoms, 
   getTables,
    
@@ -25,20 +29,6 @@ import {
 
 
 export const commands = [
-  {
-    name: "epictl: helloWorld",
-    callback: () => {
-      vscode.window.showInformationMessage("Hello World from Epictl-VSCode!");
-    },
-  },
-
-  {
-    name: "epictl: testCommand",
-    callback: () => {
-      vscode.window.showInformationMessage("Test from Epictl-VSCode!");
-    },
-  },
-
   {
     name: "epictl: setExecPath",
     callback: async () => {
@@ -57,6 +47,27 @@ export const commands = [
     name: "epictl: deleteExecPath", 
     callback: () => {
       deleteExecPath();
+    }
+  },
+
+  {
+    name: "epictl: setManifestDirPath",
+    callback: () => {
+      setManifestDirPath();
+    }
+  },
+
+  {
+    name: "epictl: getManifestDirPath",
+    callback: () => {
+      getManifestDirPath();
+    }
+  },
+
+  {
+    name: "epictl: deleteManifestDirPath",
+    callback: () => {
+      deleteManifestDirPath();
     }
   },
 

@@ -18,18 +18,14 @@
         "epictl.command_path": {
           "type": "string",
           "default": ""
+        },
+        "epictl.manifest_dir_path": {
+          "type": "string",
+          "default": ""
         }
       }
     },
     "commands": [
-      {
-        "command": "epictl: helloWorld",
-        "title": "epictl: helloWorld"
-      },
-      {
-        "command": "epictl: testCommand",
-        "title": "epictl: testCommand"
-      },
       {
         "command": "epictl: setExecPath",
         "title": "epictl: setExecPath"
@@ -41,6 +37,18 @@
       {
         "command": "epictl: deleteExecPath",
         "title": "epictl: deleteExecPath"
+      },
+      {
+        "command": "epictl: setManifestDirPath",
+        "title": "epictl: setManifestDirPath"
+      },
+      {
+        "command": "epictl: getManifestDirPath",
+        "title": "epictl: getManifestDirPath"
+      },
+      {
+        "command": "epictl: deleteManifestDirPath",
+        "title": "epictl: deleteManifestDirPath"
       },
       {
         "command": "epictl: init-manifest",

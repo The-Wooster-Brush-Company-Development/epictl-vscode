@@ -1,9 +1,11 @@
 import * as vscode from "vscode";
 import { exec } from "child_process";
+import * as path from"path";
+import { checkManifestDirPath } from "./utils/handlerUtils";
 
 const CONFIG_SECTION = "epictl";
 const CONFIG_KEY_EXEC_PATH = "command_path";
-
+const CONFIG_KEY_MANIFEST_DIR_PATH = "manifest_dir_path";
 
 /**********************************************************
  * Set/Get/Delete the executable path for the epictl command
@@ -61,6 +63,60 @@ export const deleteExecPath = () => {
 }
 
 /**********************************************************
+ * Set the path to the manifest files
+ ***********************************************************
+ */
+export const setManifestDirPath = async () => {
+  const userInput = await vscode.window.showInputBox({
+    prompt: "Enter the path to the manifest files",
+    ignoreFocusOut: true,
+  });
+  const outputChannel = vscode.window.createOutputChannel("Epictl");
+  if (userInput) {
+    vscode.workspace
+    .getConfiguration(CONFIG_SECTION)
+    .update(
+      CONFIG_KEY_MANIFEST_DIR_PATH, 
+      userInput, vscode.ConfigurationTarget.Global
+    );
+    vscode.window.showInformationMessage(`Manifest Dir path set successfully`);
+    outputChannel.appendLine(`Manifest Dir path set successfully`);
+  }
+  else {
+    vscode.window.showErrorMessage("No path provided");
+  }
+  outputChannel.show();
+}
+
+export const getManifestDirPath = async () => {
+  const manifestDirPath = vscode.workspace.getConfiguration(CONFIG_SECTION).get<string>(CONFIG_KEY_MANIFEST_DIR_PATH);
+  const outputChannel = vscode.window.createOutputChannel("Epictl");
+  if (manifestDirPath) {
+    outputChannel.appendLine(`Manifest files path: ${manifestDirPath}`);
+    vscode.window.showInformationMessage(`Manifest Dir path found`);
+  }
+  else {
+    vscode.window.showErrorMessage("No path set for Manifest Dir");
+  }
+  outputChannel.show();
+}
+
+export const deleteManifestDirPath = () => {
+  try {
+    vscode.workspace
+    .getConfiguration(CONFIG_SECTION)
+    .update(
+      CONFIG_KEY_MANIFEST_DIR_PATH,
+      "",
+      vscode.ConfigurationTarget.Global,
+    );
+    vscode.window.showInformationMessage(`Manifest Dir path deleted`);
+  } catch (error) {
+    vscode.window.showErrorMessage(`Error deleting Manifest Dir path: ${error}`);
+  }
+}
+
+/**********************************************************
  * Initialize/Clone a manifest for a given entity type and parent id
  ***********************************************************
  */
@@ -104,15 +160,22 @@ export const initManifest = async (): Promise<any> =>{
     manifestPath = ""
   }
 
+  if (checkManifestDirPath()) {
+    const manifestDirPath = vscode.workspace.getConfiguration(CONFIG_SECTION).get<string>(CONFIG_KEY_MANIFEST_DIR_PATH);
+    manifestPath = path.join(manifestDirPath as string, manifestPath);
+  }
+
+  console.log("MANIFEST PATH:", manifestPath);
+
   return new Promise((resolve, reject) => {
     const command = `${execPath} init-manifest ${entityType} ${parentId} --file ${manifestPath} --output json`;
     exec(command, (error, stdout, stderr) => {
-      if (error) {
-        reject(`Error executing ${command}: ${error}`);
+      if (stderr) {
+        reject(`Error initializing manifest: ${error}`);
         return;
       }
-      if (stderr) {
-        reject(`Python standard error: ${stderr}`);
+      if (error) {
+        reject(`Error executing ${command}: ${error}`);
         return;
       }
       resolve(stdout);
@@ -173,12 +236,12 @@ export const cloneManifest = async (): Promise<any> => {
       console.log("ERROR:", error);
       console.log("STDOUT:", stdout);
       console.log("STDERR:", stderr);
-      if (error) {
-        reject(`Error executing ${command}: ${error}`);
+      if (stderr) {
+        reject(`Error cloning manifest: ${stderr}`);
         return;
       }
-      if (stderr) {
-        reject(`Python standard error: ${stderr}`);
+      if (error) {
+        reject(`Error executing ${command}: ${error}`);
         return;
       }
       resolve(stdout);
@@ -212,12 +275,12 @@ export const getBoms = async(): Promise<any> => {
   return new Promise((resolve, reject) => {
     const command = `${execPath} get boms --output ${outputType}`;
     exec(command, (error, stdout, stderr) => {
-      if (error) {
-        reject(`Error executing ${command}: ${error}`);
+      if (stderr) {
+        reject(`Error getting boms: ${stderr}`);
         return;
       }
-      if (stderr) {
-        reject(`Python standard error: ${stderr}`);
+      if (error) {
+        reject(`Error executing ${command}: ${error}`);
         return;
       }
       resolve([stdout, outputType]);
@@ -244,12 +307,12 @@ export const getTables = async (): Promise<any> => {
   return new Promise((resolve, reject) => {
     const command = `${execPath} get tables --output ${outputType}`;
     exec(command, (error, stdout, stderr) => {
-      if (error) {
-        reject(`Error executing ${command}: ${error}`);
+      if (stderr) {
+        reject(`Error getting tables: ${stderr}`);
         return;
       }
-      if (stderr) {
-        reject(`Python standard error: ${stderr}`);
+      if (error) {
+        reject(`Error executing ${command}: ${error}`);
         return;
       }
       resolve([stdout, outputType]);
@@ -292,15 +355,12 @@ export const getTables = async (): Promise<any> => {
   return new Promise((resolve, reject) => {
     const command = `${execPath} describe bom ${bomId} --output ${outputType}`;
     exec(command, (error, stdout, stderr) => {
-      console.log("ERROR:", error);
-      console.log("STDOUT:", stdout);
-      console.log("STDERR:", stderr);
-      if (error) {
-        reject(`Error executing ${command}: ${error}`);
+      if (stderr) {
+        reject(`Error describing bom: ${stderr}`);
         return;
       }
-      if (stderr) {
-        reject(`Python standard error: ${stderr}`);
+      if (error) {
+        reject(`Error executing ${command}: ${error}`);
         return;
       }
       resolve([stdout, outputType]);
@@ -339,12 +399,12 @@ export const getTables = async (): Promise<any> => {
   return new Promise((resolve, reject) => {
     const command = `${execPath} describe table ${tableId} --output ${outputType}`;
     exec(command, (error, stdout, stderr) => {
-      if (error) {
-        reject(`Error executing ${command}: ${error}`);
+      if (stderr) {
+        reject(`Error describing table: ${stderr}`);
         return;
       }
-      if (stderr) {
-        reject(`Python standard error: ${stderr}`);
+      if (error) {
+        reject(`Error executing ${command}: ${error}`);
         return;
       }
       resolve([stdout, outputType]);
@@ -412,12 +472,16 @@ export const describeBpm = async (): Promise<any> => {
   return new Promise((resolve, reject) => {
     const command = `${execPath} describe bpm ${bpmId} --parent-type ${entityType} --parent-id ${parentId} --output ${outputType}`;
     exec(command, (error, stdout, stderr) => {
-      if (error) {
-        reject(`Error executing ${command}: ${error}`);
+      console.log("ERROR.MESSAGE:", error?.message);
+      console.log("STDOUT:", stdout);
+      console.log("STDERR:", stderr);
+      if (stderr) {
+        
+        reject(`Error describing bpm: ${stderr}`);
         return;
       }
-      if (stderr) {
-        reject(`Python standard error: ${stderr}`);
+      if (error) {
+        reject(`Error executing ${command}: ${error}`);
         return;
       }
       resolve([stdout, outputType]);
@@ -446,14 +510,14 @@ export const applyManifest = async (): Promise<any> => {
   }
 
   return new Promise((resolve, reject) => {
-    const command = `${execPath} apply bpm --file ${filePath}`;
+    const command = `${execPath} apply bpm --file ${filePath} --output json`;
     exec(command, (error, stdout, stderr) => {
-      if (error) {
-        reject(`Error executing ${command}: ${error}`);
+      if (stderr) {
+        reject(`Error applying manifest: ${stderr}`);
         return;
       }
-      if (stderr) {
-        reject(`Python standard error: ${stderr}`);
+      if (error) {
+        reject(`Error executing ${command}: ${error}`);
         return;
       }
       resolve(stdout);
