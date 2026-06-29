@@ -27,6 +27,10 @@
     },
     "commands": [
       {
+        "command": "epictl: createConfig",
+        "title": "epictl: createConfig"
+      },
+      {
         "command": "epictl: setExecPath",
         "title": "epictl: setExecPath"
       },
@@ -89,6 +93,10 @@
       {
         "command": "epictl: deleteBpm",
         "title": "epictl: deleteBpm"
+      },
+      {
+        "command": "epictl: validateCode",
+        "title": "epictl: validateCode"
       }
     ]
   },

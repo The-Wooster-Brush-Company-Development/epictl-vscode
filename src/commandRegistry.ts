@@ -26,12 +26,13 @@ import {
 
   applyBpm,
   updateBpm, 
-
   deleteBpm,
+
+  validateCode,
 } from "./commandHandlers";
 
 
-export const commands = [
+export const contextCommands = [
   {
     name: "epictl: setExecPath",
     callback: async () => {
@@ -101,10 +102,10 @@ export const commands = [
 
   {
     name: "epictl: clone-manifest",
-    callback: async () => {
+    callback: async (context: vscode.ExtensionContext) => {
       const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
-        let result = await cloneManifest();
+        let result = await cloneManifest(context);
         result = JSON.parse(result);
         console.log("RESULT:", result);
         if (result.success) {
@@ -124,6 +125,125 @@ export const commands = [
       }
     }
   },
+
+ 
+
+  {
+    "name": "epictl: describeBpm",
+    callback: async () => {
+      const outputChannel = vscode.window.createOutputChannel("Epictl");
+      try {
+        const [result, outputType] = await describeBpm();
+
+        if (outputType === "json") {
+          vscode.window.showInformationMessage("Bpm described successfully");
+          outputChannel.appendLine(result);
+        } else if (outputType === "table") {
+          vscode.window.showInformationMessage("Bpm described successfully");
+          outputChannel.appendLine(result);
+        }
+        outputChannel.show();
+      } catch (err) {
+        outputChannel.appendLine(`Error describing bpm: ${err}`);
+        vscode.window.showErrorMessage(`Error describing bpm: ${err}`);
+        outputChannel.show();
+      }
+    }
+  }, 
+
+  {
+    "name": "epictl: applyBpm",
+    callback: async () => {
+      const outputChannel = vscode.window.createOutputChannel("Epictl"); 
+      try { 
+        const result = JSON.parse(await applyBpm());
+        console.log("RESULT:", result);
+        if (result.success) {
+          vscode.window.showInformationMessage("Manifest applied successfully");
+          outputChannel.appendLine(result.message);
+        } else {
+          vscode.window.showErrorMessage("Failed to apply manifest");
+          outputChannel.appendLine(result.message);
+        }
+        outputChannel.show();
+      } catch (err) {
+        outputChannel.appendLine(`Error applying manifest: ${err}`);
+        vscode.window.showErrorMessage(`Error applying manifest: ${err}`);
+        outputChannel.show();
+      }
+    }
+  }, 
+
+  {
+    "name": "epictl: updateBpm",
+    callback: async () => {
+      const outputChannel = vscode.window.createOutputChannel("Epictl");
+      try {
+        const result = JSON.parse(await updateBpm());
+        if (result.success) {
+          vscode.window.showInformationMessage("Bpm updated successfully");
+          outputChannel.appendLine(result.message);
+        } else {
+          vscode.window.showErrorMessage("Failed to update bpm");
+          outputChannel.appendLine(result.message);
+        }
+        outputChannel.show();
+      } catch (err) {
+        outputChannel.appendLine(`Error updating bpm: ${err}`);
+        vscode.window.showErrorMessage(`Error updating bpm: ${err}`);
+        outputChannel.show();
+      }
+    }
+  },
+
+  {
+    "name": "epictl: deleteBpm", 
+    callback: async () => {
+      const outputChannel = vscode.window.createOutputChannel("Epictl");
+      try {
+        const result = JSON.parse(await deleteBpm());
+        if (result.success) {
+          vscode.window.showInformationMessage("Bpm deleted successfully");
+          outputChannel.appendLine(result.message);
+        } else {
+          vscode.window.showErrorMessage("Failed to delete bpm");
+          outputChannel.appendLine(result.message);
+        }
+      } catch (err) {
+        outputChannel.appendLine(`Error deleting bpm: ${err}`);
+        vscode.window.showErrorMessage(`Error deleting bpm: ${err}`);
+        outputChannel.show();
+      }
+    }
+  },
+
+  {
+    "name": "epictl: validateCode",
+    callback: async () => {
+      const outputChannel = vscode.window.createOutputChannel("Epictl");
+      try {
+        const [result, outputType] = await validateCode();
+        if (outputType === "json") {
+          const parsed = JSON.parse(result);
+          vscode.window.showInformationMessage("Code validated successfully");
+          outputChannel.appendLine(result);
+        } else if (outputType === "table") {
+          vscode.window.showInformationMessage("Code validated successfully");
+          outputChannel.appendLine(result);
+        }
+        outputChannel.show();
+      }
+      catch (err) {
+        outputChannel.appendLine(`Error validating code: ${err}`);
+        vscode.window.showErrorMessage(`Error validating code: ${err}`);
+        outputChannel.show();
+      }
+    }
+  }
+
+];
+
+export const noContextCommands = [
 
   {
     name: "epictl: getBoms",
@@ -216,93 +336,4 @@ export const commands = [
     }
   }, 
 
-  {
-    "name": "epictl: describeBpm",
-    callback: async () => {
-      const outputChannel = vscode.window.createOutputChannel("Epictl");
-      try {
-        const [result, outputType] = await describeBpm();
-
-        if (outputType === "json") {
-          vscode.window.showInformationMessage("Bpm described successfully");
-          outputChannel.appendLine(result);
-        } else if (outputType === "table") {
-          vscode.window.showInformationMessage("Bpm described successfully");
-          outputChannel.appendLine(result);
-        }
-        outputChannel.show();
-      } catch (err) {
-        outputChannel.appendLine(`Error describing bpm: ${err}`);
-        vscode.window.showErrorMessage(`Error describing bpm: ${err}`);
-        outputChannel.show();
-      }
-    }
-  }, 
-
-  {
-    "name": "epictl: applyBpm",
-    callback: async () => {
-      const outputChannel = vscode.window.createOutputChannel("Epictl"); 
-      try { 
-        const result = JSON.parse(await applyBpm());
-        console.log("RESULT:", result);
-        if (result.success) {
-          vscode.window.showInformationMessage("Manifest applied successfully");
-          outputChannel.appendLine(result.message);
-        } else {
-          vscode.window.showErrorMessage("Failed to apply manifest");
-          outputChannel.appendLine(result.message);
-        }
-        outputChannel.show();
-      } catch (err) {
-        outputChannel.appendLine(`Error applying manifest: ${err}`);
-        vscode.window.showErrorMessage(`Error applying manifest: ${err}`);
-        outputChannel.show();
-      }
-    }
-  }, 
-
-  {
-    "name": "epictl: updateBpm",
-    callback: async () => {
-      const outputChannel = vscode.window.createOutputChannel("Epictl");
-      try {
-        const result = JSON.parse(await updateBpm());
-        if (result.success) {
-          vscode.window.showInformationMessage("Bpm updated successfully");
-          outputChannel.appendLine(result.message);
-        } else {
-          vscode.window.showErrorMessage("Failed to update bpm");
-          outputChannel.appendLine(result.message);
-        }
-        outputChannel.show();
-      } catch (err) {
-        outputChannel.appendLine(`Error updating bpm: ${err}`);
-        vscode.window.showErrorMessage(`Error updating bpm: ${err}`);
-        outputChannel.show();
-      }
-    }
-  },
-
-  {
-    "name": "epictl: deleteBpm", 
-    callback: async () => {
-      const outputChannel = vscode.window.createOutputChannel("Epictl");
-      try {
-        const result = JSON.parse(await deleteBpm());
-        if (result.success) {
-          vscode.window.showInformationMessage("Bpm deleted successfully");
-          outputChannel.appendLine(result.message);
-        } else {
-          vscode.window.showErrorMessage("Failed to delete bpm");
-          outputChannel.appendLine(result.message);
-        }
-      } catch (err) {
-        outputChannel.appendLine(`Error deleting bpm: ${err}`);
-        vscode.window.showErrorMessage(`Error deleting bpm: ${err}`);
-        outputChannel.show();
-      }
-    }
-  },
-
-];
+]

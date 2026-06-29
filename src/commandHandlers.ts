@@ -9,7 +9,6 @@ const CONFIG_KEY_MANIFEST_DIR_PATH = "manifest_dir_path";
 const EXEC_PATH = vscode.workspace.getConfiguration(CONFIG_SECTION).get<string>(CONFIG_KEY_EXEC_PATH);
 const MANIFEST_DIR_PATH = vscode.workspace.getConfiguration(CONFIG_SECTION).get<string>(CONFIG_KEY_MANIFEST_DIR_PATH);
 
-
 /**********************************************************
  * Set/Get/Delete the executable path for the epictl command
  ***********************************************************
@@ -180,7 +179,7 @@ export const initManifest = async (): Promise<any> =>{
   });
 }
 
-export const cloneManifest = async (): Promise<any> => {
+export const cloneManifest = async (context: vscode.ExtensionContext): Promise<any> => {
   if (!EXEC_PATH) {
     throw new Error("No executable path set");
   }
@@ -632,6 +631,79 @@ export const deleteBpm = async (): Promise<any> => {
         return;
       }
       resolve(stdout);
+    });
+  });
+}
+
+/**********************************************************
+ * Validate the code for a given entity type and entity id
+ ***********************************************************
+ */
+
+export const validateCode = async (): Promise<any> => {
+  if (!EXEC_PATH) {
+    throw new Error("No executable path set");
+  }
+
+  let entityType: string | undefined;
+  entityType = await vscode.window.showQuickPick([
+    "bom",
+    "table",
+  ], {
+    placeHolder: "Select the entity type",
+  });
+  if (!entityType) {
+    throw new Error("No entity type selected");
+  }
+
+  let manifestPath: string | undefined;
+  manifestPath = await vscode.window.showInputBox({
+    prompt: "Enter the path to the manifest file",
+    ignoreFocusOut: true,
+  });
+  if (!manifestPath) {
+    throw new Error("No file path provided");
+  }
+  
+  if (checkManifestDirPath()) {
+    manifestPath = path.join(MANIFEST_DIR_PATH as string, manifestPath);
+  }
+
+  let bodyFIlePath: string | undefined;
+  bodyFIlePath = await vscode.window.showInputBox({
+    prompt: "Enter the path to the body file",
+    ignoreFocusOut: true,
+  });
+  if (!bodyFIlePath) {
+    throw new Error("No body file path provided");
+  }
+  
+  let outputType: string | undefined;
+  outputType = await vscode.window.showQuickPick([
+    "table",
+    "json",
+  ], {
+    placeHolder: "Select the output type",
+  });
+  if (!outputType) {
+    throw new Error("No output type selected");
+  }
+
+  return new Promise((resolve, reject) => {
+    const command = `${EXEC_PATH} validate-code ${entityType} ${manifestPath} ${bodyFIlePath} --output ${outputType}`;
+    exec(command, (error, stdout, stderr) => {
+      console.log("stdout", stdout)
+      console.log("stderr", stderr)
+      console.log("error", error)
+      if (stderr) {
+        reject(`Error validating code: ${stderr}`);
+        return;
+      }
+      if (error) {
+        reject(`Error executing ${command}: ${error}`);
+        return;
+      }
+      resolve([stdout, outputType]);
     });
   });
 }
