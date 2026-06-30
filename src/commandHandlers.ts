@@ -176,19 +176,22 @@ export const getManifestDirPath = (manifestManager: ManifestManager) => {
   return manifestDirPath;
 }
 
-export const deleteManifestDirPath = (manifestManager: ManifestManager) => {
-  try {
-    vscode.workspace
-    .getConfiguration(CONFIG_SECTION)
-    .update(
-      CONFIG_KEY_MANIFEST_DIR_PATH,
-      "",
-      vscode.ConfigurationTarget.Global,
-    );
-    vscode.window.showInformationMessage(`Manifest Dir path deleted`);
-  } catch (error) {
-    vscode.window.showErrorMessage(`Error deleting Manifest Dir path: ${error}`);
+export const deleteManifest = async (manifestManager: ManifestManager) => {
+  
+  let manifestInput = await vscode.window.showInputBox({
+    prompt: "Enter the name of the manifest file to delete",
+    ignoreFocusOut: true,
+  });
+  if (!manifestInput) {
+    throw new Error("No manifest file name provided");
   }
+  if (!manifestInput.endsWith(".json")) {
+    manifestInput = `${manifestInput}.json`;
+  }
+  
+  manifestManager.deleteManifest(manifestInput);
+
+  return manifestInput;
 }
 
 /**********************************************************

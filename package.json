@@ -59,16 +59,20 @@
         "title": "epictl: getManifestDirPath"
       },
       {
-        "command": "epictl: deleteManifestDirPath",
-        "title": "epictl: deleteManifestDirPath"
+        "command": "epictl: deleteManifest",
+        "title": "epictl: deleteManifest"
       },
       {
-        "command": "epictl: init-manifest",
-        "title": "epictl: init-manifest"
+        "command": "epictl: initManifest",
+        "title": "epictl: initManifest"
       },
       {
-        "command": "epictl: clone-manifest",
-        "title": "epictl: clone-manifest"
+        "command": "epictl: cloneManifest",
+        "title": "epictl: cloneManifest"
+      },
+      {
+        "command": "epictl: getAllManifests",
+        "title": "epictl: getAllManifests"
       },
       {
         "command": "epictl: getBoms",

@@ -82,4 +82,11 @@ export class ManifestManager {
         }
         return manifests
     }
+
+    public deleteManifest(manifestName: string) {
+        const manifestPath = this.createManifestFilePath(manifestName);
+        console.log("deleting manifest: ", manifestPath);
+        
+        fs.unlinkSync(manifestPath);
+    }
 }

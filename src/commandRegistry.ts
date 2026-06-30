@@ -18,7 +18,7 @@ import {
 
   setManifestDirPath,
   getManifestDirPath,
-  deleteManifestDirPath,
+  deleteManifest,
 
   getBoms, 
   getTables,
@@ -239,13 +239,22 @@ export const manifestDependentCommands = [
   },
 
   {
-    name: "epictl: deleteManifestDirPath",
-    callback: (_vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager) => {
-      deleteManifestDirPath(manifestManager);
+    name: "epictl: deleteManifest",
+    callback: async (_vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager) => {
+      const outputChannel = vscode.window.createOutputChannel("Epictl");
+      try {
+        const manifestName = await deleteManifest(manifestManager);
+        vscode.window.showInformationMessage(`Manifest deleated successfully`);
+        outputChannel.appendLine(`Manifest ${manifestName} deleated successfully`);
+      } catch (err) {
+        vscode.window.showErrorMessage("Failed to deleate manifest");
+        outputChannel.appendLine(`Error deleating manifest: ${err}`);
+      }
+      outputChannel.show();
     }
   },
   {
-    name: "epictl: init-manifest", 
+    name: "epictl: initManifest", 
     callback: async (vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager) => {
       const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
@@ -269,7 +278,7 @@ export const manifestDependentCommands = [
   },
 
   {
-    name: "epictl: clone-manifest",
+    name: "epictl: cloneManifest",
     callback: async (vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager) => {
       const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
@@ -291,6 +300,29 @@ export const manifestDependentCommands = [
         outputChannel.appendLine(`Error cloning manifest: ${err}`);
         outputChannel.show();
       }
+    }
+  },
+
+  {
+    name: "epictl: getAllManifests",
+    callback: (_vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager) => {
+      const outputChannel = vscode.window.createOutputChannel("Epictl");
+      try {  
+        const manifests = manifestManager.getAllManifests();
+
+        if (manifests.length === 0) {
+          outputChannel.appendLine("No manifests found");
+        } else {
+          for (const manifest of manifests) {
+            outputChannel.appendLine(`- ${manifest}`);
+          }
+        }
+      }
+      catch (err) {
+        outputChannel.appendLine(`Error listing manifests: ${err}`);
+        vscode.window.showErrorMessage(`Error listing manifests: ${err}`);
+      }
+      outputChannel.show();
     }
   },
 
