@@ -1,73 +1,152 @@
 import * as vscode from "vscode";
-import { exec } from "child_process";
 import * as path from"path";
-import { checkManifestDirPath, formatCommand, fields } from "./utils/handlerUtils";
+import { exec } from "child_process";
+import { manifestDirPath, formatCommand, fields} from "./utils/handlerUtils";
+import { VsCodeConfigManager } from "./managers/configManager";
+import { ManifestManager } from "./managers/manifestManager";
+import { stringify } from "querystring";
 
 const CONFIG_SECTION = "epictl";
 const CONFIG_KEY_EXEC_PATH = "command_path";
 const CONFIG_KEY_MANIFEST_DIR_PATH = "manifest_dir_path";
-const EXEC_PATH = vscode.workspace.getConfiguration(CONFIG_SECTION).get<string>(CONFIG_KEY_EXEC_PATH);
-const MANIFEST_DIR_PATH = vscode.workspace.getConfiguration(CONFIG_SECTION).get<string>(CONFIG_KEY_MANIFEST_DIR_PATH);
+//const EXEC_PATH = vscode.workspace.getConfiguration(CONFIG_SECTION).get<string>(CONFIG_KEY_EXEC_PATH);
+//const MANIFEST_DIR_PATH = vscode.workspace.getConfiguration(CONFIG_SECTION).get<string>(CONFIG_KEY_MANIFEST_DIR_PATH);
+
+
+//TODO: Just removed all of exec path checks, migrating to use config file instead, 
+// will have cli throw error if exec path is not set and see what error is thrown
+
+
+/**********************************************************
+ * Create/Get/Delete a config file for the epictl command
+ * This is the Cli config file, different from the vs code config file
+ ***********************************************************
+ */
+
+// creates and sets the config as the current active config
+export const createConfig = async(vsCodeConfigManager: VsCodeConfigManager): Promise<any> => {
+
+  const baseUrlPath = await vscode.window.showInputBox({
+    prompt: "Enter the base url path",
+    ignoreFocusOut: true,
+  });
+  if (!baseUrlPath) {
+    throw new Error("No base url path provided");
+  }
+  
+  const username = await vscode.window.showInputBox({
+    prompt: "Enter the username",
+    ignoreFocusOut: true,
+  });
+  if (!username) {
+    throw new Error("No username provided");
+  }
+  
+  const password = await vscode.window.showInputBox({
+    prompt: "Enter the password",
+    ignoreFocusOut: true,
+  });
+  if (!password) {
+    throw new Error("No password provided");
+  }
+
+  const apiKey = await vscode.window.showInputBox({
+    prompt: "Enter the api key",
+    ignoreFocusOut: true,
+  });
+  if (!apiKey) {
+    throw new Error("No api key provided");
+  }
+
+  return new Promise((resolve, reject) => {
+    const command = `${getExecPath(vsCodeConfigManager)} config-create --base-url ${baseUrlPath} --username ${username} --password ${password} --api-key ${apiKey} --output json`;
+    
+    exec(command, (error, stdout, stderr) => {
+      if (stderr) {
+        reject(`Error creating config: ${stderr}`);
+      }
+      if (error) {
+        reject(`Error executing ${command}: ${error}`);
+        return;
+      }
+      resolve(stdout);
+    });
+  });
+}
+
+//TODO: this is getting the cli config file, not the vs code config file
+ export const getConfig = () => {
+   console.log("To do: get config");
+ }
+
+ // sets this config to the active config
+ export const setConfig = async (configId: string | undefined, vsCodeConfigManager: VsCodeConfigManager): Promise<any> => {
+
+  if (!configId) {
+    configId = await vscode.window.showInputBox({
+      prompt: "Enter the config id",
+      ignoreFocusOut: true,
+    });
+  }
+
+  if (!configId) {
+    throw new Error("No config id provided");
+  }
+
+  const execPath = vsCodeConfigManager.readExecPath();
+  if (!execPath) {
+    throw new Error("No exec path set");
+  }
+  const command = `${execPath} config-set ${configId}`;
+  return new Promise((resolve, reject) => {
+    exec(command, (error, stdout, stderr) => {
+      if (stderr) {
+        reject(`Error setting config: ${stderr}`);
+      }
+      if (error) {
+        reject(`Error executing ${command}: ${error}`);
+      }
+      resolve(stdout);
+    }); 
+  });
+ }
+
+
 
 /**********************************************************
  * Set/Get/Delete the executable path for the epictl command
  ***********************************************************
  */
 
-export const setExecPath = async () => {
-    const userInput = await vscode.window.showInputBox({
-        prompt: "Enter the path to the epictl executable",
-        ignoreFocusOut: true,
-      });
-      if (userInput) {
-        vscode.workspace
-          .getConfiguration(CONFIG_SECTION)
-          .update(
-            CONFIG_KEY_EXEC_PATH,
-            userInput,
-            vscode.ConfigurationTarget.Global,
-          );
-        vscode.window.showInformationMessage(
-          `Epictl executable path set to: ${userInput}`,
-        );
-      }
-      else {
-        vscode.window.showErrorMessage("No path provided");
-      }
+export const setExecPath = async (vsCodeConfigManager: VsCodeConfigManager) => {
+  const execPath = await vscode.window.showInputBox({
+    prompt: "Enter the path to the epictl executable",
+    ignoreFocusOut: true,
+  });
+  if (!execPath) {
+    throw new Error("No path provided");
+  }
+
+  vsCodeConfigManager.writeExecPath(execPath);
 }
 
-export const getExecPath = async () => {
-    const outputChannel = vscode.window.createOutputChannel("Epictl");
-    if (EXEC_PATH) {
-       outputChannel.appendLine(`Epictl executable path: ${EXEC_PATH}`);
-       vscode.window.showInformationMessage("Epictl executable path found");
-
-    }
-    else {
-        outputChannel.appendLine("No path set for Epictl executable");
-        vscode.window.showErrorMessage("No path set for Epictl executable");
-    }
-    outputChannel.show();
+export const getExecPath = (vsCodeConfigManager: VsCodeConfigManager) => {
+  const execPath = vsCodeConfigManager.readExecPath();
+  if (!execPath) {
+    throw new Error("No path set for Epictl executable");
+  }
+  return execPath;
 }
 
-export const deleteExecPath = () => {
-    vscode.workspace
-    .getConfiguration(CONFIG_SECTION)
-    .update(
-      CONFIG_KEY_EXEC_PATH,
-      "",
-      vscode.ConfigurationTarget.Global,
-    );
-  vscode.window.showInformationMessage(
-    `Epictl executable path deleted`,
-  );
+export const deleteExecPath = (vsCodeConfigManager: VsCodeConfigManager) => {
+    vsCodeConfigManager.deleteExecPath();
 }
 
 /**********************************************************
  * Set the path to the manifest files
  ***********************************************************
  */
-export const setManifestDirPath = async () => {
+export const setManifestDirPath = async (manifestManager: ManifestManager) => {
   const userInput = await vscode.window.showInputBox({
     prompt: "Enter the path to the manifest files",
     ignoreFocusOut: true,
@@ -89,19 +168,15 @@ export const setManifestDirPath = async () => {
   outputChannel.show();
 }
 
-export const getManifestDirPath = async () => {
-  const outputChannel = vscode.window.createOutputChannel("Epictl");
-  if (MANIFEST_DIR_PATH) {
-    outputChannel.appendLine(`Manifest files path: ${MANIFEST_DIR_PATH}`);
-    vscode.window.showInformationMessage(`Manifest Dir path found`);
+export const getManifestDirPath = (manifestManager: ManifestManager) => {
+  const manifestDirPath = manifestManager.readManifestDirPath();
+  if (!manifestDirPath) {
+    throw new Error("No manifest directory path set");
   }
-  else {
-    vscode.window.showErrorMessage("No path set for Manifest Dir");
-  }
-  outputChannel.show();
+  return manifestDirPath;
 }
 
-export const deleteManifestDirPath = () => {
+export const deleteManifestDirPath = (manifestManager: ManifestManager) => {
   try {
     vscode.workspace
     .getConfiguration(CONFIG_SECTION)
@@ -121,14 +196,9 @@ export const deleteManifestDirPath = () => {
  ***********************************************************
  */
 
-export const initManifest = async (): Promise<any> =>{
-  if (!EXEC_PATH) {
-    throw new Error("No executable path set");
-  }
+export const initManifest = async (vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager): Promise<any> =>{
   // get the entity type
-  let entityType: string | undefined;
-
-  entityType = await vscode.window.showQuickPick([
+  const entityType = await vscode.window.showQuickPick([
     "bom",
     "table",
   ], {
@@ -140,8 +210,7 @@ export const initManifest = async (): Promise<any> =>{
   }
 
   // get the parent id
-  let parentId: string | undefined;
-  parentId = await vscode.window.showInputBox({
+  const parentId = await vscode.window.showInputBox({
     prompt: "Enter the parent id",
     ignoreFocusOut: true,
   });
@@ -150,24 +219,34 @@ export const initManifest = async (): Promise<any> =>{
     throw new Error("No parent id provided");
   }
 
-  let manifestPath: string | undefined; 
-  manifestPath = await vscode.window.showInputBox({
-    prompt: "Enter the path to the manifest file",
+  let manifestInput = await vscode.window.showInputBox({
+    prompt: "enter the name of the manifest file",
     ignoreFocusOut: true,
   });
-  if (!manifestPath) {
-    manifestPath = ""
+  if (!manifestInput) {
+    throw new Error("No manifest file name provided");
   }
 
-  if (checkManifestDirPath()) {
-    manifestPath = path.join(MANIFEST_DIR_PATH as string, manifestPath);
+  if (!manifestInput.endsWith(".json")) {
+   manifestInput = `${manifestInput}.json`;
   }
 
+  const manifestPath = manifestManager.createManifestFilePath(manifestInput);
+  console.log("manifestPath", manifestPath);
+
+  const execPath = vsCodeConfigManager.readExecPath();
+  if (!execPath) {
+    throw new Error("No exec path set");
+  }
+  const command = `${execPath} init-manifest ${entityType} ${parentId} --file ${manifestPath} --output json`;
+  console.log("command", command);
   return new Promise((resolve, reject) => {
-    const command = `${EXEC_PATH} init-manifest ${entityType} ${parentId} --file ${manifestPath} --output json`;
     exec(command, (error, stdout, stderr) => {
+      console.log("stdout", stdout);
+      console.log("stderr", stderr);
+      console.log("error", error);
       if (stderr) {
-        reject(`Error initializing manifest: ${error}`);
+        reject(`Error initializing manifest: ${stderr}`);
         return;
       }
       if (error) {
@@ -179,13 +258,9 @@ export const initManifest = async (): Promise<any> =>{
   });
 }
 
-export const cloneManifest = async (context: vscode.ExtensionContext): Promise<any> => {
-  if (!EXEC_PATH) {
-    throw new Error("No executable path set");
-  }
-
-  let entityType: string | undefined;
-  entityType = await vscode.window.showQuickPick([
+//TODO: Need to fix this function, not handling manifest path correctly
+export const cloneManifest = async (vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager): Promise<any> => {
+  const entityType = await vscode.window.showQuickPick([
     "bom",
     "table",
   ], {
@@ -196,8 +271,7 @@ export const cloneManifest = async (context: vscode.ExtensionContext): Promise<a
     throw new Error("No entity type selected");
   }
 
-  let bpmId: string | undefined;
-  bpmId = await vscode.window.showInputBox({
+  const bpmId = await vscode.window.showInputBox({
     prompt: "Enter the bpm id",
     ignoreFocusOut: true,
   });
@@ -205,8 +279,7 @@ export const cloneManifest = async (context: vscode.ExtensionContext): Promise<a
     throw new Error("No bpm id provided");
   }
 
-  let parentId: string | undefined;
-  parentId = await vscode.window.showInputBox({
+  const parentId = await vscode.window.showInputBox({
     prompt: "Enter the parent id",
     ignoreFocusOut: true,
   });
@@ -214,22 +287,28 @@ export const cloneManifest = async (context: vscode.ExtensionContext): Promise<a
     throw new Error("No parent id provided");
   }
 
-  let manifestPath: string | undefined;
-  manifestPath = await vscode.window.showInputBox({
-    prompt: "Enter the path to the manifest file",
+  let manifestInput: string | undefined;
+  manifestInput = await vscode.window.showInputBox({
+    prompt: "(optional) enter the name of the new manifest file",
     ignoreFocusOut: true,
   });
-  // Might want to make this optional
-  if (!manifestPath) {
-    manifestPath = ""
+
+  if (manifestInput) {
+    if (!manifestInput.endsWith(".json")) {
+      manifestInput = `${manifestInput}.json`;
+    }
+  } else {
+    manifestInput = "";
   }
 
-  if (checkManifestDirPath()) {
-    manifestPath = path.join(MANIFEST_DIR_PATH as string, manifestPath);
-  }
+  const manifestPath = manifestManager.createManifestFilePath(manifestInput);
 
+  const execPath = vsCodeConfigManager.readExecPath();
+  if (!execPath) {
+    throw new Error("No exec path set");
+  }
   return new Promise((resolve, reject) => {
-    const command = `${EXEC_PATH} clone-manifest ${entityType} ${bpmId} ${parentId} --file ${manifestPath} --output json`;
+    const command = `${execPath} clone-manifest ${entityType} ${bpmId} ${parentId} --file ${manifestPath} --output json`;
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
         reject(`Error cloning manifest: ${stderr}`);
@@ -249,13 +328,9 @@ export const cloneManifest = async (context: vscode.ExtensionContext): Promise<a
  ***********************************************************
  */
 
-export const getBoms = async(): Promise<any> => {
-  if (!EXEC_PATH) {
-    throw new Error("No executable path set");
-  }
+export const getBoms = async(vsCodeConfigManager: VsCodeConfigManager): Promise<any> => {
 
-  let outputType: string | undefined;
-  outputType = await vscode.window.showQuickPick([
+  const outputType = await vscode.window.showQuickPick([
     "table",
     "json",
   ], {
@@ -266,11 +341,19 @@ export const getBoms = async(): Promise<any> => {
     throw new Error("No output type selected");
   }
 
+  const execPath = vsCodeConfigManager.readExecPath();
+  if (!execPath) {
+    throw new Error("No exec path set");
+  }
+
   return new Promise((resolve, reject) => {
-    const command = `${EXEC_PATH} get boms --output ${outputType}`;
+    const command = `${execPath} get boms --output ${outputType}`;
     exec(command, (error, stdout, stderr) => {
+      console.log("stdout", stdout);
+      console.log("stderr", stderr);
+      console.log("error", error);
       if (stderr) {
-        reject(`Error getting boms: ${stderr}`);
+        reject(`${stderr}`);
         return;
       }
       if (error) {
@@ -282,12 +365,8 @@ export const getBoms = async(): Promise<any> => {
   });
 };
 
-export const getTables = async (): Promise<any> => {
-  if (!EXEC_PATH) {
-      throw new Error("No executable path set");
-    }
-  let outputType: string | undefined;
-  outputType = await vscode.window.showQuickPick([
+export const getTables = async (vsCodeConfigManager: VsCodeConfigManager): Promise<any> => {
+  const outputType = await vscode.window.showQuickPick([
     "table",
     "json",
   ], {
@@ -297,8 +376,14 @@ export const getTables = async (): Promise<any> => {
   if (!outputType) {
     throw new Error("No output type selected");
   }
+
+  const execPath = vsCodeConfigManager.readExecPath();
+  if (!execPath) {
+    throw new Error("No exec path set");
+  }
+
   return new Promise((resolve, reject) => {
-    const command = `${EXEC_PATH} get tables --output ${outputType}`;
+    const command = `${execPath} get tables --output ${outputType}`;
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
         reject(`Error getting tables: ${stderr}`);
@@ -318,13 +403,9 @@ export const getTables = async (): Promise<any> => {
  ***********************************************************
  */
 
- export const describeBom = async (): Promise<any> => {
-  if (!EXEC_PATH) {
-    throw new Error("No executable path set");
-  }
+ export const describeBom = async (vsCodeConfigManager: VsCodeConfigManager): Promise<any> => {
 
-  let bomId: string | undefined;
-  bomId = await vscode.window.showInputBox({
+  const bomId = await vscode.window.showInputBox({
     prompt: "Enter the bom id",
     ignoreFocusOut: true,
   });
@@ -332,8 +413,7 @@ export const getTables = async (): Promise<any> => {
     throw new Error("No bom id provided");
   }
 
-  let outputType: string | undefined;
-  outputType = await vscode.window.showQuickPick([
+  const outputType = await vscode.window.showQuickPick([
     "table",
     "json",
   ], {
@@ -344,8 +424,13 @@ export const getTables = async (): Promise<any> => {
     throw new Error("No output type selected");
   }
 
+  const execPath = vsCodeConfigManager.readExecPath();
+  if (!execPath) {
+    throw new Error("No exec path set");
+  }
+
   return new Promise((resolve, reject) => {
-    const command = `${EXEC_PATH} describe bom ${bomId} --output ${outputType}`;
+    const command = `${execPath} describe bom --entity-id${bomId} --output ${outputType}`;
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
         reject(`Error describing bom: ${stderr}`);
@@ -361,13 +446,9 @@ export const getTables = async (): Promise<any> => {
  }
 
  
- export const describeTable = async (): Promise<any> => {
-  if (!EXEC_PATH) {
-    throw new Error("No executable path set");
-  }
+ export const describeTable = async (vsCodeConfigManager: VsCodeConfigManager): Promise<any> => {
 
-  let tableId: string | undefined;
-  tableId = await vscode.window.showInputBox({
+  const tableId = await vscode.window.showInputBox({
     prompt: "Enter the table id",
     ignoreFocusOut: true,
   });
@@ -375,8 +456,7 @@ export const getTables = async (): Promise<any> => {
     throw new Error("No table id provided");
   }
 
-  let outputType: string | undefined;
-  outputType = await vscode.window.showQuickPick([
+  const outputType = await vscode.window.showQuickPick([
     "table",
     "json",
   ], {
@@ -387,8 +467,13 @@ export const getTables = async (): Promise<any> => {
     throw new Error("No output type selected");
   }
 
+  const execPath = vsCodeConfigManager.readExecPath();
+  if (!execPath) {
+    throw new Error("No exec path set");
+  }
+
   return new Promise((resolve, reject) => {
-    const command = `${EXEC_PATH} describe table ${tableId} --output ${outputType}`;
+    const command = `${execPath} describe table --entity-id ${tableId} --output ${outputType}`;
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
         reject(`Error describing table: ${stderr}`);
@@ -409,52 +494,47 @@ export const getTables = async (): Promise<any> => {
  ***********************************************************
  */
 
-export const describeBpm = async (): Promise<any> => {
-  if (!EXEC_PATH) {
-    throw new Error("No executable path set");
-  }
-
-  let manifestPath: string | undefined;
-  manifestPath = await vscode.window.showInputBox({
-    prompt: "Enter path to manifest file, leave blank to skip", 
+export const describeBpm = async (vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager): Promise<any> => {
+  let manifestInput = await vscode.window.showInputBox({
+    prompt: "(optional) enter the name of the manifest file", 
     ignoreFocusOut: true
   }) 
 
-  if (manifestPath) {
-    if (checkManifestDirPath()) {
-      manifestPath = path.join(MANIFEST_DIR_PATH as string, manifestPath);
+  if (manifestInput) {
+    if (!manifestInput.endsWith(".json")) {
+      manifestInput = `${manifestInput}.json`;
     }
   }
 
-
   let bpmId: string | undefined;
-  bpmId = await vscode.window.showInputBox({
-    prompt: "Enter the bpm id",
-    ignoreFocusOut: true,
-  });
+  let entityType: string | undefined;
+  let parentId: string | undefined;
 
-  if (!bpmId) {
-    throw new Error("No bpm id provided");
+  if (!manifestInput) {
+    bpmId = await vscode.window.showInputBox({
+      prompt: "Enter the bpm id",
+      ignoreFocusOut: true,
+    });
+
+    if (!bpmId) {
+      throw new Error("No bpm id provided");
+    }
+
+    entityType = await vscode.window.showQuickPick([
+      "bom",
+      "table",
+    ], {
+    placeHolder: "Select the entity type",
+    });
+
+
+    parentId = await vscode.window.showInputBox({
+      prompt: "Enter the parent id",
+      ignoreFocusOut: true,
+    });
   }
 
-  let entityType: string | undefined;
-  entityType = await vscode.window.showQuickPick([
-    "bom",
-    "table",
-  ], {
-  placeHolder: "Select the entity type",
-  });
-
-
-  let parentId: string | undefined;
-  parentId = await vscode.window.showInputBox({
-    prompt: "Enter the parent id",
-    ignoreFocusOut: true,
-  });
-
-
-  let outputType: string | undefined;
-  outputType = await vscode.window.showQuickPick([
+  const outputType = await vscode.window.showQuickPick([
     "table",
     "json",
   ], {
@@ -465,22 +545,26 @@ export const describeBpm = async (): Promise<any> => {
     throw new Error("No output type selected");
   }
   
-  //TODO: should be able to describe a bpm from a manifest file
-  // need to add a new prompt to accept an optional manifest file path (maybe at beginning of function)
+  const execPath = vsCodeConfigManager.readExecPath();
+  if (!execPath) {
+    throw new Error("No exec path set");
+  }
+
+  let command: string;
+  if (manifestInput) {
+    command = `${execPath} describe bpm --file ${manifestManager.createManifestFilePath(manifestInput)} --output ${outputType}`
+  } else {
+    command = `${execPath} describe bpm --entity-id ${bpmId} --parent-type ${entityType} --parent-id ${parentId} --output ${outputType}`;
+  }
+
+  const manifests = manifestManager.getAllManifests();
+  console.log("manifests", manifests);
+  console.log("command", command);
 
   return new Promise((resolve, reject) => {
-    let command: string;
-    if (!manifestPath) {
-      command = `${EXEC_PATH} describe bpm ${bpmId} --parent-type ${entityType} --parent-id ${parentId} --output ${outputType}`;
-    } else {
-      command = `${EXEC_PATH} describe bpm ${bpmId} --file ${manifestPath}`
-    }
 
     console.log("command", command)
     exec(command, (error, stdout, stderr) => {
-      console.log("stdout", stdout)
-      console.log("stderr", stderr)
-      console.log("error", error)
       if (stderr) {
         
         reject(`Error describing bpm: ${stderr}`);
@@ -500,27 +584,28 @@ export const describeBpm = async (): Promise<any> => {
  ***********************************************************
  */
 
-export const applyBpm = async (): Promise<any> => {
-  if (!EXEC_PATH) {
-    throw new Error("No executable path set");
-  }
-
-  let filePath: string | undefined;
-  filePath = await vscode.window.showInputBox({
-    prompt: "Enter the path to your manifest file",
+export const applyBpm = async (vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager): Promise<any> => {
+  let manifestInput = await vscode.window.showInputBox({
+    prompt: "Enter the name of the manifest file",
     ignoreFocusOut: true,
   });
-  if (!filePath) {
-    throw new Error("No file path provided");
+  if (!manifestInput) {
+    throw new Error("No manifest file name provided");
   }
 
-  if (checkManifestDirPath()) {
-    filePath = path.join(MANIFEST_DIR_PATH as string, filePath);
+  if (!manifestInput.endsWith(".json")) {
+    manifestInput = `${manifestInput}.json`;
   }
 
+  const manifestPath = manifestManager.createManifestFilePath(manifestInput);
+
+  const execPath = vsCodeConfigManager.readExecPath();
+  if (!execPath) {
+    throw new Error("No exec path set");
+  }
 
   return new Promise((resolve, reject) => {
-    const command = `${EXEC_PATH} apply bpm --file ${filePath} --output json`;
+    const command = `${execPath} apply bpm --file ${manifestPath} --output json`;
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
         reject(`Error applying manifest: ${stderr}`);
@@ -535,25 +620,21 @@ export const applyBpm = async (): Promise<any> => {
   });
 }
 
-export const updateBpm = async (): Promise<any> => {
-  if (!EXEC_PATH) {
-    throw new Error("No executable path set");
-  }
+export const updateBpm = async (vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager): Promise<any> => {
 
-  let filePath: string | undefined;
-  filePath = await vscode.window.showInputBox({
-    prompt: "Enter the path to your manifest file",
+  let manifestInput = await vscode.window.showInputBox({
+    prompt: "Enter the name of the manifest file",
     ignoreFocusOut: true,
   });
-  if (!filePath) {
-    throw new Error("No file path provided");
+  if (!manifestInput) {
+    throw new Error("No manifest file name provided");
+  }
+
+  if (!manifestInput.endsWith(".json")) {
+    manifestInput = `${manifestInput}.json`;
   }
   
-  if (checkManifestDirPath()) {
-    filePath = path.join(MANIFEST_DIR_PATH as string, filePath);
-  }
-
-
+  const manifestPath = manifestManager.createManifestFilePath(manifestInput);
 
   const flagsWithCmds: string[] = [];
 
@@ -580,8 +661,13 @@ export const updateBpm = async (): Promise<any> => {
    
   }
 
+  const execPath = vsCodeConfigManager.readExecPath();
+  if (!execPath) {
+    throw new Error("No exec path set");
+  }
+
   return new Promise((resolve, reject) => {
-    let command = `${EXEC_PATH} update bpm --file ${filePath}`;
+    let command = `${execPath} update bpm --file ${manifestPath}`;
     for (const field of flagsWithCmds) {
       command += ` ${field}`
     }
@@ -601,26 +687,29 @@ export const updateBpm = async (): Promise<any> => {
   });
 }
 
-export const deleteBpm = async (): Promise<any> => {
-  if (!EXEC_PATH) {
-    throw new Error("No executable path set");
-  }
+export const deleteBpm = async (vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager): Promise<any> => {
 
-  let manifestPath: string | undefined;
-  manifestPath = await vscode.window.showInputBox({
-    prompt: "Enter the path to your manifest file",
+  let manifestInput = await vscode.window.showInputBox({
+    prompt: "Enter the name of the manifest file",
     ignoreFocusOut: true,
   });
-  if (!manifestPath) {
-    throw new Error("No file path provided");
+  if (!manifestInput) {
+    throw new Error("No manifest file name provided");
+  }
+
+  if (!manifestInput.endsWith(".json")) {
+    manifestInput = `${manifestInput}.json`;
   }
   
-  if (checkManifestDirPath()) {
-    manifestPath = path.join(MANIFEST_DIR_PATH as string, manifestPath);
+  const manifestPath = manifestManager.createManifestFilePath(manifestInput);
+
+  const execPath = vsCodeConfigManager.readExecPath();
+  if (!execPath) {
+    throw new Error("No exec path set");
   }
 
   return new Promise((resolve, reject) => {
-    const command = `${EXEC_PATH} delete bpm --file ${manifestPath} --output json`;
+    const command = `${execPath} delete bpm --file ${manifestPath} --output json`;
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
         reject(`Error deleting bpm: ${stderr}`);
@@ -640,13 +729,8 @@ export const deleteBpm = async (): Promise<any> => {
  ***********************************************************
  */
 
-export const validateCode = async (): Promise<any> => {
-  if (!EXEC_PATH) {
-    throw new Error("No executable path set");
-  }
-
-  let entityType: string | undefined;
-  entityType = await vscode.window.showQuickPick([
+export const validateCode = async (vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager): Promise<any> => {
+  const entityType = await vscode.window.showQuickPick([
     "bom",
     "table",
   ], {
@@ -656,30 +740,30 @@ export const validateCode = async (): Promise<any> => {
     throw new Error("No entity type selected");
   }
 
-  let manifestPath: string | undefined;
-  manifestPath = await vscode.window.showInputBox({
-    prompt: "Enter the path to the manifest file",
+  
+  let manifestInput = await vscode.window.showInputBox({
+    prompt: "Enter the name of the manifest file",
     ignoreFocusOut: true,
   });
-  if (!manifestPath) {
-    throw new Error("No file path provided");
+  if (!manifestInput) {
+    throw new Error("No manifest file name provided");
   }
   
-  if (checkManifestDirPath()) {
-    manifestPath = path.join(MANIFEST_DIR_PATH as string, manifestPath);
+  if (!manifestInput.endsWith(".json")) {
+    manifestInput = `${manifestInput}.json`;
   }
 
-  let bodyFIlePath: string | undefined;
-  bodyFIlePath = await vscode.window.showInputBox({
+  const manifestPath = manifestManager.createManifestFilePath(manifestInput);
+
+  const bodyFilePath = await vscode.window.showInputBox({
     prompt: "Enter the path to the body file",
     ignoreFocusOut: true,
   });
-  if (!bodyFIlePath) {
+  if (!bodyFilePath) {
     throw new Error("No body file path provided");
   }
   
-  let outputType: string | undefined;
-  outputType = await vscode.window.showQuickPick([
+  const outputType = await vscode.window.showQuickPick([
     "table",
     "json",
   ], {
@@ -689,12 +773,14 @@ export const validateCode = async (): Promise<any> => {
     throw new Error("No output type selected");
   }
 
+  const execPath = vsCodeConfigManager.readExecPath();
+  if (!execPath) {
+    throw new Error("No exec path set");
+  }
+
   return new Promise((resolve, reject) => {
-    const command = `${EXEC_PATH} validate-code ${entityType} ${manifestPath} ${bodyFIlePath} --output ${outputType}`;
+    const command = `${execPath} validate-code ${entityType} ${manifestPath} ${bodyFilePath} --output ${outputType}`;
     exec(command, (error, stdout, stderr) => {
-      console.log("stdout", stdout)
-      console.log("stderr", stderr)
-      console.log("error", error)
       if (stderr) {
         reject(`Error validating code: ${stderr}`);
         return;

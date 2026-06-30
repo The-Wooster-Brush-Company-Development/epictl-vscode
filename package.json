@@ -31,6 +31,14 @@
         "title": "epictl: createConfig"
       },
       {
+        "command": "epictl: getConfig",
+        "title": "epictl: getConfig"
+      },
+      {
+        "command": "epictl: deleteConfig",
+        "title": "epictl: deleteConfig"
+      },
+      {
         "command": "epictl: setExecPath",
         "title": "epictl: setExecPath"
       },

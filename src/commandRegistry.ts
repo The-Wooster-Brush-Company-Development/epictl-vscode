@@ -5,6 +5,10 @@ const CONFIG_SECTION = "epictl";
 const CONFIG_KEY_EXEC_PATH = "command_path";
 
 import {
+  createConfig,
+  getConfig,
+  setConfig,
+
   setExecPath, 
   getExecPath, 
   deleteExecPath,
@@ -31,57 +35,221 @@ import {
   validateCode,
 } from "./commandHandlers";
 
+import { VsCodeConfigManager } from "./managers/configManager";
+import { ManifestManager } from "./managers/manifestManager";
 
-export const contextCommands = [
+export const vsCodeConfigCommands = [
   {
     name: "epictl: setExecPath",
-    callback: async () => {
-        setExecPath();
-    },
+    callback: async (vsCodeConfigManager: VsCodeConfigManager) => {
+      const outputChannel = vscode.window.createOutputChannel("Epictl");
+      try {
+        await setExecPath(vsCodeConfigManager);
+        outputChannel.appendLine("Exec path set successfully");
+        vscode.window.showInformationMessage("Exec path set successfully");
+      } catch (err) {        
+        vscode.window.showErrorMessage("Error setting exec path");
+        outputChannel.appendLine(`Error setting exec path: ${err}`);
+      }
+      outputChannel.show();
+    }
   },
 
   {
     name: "epictl: getExecPath", 
-    callback: () => {
-      getExecPath();
+    callback: (vsCodeConfigManager: VsCodeConfigManager) => {
+      const outputChannel = vscode.window.createOutputChannel("Epictl");
+      try {
+        const execPath = getExecPath(vsCodeConfigManager);
+        outputChannel.appendLine(`Exec path: ${execPath}`);
+        vscode.window.showInformationMessage("Exec path found");
+      } catch (err: any) {
+        vscode.window.showErrorMessage("Error getting exec path");
+        outputChannel.appendLine(`Error getting exec path: ${err.message}`);
+      }
+      outputChannel.show();
     }
   },
 
   {
     name: "epictl: deleteExecPath", 
-    callback: () => {
-      deleteExecPath();
+    callback: (vsCodeConfigManager: VsCodeConfigManager) => {
+      deleteExecPath(vsCodeConfigManager);
     }
+  }
+]
+
+export const cliConfigCommands = [
+  {
+    name: "epictl: createConfig",
+    callback: async(vsCodeConfigManager: VsCodeConfigManager) => {
+      let outputChannel = vscode.window.createOutputChannel("Epictl");
+      try {
+        const result = JSON.parse(await createConfig(vsCodeConfigManager));
+        if (result.success) {
+          outputChannel.appendLine(result.message);
+          if (result.config_id) {
+            try {
+              const message = await setConfig(result.config_id, vsCodeConfigManager);
+              outputChannel.appendLine(message);
+            } catch (err) {
+              outputChannel.appendLine(`Error setting config: ${err}`);
+            }
+            vscode.window.showInformationMessage("Config created successfully");
+          }
+        } else {
+          vscode.window.showErrorMessage("Failed to create config");
+          outputChannel.appendLine(result.message);
+        }
+        outputChannel.show();
+      } catch (err) {
+        outputChannel.appendLine(`Error creating config: ${err}`);
+        vscode.window.showErrorMessage("Failed to create config");
+        outputChannel.show();
+      }
+    },
   },
+  {
+    name: "epictl: getConfig",
+    callback: async (_vsCodeConfigManager: VsCodeConfigManager) => {
+      getConfig();
+    },
+  },
+]
+
+
+export const commands = [
 
   {
+    name: "epictl: getBoms",
+    callback: async (vsCodeConfigManager: VsCodeConfigManager) => {
+      const outputChannel = vscode.window.createOutputChannel("Epictl");
+      try {
+        const [result, outputType] = await getBoms(vsCodeConfigManager);
+
+        if (outputType === "json") {
+          vscode.window.showInformationMessage("Boms fetched successfully");
+          outputChannel.appendLine(result);
+        } else if (outputType === "table") {
+          vscode.window.showInformationMessage("Boms fetched successfully");
+          outputChannel.appendLine(result);
+        } else {
+          vscode.window.showErrorMessage("Invalid output type");
+          outputChannel.appendLine(result);
+        }
+        outputChannel.show();
+      } catch (err) {
+        outputChannel.appendLine(`${err}`);
+        outputChannel.appendLine("")
+        vscode.window.showErrorMessage("Error fetching boms");
+        outputChannel.show();
+      }
+    }
+  }, 
+
+  {
+    name: "epictl: getTables", 
+    callback: async (vsCodeConfigManager: VsCodeConfigManager): Promise<any> => {
+      const outputChannel = vscode.window.createOutputChannel("Epictl");
+      try {
+        const [result, outputType] = await getTables(vsCodeConfigManager);
+        if (outputType === "json") {
+          vscode.window.showInformationMessage("Tables fetched successfully");
+          outputChannel.appendLine(result);
+        } else if (outputType === "table") {
+          vscode.window.showInformationMessage("Tables fetched successfully");
+          outputChannel.appendLine(result);
+        }
+        outputChannel.show();
+      } catch (err) {
+        outputChannel.appendLine(`Error fetching tables: ${err}`);
+        vscode.window.showErrorMessage(`Error fetching tables: ${err}`);
+      }
+    }
+  }, 
+
+  {
+    "name": "epictl: describeBom",
+    callback: async (vsCodeConfigManager: VsCodeConfigManager) => {
+      const outputChannel = vscode.window.createOutputChannel("Epictl");
+      try {
+        const [result, outputType] = await describeBom(vsCodeConfigManager);
+        if (outputType === "json") {
+            vscode.window.showInformationMessage("Bom described successfully");
+            outputChannel.append(result);
+        } else if (outputType === "table") {
+          vscode.window.showInformationMessage("Bom described successfully");
+          outputChannel.append(result);
+        } 
+        outputChannel.show();
+      } catch (err) {
+        outputChannel.appendLine(`Error describing bom: ${err}`);
+        vscode.window.showErrorMessage(`Error describing bom: ${err}`);
+        outputChannel.show();
+      }
+    }
+  }, 
+
+  {
+    "name": "epictl: describeTable", 
+    callback: async (vsCodeConfigManager: VsCodeConfigManager) => {
+      const outputChannel = vscode.window.createOutputChannel("Epictl");
+      try {
+        const [result, outputType] = await describeTable(vsCodeConfigManager);
+        if (outputType === "json") {
+          vscode.window.showInformationMessage("Table described successfully");
+          outputChannel.appendLine(result);
+        } else if (outputType === "table") {
+          vscode.window.showInformationMessage("Table described successfully");
+          outputChannel.appendLine(result);
+        }
+        outputChannel.show();
+      } catch (err) {
+        outputChannel.appendLine(`Error describing table:f ${err}`);
+        vscode.window.showErrorMessage(`Error describing table: ${err}`);
+        outputChannel.show();
+      }
+    }
+  }, 
+]
+
+export const manifestDependentCommands = [
+  {
     name: "epictl: setManifestDirPath",
-    callback: () => {
-      setManifestDirPath();
+    callback: (_vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager) => {
+      setManifestDirPath(manifestManager);
     }
   },
 
   {
     name: "epictl: getManifestDirPath",
-    callback: () => {
-      getManifestDirPath();
+    callback: (_vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager) => {
+      const outputChannel = vscode.window.createOutputChannel("Epictl");
+      try {
+        const manifestDirPath = getManifestDirPath(manifestManager);
+        vscode.window.showInformationMessage("Manifest directory path found");
+        outputChannel.appendLine(`Manifest directory path: ${manifestDirPath}`);
+        outputChannel.show();
+      } catch (err: any) {
+        vscode.window.showErrorMessage("Failed getting manifest directory path");
+        outputChannel.appendLine(`Error getting manifest directory path: ${err.message}`);
+        outputChannel.show();
+      }
     }
   },
 
   {
     name: "epictl: deleteManifestDirPath",
-    callback: () => {
-      deleteManifestDirPath();
+    callback: (_vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager) => {
+      deleteManifestDirPath(manifestManager);
     }
   },
-
   {
     name: "epictl: init-manifest", 
-    callback: async () => {
+    callback: async (vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager) => {
       const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
-        const result = JSON.parse(await initManifest());
-        // console.log(`duplicate: ${result["duplicate"]}`);
+        const result = JSON.parse(await initManifest(vsCodeConfigManager, manifestManager));
         if (result.success) {
           vscode.window.showInformationMessage("Manifest initialized successfully");
           outputChannel.append(result.message);
@@ -102,10 +270,10 @@ export const contextCommands = [
 
   {
     name: "epictl: clone-manifest",
-    callback: async (context: vscode.ExtensionContext) => {
+    callback: async (vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager) => {
       const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
-        let result = await cloneManifest(context);
+        let result = await cloneManifest(vsCodeConfigManager, manifestManager);
         result = JSON.parse(result);
         console.log("RESULT:", result);
         if (result.success) {
@@ -126,14 +294,12 @@ export const contextCommands = [
     }
   },
 
- 
-
   {
     "name": "epictl: describeBpm",
-    callback: async () => {
+    callback: async (vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager) => {
       const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
-        const [result, outputType] = await describeBpm();
+        const [result, outputType] = await describeBpm(vsCodeConfigManager, manifestManager);
 
         if (outputType === "json") {
           vscode.window.showInformationMessage("Bpm described successfully");
@@ -153,10 +319,10 @@ export const contextCommands = [
 
   {
     "name": "epictl: applyBpm",
-    callback: async () => {
+    callback: async (vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager) => {
       const outputChannel = vscode.window.createOutputChannel("Epictl"); 
       try { 
-        const result = JSON.parse(await applyBpm());
+        const result = JSON.parse(await applyBpm(vsCodeConfigManager, manifestManager));
         console.log("RESULT:", result);
         if (result.success) {
           vscode.window.showInformationMessage("Manifest applied successfully");
@@ -176,10 +342,10 @@ export const contextCommands = [
 
   {
     "name": "epictl: updateBpm",
-    callback: async () => {
+    callback: async (vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager) => {
       const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
-        const result = JSON.parse(await updateBpm());
+        const result = JSON.parse(await updateBpm(vsCodeConfigManager, manifestManager));
         if (result.success) {
           vscode.window.showInformationMessage("Bpm updated successfully");
           outputChannel.appendLine(result.message);
@@ -198,10 +364,10 @@ export const contextCommands = [
 
   {
     "name": "epictl: deleteBpm", 
-    callback: async () => {
+    callback: async (vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager) => {
       const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
-        const result = JSON.parse(await deleteBpm());
+        const result = JSON.parse(await deleteBpm(vsCodeConfigManager, manifestManager));
         if (result.success) {
           vscode.window.showInformationMessage("Bpm deleted successfully");
           outputChannel.appendLine(result.message);
@@ -219,10 +385,10 @@ export const contextCommands = [
 
   {
     "name": "epictl: validateCode",
-    callback: async () => {
+    callback: async (vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager) => {
       const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
-        const [result, outputType] = await validateCode();
+        const [result, outputType] = await validateCode(vsCodeConfigManager, manifestManager  );
         if (outputType === "json") {
           const parsed = JSON.parse(result);
           vscode.window.showInformationMessage("Code validated successfully");
@@ -240,100 +406,4 @@ export const contextCommands = [
       }
     }
   }
-
-];
-
-export const noContextCommands = [
-
-  {
-    name: "epictl: getBoms",
-    callback: async () => {
-      const outputChannel = vscode.window.createOutputChannel("Epictl");
-      try {
-        const [result, outputType] = await getBoms();
-
-        if (outputType === "json") {
-          vscode.window.showInformationMessage("Boms fetched successfully");
-          outputChannel.appendLine(result);
-        } else if (outputType === "table") {
-          vscode.window.showInformationMessage("Boms fetched successfully");
-          outputChannel.appendLine(result);
-        } else {
-          vscode.window.showErrorMessage("Invalid output type");
-          outputChannel.appendLine(result);
-        }
-        outputChannel.show();
-      } catch (err) {
-        outputChannel.appendLine(`Error fetching boms: ${err}`);
-        vscode.window.showErrorMessage(`Error fetching boms: ${err}`);
-        outputChannel.show();
-      }
-    }
-  }, 
-
-  {
-    name: "epictl: getTables", 
-    callback: async (): Promise<any> => {
-      const outputChannel = vscode.window.createOutputChannel("Epictl");
-      try {
-        const [result, outputType] = await getTables();
-        if (outputType === "json") {
-          vscode.window.showInformationMessage("Tables fetched successfully");
-          outputChannel.appendLine(result);
-        } else if (outputType === "table") {
-          vscode.window.showInformationMessage("Tables fetched successfully");
-          outputChannel.appendLine(result);
-        }
-        outputChannel.show();
-      } catch (err) {
-        outputChannel.appendLine(`Error fetching tables: ${err}`);
-        vscode.window.showErrorMessage(`Error fetching tables: ${err}`);
-      }
-    }
-  }, 
-
-  {
-    "name": "epictl: describeBom",
-    callback: async () => {
-      const outputChannel = vscode.window.createOutputChannel("Epictl");
-      try {
-        const [result, outputType] = await describeBom();
-        if (outputType === "json") {
-            vscode.window.showInformationMessage("Bom described successfully");
-            outputChannel.append(result);
-        } else if (outputType === "table") {
-          vscode.window.showInformationMessage("Bom described successfully");
-          outputChannel.append(result);
-        } 
-        outputChannel.show();
-      } catch (err) {
-        outputChannel.appendLine(`Error describing bom: ${err}`);
-        vscode.window.showErrorMessage(`Error describing bom: ${err}`);
-        outputChannel.show();
-      }
-    }
-  }, 
-
-  {
-    "name": "epictl: describeTable", 
-    callback: async () => {
-      const outputChannel = vscode.window.createOutputChannel("Epictl");
-      try {
-        const [result, outputType] = await describeTable();
-        if (outputType === "json") {
-          vscode.window.showInformationMessage("Table described successfully");
-          outputChannel.appendLine(result);
-        } else if (outputType === "table") {
-          vscode.window.showInformationMessage("Table described successfully");
-          outputChannel.appendLine(result);
-        }
-        outputChannel.show();
-      } catch (err) {
-        outputChannel.appendLine(`Error describing table: ${err}`);
-        vscode.window.showErrorMessage(`Error describing table: ${err}`);
-        outputChannel.show();
-      }
-    }
-  }, 
-
 ]

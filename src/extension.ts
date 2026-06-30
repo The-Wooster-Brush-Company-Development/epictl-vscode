@@ -2,33 +2,48 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 
-import { contextCommands, noContextCommands } from './commandRegistry';
+import { commands, manifestDependentCommands, cliConfigCommands, vsCodeConfigCommands } from './commandRegistry';
+import {getConfig} from './commandHandlers';
+import { getExecPath } from './utils/extensionUtils';
+import { VsCodeConfigManager } from './managers/configManager';
+import { ManifestManager } from './managers/manifestManager';
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
+
 export function activate(context: vscode.ExtensionContext) {
 
-	//initialize .epictl directory
-	const storageUri = context.globalStorageUri;
-	console.log(`storageUri: ${storageUri}`);
-
-    
-
-
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
 	console.log('Congratulations, your extension "epictl-vscode" is now active!');
+	
+	const vsCodeConfigManager = new VsCodeConfigManager(context);
+	const manifestManager = new ManifestManager(context);
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	contextCommands.forEach(({name, callback}) => {
-		let disposable = vscode.commands.registerCommand(name, () => callback(context));
+  // ***********************************************************
+  // register all commands for the extension
+  // ***********************************************************
+	vsCodeConfigCommands.forEach(({name, callback}) => {
+		let disposable = vscode.commands.registerCommand(name, () => {
+			callback(vsCodeConfigManager);
+		});
 		context.subscriptions.push(disposable);
 	});
 
-	noContextCommands.forEach(({name, callback}) => {
-		let disposable = vscode.commands.registerCommand(name, () => callback());
+	cliConfigCommands.forEach(({name, callback}) => {
+		let disposable = vscode.commands.registerCommand(name, () => {
+			callback(vsCodeConfigManager);
+		});
+		context.subscriptions.push(disposable);
+	});
+
+	commands.forEach(({name, callback}) => {
+		let disposable = vscode.commands.registerCommand(name, () => {
+			callback(vsCodeConfigManager);
+		});
+		context.subscriptions.push(disposable);
+	});
+
+	manifestDependentCommands.forEach(({name, callback}) => {
+		let disposable = vscode.commands.registerCommand(name, () => {
+			callback(vsCodeConfigManager, manifestManager);
+		});
 		context.subscriptions.push(disposable);
 	});
 }
