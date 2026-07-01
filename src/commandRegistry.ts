@@ -18,7 +18,7 @@ import {
 
   setManifestDirPath,
   getManifestDirPath,
-  deleteManifest,
+  deleteLocalManifest,
 
   getBoms, 
   getTables,
@@ -241,16 +241,16 @@ export const manifestDependentCommands = [
   },
 
   {
-    name: "epictl: deleteManifest",
+    name: "epictl: deleteLocalManifest",
     callback: async (_vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager) => {
       const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
-        const manifestName = await deleteManifest(manifestManager);
-        vscode.window.showInformationMessage(`Manifest deleated successfully`);
-        outputChannel.appendLine(`Manifest ${manifestName} deleated successfully`);
+        const manifestName = await deleteLocalManifest(manifestManager);
+        vscode.window.showInformationMessage(`Local manifest deleted successfully`);
+        outputChannel.appendLine(`Local manifest ${manifestName} deleted successfully`);
       } catch (err) {
-        vscode.window.showErrorMessage("Failed to deleate manifest");
-        outputChannel.appendLine(`Error deleating manifest: ${err}`);
+        vscode.window.showErrorMessage("Failed to delete local manifest");
+        outputChannel.appendLine(`Error deleting local manifest: ${err}`);
       }
       outputChannel.show();
     }
@@ -407,6 +407,7 @@ export const manifestDependentCommands = [
       const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
         const result = JSON.parse(await deleteBpm(vsCodeConfigManager, manifestManager));
+        console.log("RESULT:", result);
         if (result.success) {
           vscode.window.showInformationMessage("Bpm deleted successfully");
           outputChannel.appendLine(result.message);

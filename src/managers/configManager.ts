@@ -42,6 +42,7 @@ export class VsCodeConfigManager {
 
     // Executable methods ------------------------------------------------------------
 
+    // overwrites the existing config file with the new exec path
     public writeExecPath(execPath: string) {
         const data = this.loadConfig();
         if (!data) {
@@ -53,6 +54,7 @@ export class VsCodeConfigManager {
         fs.writeFileSync(this.configPath, JSON.stringify(data, null, 2));
     }
 
+    // reads the exec path from the config file
     public readExecPath(): string | undefined {
         const data = this.loadConfig();
         if (!data) {
@@ -61,6 +63,7 @@ export class VsCodeConfigManager {
         return data.exec_path;
     }
 
+    // deletes the exec path from the config file
     public deleteExecPath() {
         const data = this.loadConfig();
         if (!data) {

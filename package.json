@@ -59,8 +59,8 @@
         "title": "epictl: getManifestDirPath"
       },
       {
-        "command": "epictl: deleteManifest",
-        "title": "epictl: deleteManifest"
+        "command": "epictl: deleteLocalManifest",
+        "title": "epictl: deleteLocalManifest"
       },
       {
         "command": "epictl: initManifest",

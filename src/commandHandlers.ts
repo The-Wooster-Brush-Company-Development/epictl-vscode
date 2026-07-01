@@ -73,7 +73,6 @@ export const createConfig = async(vsCodeConfigManager: VsCodeConfigManager): Pro
   });
 }
 
-//TODO: this is getting the cli config file, not the vs code config file
  export const getConfig = () => {
    console.log("To do: get config");
  }
@@ -175,7 +174,7 @@ export const getManifestDirPath = (manifestManager: ManifestManager) => {
   return manifestDirPath;
 }
 
-export const deleteManifest = async (manifestManager: ManifestManager) => {
+export const deleteLocalManifest = async (manifestManager: ManifestManager) => {
   
   let manifestInput = await vscode.window.showInputBox({
     prompt: "Enter the name of the manifest file to delete",
@@ -237,6 +236,7 @@ export const initManifest = async (vsCodeConfigManager: VsCodeConfigManager, man
     throw new Error("No exec path set");
   }
   const command = `${execPath} init-manifest ${entityType} ${parentId} --file ${manifestPath} --output json`;
+
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
@@ -252,7 +252,6 @@ export const initManifest = async (vsCodeConfigManager: VsCodeConfigManager, man
   });
 }
 
-//TODO: Need to fix this function, not handling manifest path correctly
 export const cloneManifest = async (vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager): Promise<any> => {
   const entityType = await vscode.window.showQuickPick([
     "bom",
@@ -667,12 +666,6 @@ export const updateBpm = async (vsCodeConfigManager: VsCodeConfigManager, manife
     command += " --output json";
     console.log("update nam: ", updateName);
     exec(command, (error, stdout, stderr) => {
-      console.log("------------------------------------------------------------------------------------------------------------")
-      console.log("stdout", stdout);
-      console.log("stderr", stderr);
-      console.log("error", error);
-      console.log("------------------------------------------------------------------------------------------------------------")
-
       if (stderr) { 
         reject(`Error updating bpm: ${stderr}`);
         return;
@@ -739,38 +732,26 @@ export const validateCode = async (vsCodeConfigManager: VsCodeConfigManager, man
     throw new Error("No entity type selected");
   }
 
-  
-  let manifestInput = await vscode.window.showInputBox({
-    prompt: "Enter the name of the manifest file",
-    ignoreFocusOut: true,
-  });
-  if (!manifestInput) {
-    throw new Error("No manifest file name provided");
-  }
-  
-  if (!manifestInput.endsWith(".json")) {
-    manifestInput = `${manifestInput}.json`;
+  const editor = vscode.window.activeTextEditor;
+  if (!editor) {
+    throw new Error("No editor open");
   }
 
-  const manifestPath = manifestManager.createManifestFilePath(manifestInput);
+  const bodyFilePath = editor.document.fileName;
 
-  const bodyFilePath = await vscode.window.showInputBox({
-    prompt: "Enter the path to the body file",
-    ignoreFocusOut: true,
-  });
-  if (!bodyFilePath) {
-    throw new Error("No body file path provided");
-  }
+  let fileName = path.basename(editor.document.fileName);
+  fileName = path.parse(fileName).name;
+
+  const manifestFiles = manifestManager.getAllManifests();
+  const targetManifest = manifestFiles.find((manifest) => path.parse(path.basename(manifest)).name === fileName);
   
-  const outputType = await vscode.window.showQuickPick([
-    "table",
-    "json",
-  ], {
-    placeHolder: "Select the output type",
-  });
-  if (!outputType) {
-    throw new Error("No output type selected");
+  if (!targetManifest) {
+    throw new Error("No manifest file found");
   }
+
+  const manifestPath = manifestManager.createManifestFilePath(targetManifest);
+
+  const outputType = "table";
 
   const execPath = vsCodeConfigManager.readExecPath();
   if (!execPath) {
@@ -792,3 +773,5 @@ export const validateCode = async (vsCodeConfigManager: VsCodeConfigManager, man
     });
   });
 }
+
+  
