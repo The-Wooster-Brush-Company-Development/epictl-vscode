@@ -65,11 +65,9 @@ export class ManifestManager {
 
     public createManifestFilePath(manifestName: string): string {
         const manifestDirPath = this.readManifestDirPath();
-        console.log("manifestDirPath", manifestDirPath);
         if (!manifestDirPath) {
             throw new Error("No manifest directory path set");
         }
-        console.log(`new path: ${path.join(manifestDirPath, manifestName)}`);
         return path.join(manifestDirPath, manifestName);
     }
 

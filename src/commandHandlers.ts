@@ -4,7 +4,6 @@ import { exec } from "child_process";
 import { manifestDirPath, formatCommand, fields} from "./utils/handlerUtils";
 import { VsCodeConfigManager } from "./managers/configManager";
 import { ManifestManager } from "./managers/manifestManager";
-import { stringify } from "querystring";
 
 const CONFIG_SECTION = "epictl";
 const CONFIG_KEY_EXEC_PATH = "command_path";
@@ -226,28 +225,20 @@ export const initManifest = async (vsCodeConfigManager: VsCodeConfigManager, man
     prompt: "enter the name of the manifest file",
     ignoreFocusOut: true,
   });
-  if (!manifestInput) {
-    throw new Error("No manifest file name provided");
-  }
 
-  if (!manifestInput.endsWith(".json")) {
+  if (manifestInput && !manifestInput.endsWith(".json")) {
    manifestInput = `${manifestInput}.json`;
   }
 
-  const manifestPath = manifestManager.createManifestFilePath(manifestInput);
-  console.log("manifestPath", manifestPath);
+  const manifestPath = manifestManager.createManifestFilePath(manifestInput ? manifestInput : "");
 
   const execPath = vsCodeConfigManager.readExecPath();
   if (!execPath) {
     throw new Error("No exec path set");
   }
   const command = `${execPath} init-manifest ${entityType} ${parentId} --file ${manifestPath} --output json`;
-  console.log("command", command);
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
-      console.log("stdout", stdout);
-      console.log("stderr", stderr);
-      console.log("error", error);
       if (stderr) {
         reject(`Error initializing manifest: ${stderr}`);
         return;
@@ -352,9 +343,6 @@ export const getBoms = async(vsCodeConfigManager: VsCodeConfigManager): Promise<
   return new Promise((resolve, reject) => {
     const command = `${execPath} get boms --output ${outputType}`;
     exec(command, (error, stdout, stderr) => {
-      console.log("stdout", stdout);
-      console.log("stderr", stderr);
-      console.log("error", error);
       if (stderr) {
         reject(`${stderr}`);
         return;
@@ -561,15 +549,9 @@ export const describeBpm = async (vsCodeConfigManager: VsCodeConfigManager, mani
   }
 
   const manifests = manifestManager.getAllManifests();
-  console.log("manifests", manifests);
-  console.log("command", command);
-
   return new Promise((resolve, reject) => {
-
-    console.log("command", command)
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
-        
         reject(`Error describing bpm: ${stderr}`);
         return;
       }
@@ -650,6 +632,9 @@ export const updateBpm = async (vsCodeConfigManager: VsCodeConfigManager, manife
     throw new Error("No fields selected");
   }
 
+  let updateName  = false;
+  let newName: string | undefined;
+  let oldName: string | undefined;
 
   for (const field of selectedFields) {
     const value = await vscode.window.showInputBox({
@@ -660,8 +645,13 @@ export const updateBpm = async (vsCodeConfigManager: VsCodeConfigManager, manife
       throw new Error(`No value provided for ${field.label}`);
     }
 
+    if (field.key === "name") {
+      updateName = true;
+      newName = value;
+      oldName = manifestInput;
+    }
+
     flagsWithCmds.push(formatCommand[field.key](value));
-   
   }
 
   const execPath = vsCodeConfigManager.readExecPath();
@@ -675,8 +665,14 @@ export const updateBpm = async (vsCodeConfigManager: VsCodeConfigManager, manife
       command += ` ${field}`
     }
     command += " --output json";
-
+    console.log("update nam: ", updateName);
     exec(command, (error, stdout, stderr) => {
+      console.log("------------------------------------------------------------------------------------------------------------")
+      console.log("stdout", stdout);
+      console.log("stderr", stderr);
+      console.log("error", error);
+      console.log("------------------------------------------------------------------------------------------------------------")
+
       if (stderr) { 
         reject(`Error updating bpm: ${stderr}`);
         return;
@@ -685,7 +681,7 @@ export const updateBpm = async (vsCodeConfigManager: VsCodeConfigManager, manife
         reject(`Error executing ${command}: ${error}`);
         return;
       }
-      resolve(stdout);
+      resolve([stdout, updateName, newName, oldName]);
     });
   });
 }

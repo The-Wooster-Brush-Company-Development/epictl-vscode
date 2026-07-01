@@ -38,6 +38,8 @@ import {
 import { VsCodeConfigManager } from "./managers/configManager";
 import { ManifestManager } from "./managers/manifestManager";
 
+import { updateFileName } from "./utils/registryUtils";
+
 export const vsCodeConfigCommands = [
   {
     name: "epictl: setExecPath",
@@ -354,8 +356,7 @@ export const manifestDependentCommands = [
     callback: async (vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager) => {
       const outputChannel = vscode.window.createOutputChannel("Epictl"); 
       try { 
-        const result = JSON.parse(await applyBpm(vsCodeConfigManager, manifestManager));
-        console.log("RESULT:", result);
+        const result = await JSON.parse(await applyBpm(vsCodeConfigManager, manifestManager));
         if (result.success) {
           vscode.window.showInformationMessage("Manifest applied successfully");
           outputChannel.appendLine(result.message);
@@ -364,11 +365,12 @@ export const manifestDependentCommands = [
           outputChannel.appendLine(result.message);
         }
         outputChannel.show();
-      } catch (err) {
-        outputChannel.appendLine(`Error applying manifest: ${err}`);
-        vscode.window.showErrorMessage(`Error applying manifest: ${err}`);
+      } catch (err: any) {
+        outputChannel.appendLine(`${err.message}`);
+        vscode.window.showErrorMessage("Error applying manifest");
         outputChannel.show();
       }
+
     }
   }, 
 
@@ -377,18 +379,23 @@ export const manifestDependentCommands = [
     callback: async (vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager) => {
       const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
-        const result = JSON.parse(await updateBpm(vsCodeConfigManager, manifestManager));
-        if (result.success) {
+        const [result, updateName, newName, oldName] = await updateBpm(vsCodeConfigManager, manifestManager);
+        const parsedResult = JSON.parse(result);
+  
+        if (parsedResult.success) {
           vscode.window.showInformationMessage("Bpm updated successfully");
-          outputChannel.appendLine(result.message);
+          outputChannel.appendLine(parsedResult.message);
+          if (updateName) {
+            updateFileName(manifestManager, newName, oldName);
+          }
         } else {
           vscode.window.showErrorMessage("Failed to update bpm");
-          outputChannel.appendLine(result.message);
+          outputChannel.appendLine(parsedResult.message);
         }
         outputChannel.show();
-      } catch (err) {
-        outputChannel.appendLine(`Error updating bpm: ${err}`);
-        vscode.window.showErrorMessage(`Error updating bpm: ${err}`);
+      } catch (err: any) {
+        outputChannel.appendLine(`${err}`);
+        vscode.window.showErrorMessage("Error updating bpm");
         outputChannel.show();
       }
     }
