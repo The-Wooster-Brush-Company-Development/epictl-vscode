@@ -100,9 +100,11 @@ export const createConfig = async(vsCodeConfigManager: VsCodeConfigManager): Pro
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
         reject(`Error setting config: ${stderr}`);
+        return;
       }
       if (error) {
         reject(`Error executing ${command}: ${error}`);
+        return;
       }
       resolve(stdout);
     }); 
@@ -420,7 +422,7 @@ export const getTables = async (vsCodeConfigManager: VsCodeConfigManager): Promi
   }
 
   return new Promise((resolve, reject) => {
-    const command = `${execPath} describe bom --entity-id${bomId} --output ${outputType}`;
+    const command = `${execPath} describe bom --entity-id ${bomId} --output ${outputType}`;
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
         reject(`Error describing bom: ${stderr}`);
@@ -517,11 +519,19 @@ export const describeBpm = async (vsCodeConfigManager: VsCodeConfigManager, mani
     placeHolder: "Select the entity type",
     });
 
+    if (!entityType) {
+      throw new Error("No entity type selected");
+    }
+
 
     parentId = await vscode.window.showInputBox({
       prompt: "Enter the parent id",
       ignoreFocusOut: true,
     });
+
+    if (!parentId) {
+      throw new Error("No parent id provided");
+    }
   }
 
   const outputType = await vscode.window.showQuickPick([

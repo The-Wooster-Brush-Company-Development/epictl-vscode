@@ -163,9 +163,10 @@ export const commands = [
           outputChannel.appendLine(result);
         }
         outputChannel.show();
-      } catch (err) {
-        outputChannel.appendLine(`Error fetching tables: ${err}`);
-        vscode.window.showErrorMessage(`Error fetching tables: ${err}`);
+      } catch (err: any) {
+        outputChannel.appendLine(`${err.message}`);
+        vscode.window.showErrorMessage("Error fetching tables");
+        outputChannel.show();
       }
     }
   }, 
