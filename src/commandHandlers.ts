@@ -1,16 +1,16 @@
 import * as vscode from "vscode";
-import * as path from"path";
+import * as path from "path";
 import { exec } from "child_process";
-import { manifestDirPath, formatCommand, fields} from "./utils/handlerUtils";
+import { manifestDirPath, formatCommand, fields } from "./utils/handlerUtils";
 import { VsCodeConfigManager } from "./managers/configManager";
 import { ManifestManager } from "./managers/manifestManager";
+import { json } from "stream/consumers";
 
 const CONFIG_SECTION = "epictl";
 const CONFIG_KEY_EXEC_PATH = "command_path";
 const CONFIG_KEY_MANIFEST_DIR_PATH = "manifest_dir_path";
 //const EXEC_PATH = vscode.workspace.getConfiguration(CONFIG_SECTION).get<string>(CONFIG_KEY_EXEC_PATH);
 //const MANIFEST_DIR_PATH = vscode.workspace.getConfiguration(CONFIG_SECTION).get<string>(CONFIG_KEY_MANIFEST_DIR_PATH);
-
 
 /**********************************************************
  * Create/Get/Delete a config file for the epictl command
@@ -19,8 +19,9 @@ const CONFIG_KEY_MANIFEST_DIR_PATH = "manifest_dir_path";
  */
 
 // creates and sets the config as the current active config
-export const createConfig = async(vsCodeConfigManager: VsCodeConfigManager): Promise<any> => {
-
+export const createConfig = async (
+  vsCodeConfigManager: VsCodeConfigManager,
+): Promise<any> => {
   const baseUrlPath = await vscode.window.showInputBox({
     prompt: "Enter the base url path",
     ignoreFocusOut: true,
@@ -28,7 +29,7 @@ export const createConfig = async(vsCodeConfigManager: VsCodeConfigManager): Pro
   if (!baseUrlPath) {
     throw new Error("No base url path provided");
   }
-  
+
   const username = await vscode.window.showInputBox({
     prompt: "Enter the username",
     ignoreFocusOut: true,
@@ -36,7 +37,7 @@ export const createConfig = async(vsCodeConfigManager: VsCodeConfigManager): Pro
   if (!username) {
     throw new Error("No username provided");
   }
-  
+
   const password = await vscode.window.showInputBox({
     prompt: "Enter the password",
     ignoreFocusOut: true,
@@ -55,7 +56,7 @@ export const createConfig = async(vsCodeConfigManager: VsCodeConfigManager): Pro
 
   return new Promise((resolve, reject) => {
     const command = `${getExecPath(vsCodeConfigManager)} config-create --base-url ${baseUrlPath} --username ${username} --password ${password} --api-key ${apiKey} --output json`;
-    
+
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
         reject(`Error creating config: ${stderr}`);
@@ -67,15 +68,49 @@ export const createConfig = async(vsCodeConfigManager: VsCodeConfigManager): Pro
       resolve(stdout);
     });
   });
-}
+};
 
-export const getConfig = (vsCodeConfigManager: VsCodeConfigManager) => {
- console.log("todo: get cli config")
-}
+// retrieves the config from the cli config file
+export const getConfig = async (
+  vsCodeConfigManager: VsCodeConfigManager,
+  outputType: string | undefined,
+): Promise<any> => {
+  const execPath = vsCodeConfigManager.readExecPath();
+  if (!execPath) {
+    throw new Error("No exec path set");
+  }
 
- // sets this config to the active config
-export const setConfig = async (configId: string | undefined, vsCodeConfigManager: VsCodeConfigManager): Promise<any> => {
+  if (!outputType) {
+    outputType = await vscode.window.showQuickPick(["table", "json"], {
+      placeHolder: "Select the output type",
+    });
+  }
 
+  if (!outputType) {
+    throw new Error("No output type provided");
+  }
+
+  const command = `${execPath} config-get --output ${outputType}`;
+  return new Promise((resolve, reject) => {
+    exec(command, (error, stdout, stderr) => {
+      if (stderr) {
+        reject(`Error getting config: ${stderr}`);
+        return;
+      }
+      if (error) {
+        reject(`Error executing ${command}: ${error}`);
+        return;
+      }
+      resolve([stdout, outputType]);
+    });
+  });
+};
+
+// sets this config to the active config
+export const setConfig = async (
+  configId: string | undefined,
+  vsCodeConfigManager: VsCodeConfigManager,
+): Promise<any> => {
   if (!configId) {
     configId = await vscode.window.showInputBox({
       prompt: "Enter the config id",
@@ -103,13 +138,15 @@ export const setConfig = async (configId: string | undefined, vsCodeConfigManage
         return;
       }
       resolve(stdout);
-    }); 
+    });
   });
-}
+};
 
 // if we make it so the active config is the one that is set, will want to write it to the config file
 // and perform all of our actions on that config
-export const setConfigCmd = async (vsCodeConfigManager: VsCodeConfigManager): Promise<any> => {
+export const setConfigCmd = async (
+  vsCodeConfigManager: VsCodeConfigManager,
+): Promise<any> => {
   const configId = await vscode.window.showInputBox({
     prompt: "Enter the config id",
     ignoreFocusOut: true,
@@ -135,16 +172,66 @@ export const setConfigCmd = async (vsCodeConfigManager: VsCodeConfigManager): Pr
       resolve(stdout);
     });
   });
-}
+};
 
-export const deleteConfig = async (vsCodeConfigManager: VsCodeConfigManager): Promise<any> => {
-  
-  const configId = await vscode.window.showInputBox({
-    prompt: "Enter the config id",
-    ignoreFocusOut: true,
+export const activeConfig = async (
+  vsCodeConfigManager: VsCodeConfigManager,
+): Promise<any> => {
+  const execPath = vsCodeConfigManager.readExecPath();
+  if (!execPath) {
+    throw new Error("No exec path set");
+  }
+  const command = `${execPath} config-active --output json`;
+  return new Promise((resolve, reject) => {
+    exec(command, (error, stdout, stderr) => {
+      if (stderr) {
+        reject(`Error active config: ${stderr}`);
+        return;
+      }
+      if (error) {
+        reject(`Error executing ${command}: ${error}`);
+        return;
+      }
+      resolve(stdout);
+    });
+  });
+};
+
+export const deleteConfig = async (
+  vsCodeConfigManager: VsCodeConfigManager,
+): Promise<any> => {
+  const [configs, _outputType] = await getConfig(vsCodeConfigManager, "json");
+  const configsParsed = JSON.parse(configs);
+
+  const activeConfigResult = JSON.parse(
+    await activeConfig(vsCodeConfigManager),
+  );
+  const activeConfigId = activeConfigResult.active_config;
+
+  console.log("activeConfigId: ", activeConfigId);
+  console.log("configsParsed: ", configsParsed);
+
+  const configIds = configsParsed
+    .filter((config: any) => config.id !== activeConfigId)
+    .map((config: any) => config.id);
+  console.log("configIds: ", configIds);
+
+  const configId = await vscode.window.showQuickPick(configIds, {
+    placeHolder: "Select the config to delete",
+    canPickMany: false,
   });
   if (!configId) {
     throw new Error("No config id provided");
+  }
+
+  const confirm = await vscode.window.showQuickPick(["Yes", "No"], {
+    placeHolder: "Are you sure you want to delete this config?",
+  });
+  if (!confirm) {
+    throw new Error("No confirmation provided");
+  }
+  if (confirm !== "Yes") {
+    throw new Error("Config not deleted");
   }
 
   const execPath = vsCodeConfigManager.readExecPath();
@@ -166,8 +253,7 @@ export const deleteConfig = async (vsCodeConfigManager: VsCodeConfigManager): Pr
       resolve(stdout);
     });
   });
-}
-
+};
 
 /**********************************************************
  * Set/Get/Delete the executable path for the epictl command
@@ -184,7 +270,7 @@ export const setExecPath = async (vsCodeConfigManager: VsCodeConfigManager) => {
   }
 
   vsCodeConfigManager.writeExecPath(execPath);
-}
+};
 
 export const getExecPath = (vsCodeConfigManager: VsCodeConfigManager) => {
   const execPath = vsCodeConfigManager.readExecPath();
@@ -192,11 +278,11 @@ export const getExecPath = (vsCodeConfigManager: VsCodeConfigManager) => {
     throw new Error("No path set for Epictl executable");
   }
   return execPath;
-}
+};
 
 export const deleteExecPath = (vsCodeConfigManager: VsCodeConfigManager) => {
-    vsCodeConfigManager.deleteExecPath();
-}
+  vsCodeConfigManager.deleteExecPath();
+};
 
 /**********************************************************
  * Set the path to the manifest files
@@ -210,19 +296,19 @@ export const setManifestDirPath = async (manifestManager: ManifestManager) => {
   const outputChannel = vscode.window.createOutputChannel("Epictl");
   if (userInput) {
     vscode.workspace
-    .getConfiguration(CONFIG_SECTION)
-    .update(
-      CONFIG_KEY_MANIFEST_DIR_PATH, 
-      userInput, vscode.ConfigurationTarget.Global
-    );
+      .getConfiguration(CONFIG_SECTION)
+      .update(
+        CONFIG_KEY_MANIFEST_DIR_PATH,
+        userInput,
+        vscode.ConfigurationTarget.Global,
+      );
     vscode.window.showInformationMessage(`Manifest Dir path set successfully`);
     outputChannel.appendLine(`Manifest Dir path set successfully`);
-  }
-  else {
+  } else {
     vscode.window.showErrorMessage("No path provided");
   }
   outputChannel.show();
-}
+};
 
 export const getManifestDirPath = (manifestManager: ManifestManager) => {
   const manifestDirPath = manifestManager.readManifestDirPath();
@@ -230,10 +316,9 @@ export const getManifestDirPath = (manifestManager: ManifestManager) => {
     throw new Error("No manifest directory path set");
   }
   return manifestDirPath;
-}
+};
 
 export const deleteLocalManifest = async (manifestManager: ManifestManager) => {
-  
   let manifestInput = await vscode.window.showInputBox({
     prompt: "Enter the name of the manifest file to delete",
     ignoreFocusOut: true,
@@ -244,23 +329,23 @@ export const deleteLocalManifest = async (manifestManager: ManifestManager) => {
   if (!manifestInput.endsWith(".json")) {
     manifestInput = `${manifestInput}.json`;
   }
-  
+
   manifestManager.deleteManifest(manifestInput);
 
   return manifestInput;
-}
+};
 
 /**********************************************************
  * Initialize/Clone a manifest for a given entity type and parent id
  ***********************************************************
  */
 
-export const initManifest = async (vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager): Promise<any> =>{
+export const initManifest = async (
+  vsCodeConfigManager: VsCodeConfigManager,
+  manifestManager: ManifestManager,
+): Promise<any> => {
   // get the entity type
-  const entityType = await vscode.window.showQuickPick([
-    "bom",
-    "table",
-  ], {
+  const entityType = await vscode.window.showQuickPick(["bom", "table"], {
     placeHolder: "Select the entity type",
   });
 
@@ -284,10 +369,12 @@ export const initManifest = async (vsCodeConfigManager: VsCodeConfigManager, man
   });
 
   if (manifestInput && !manifestInput.endsWith(".json")) {
-   manifestInput = `${manifestInput}.json`;
+    manifestInput = `${manifestInput}.json`;
   }
 
-  const manifestPath = manifestManager.createManifestFilePath(manifestInput ? manifestInput : "");
+  const manifestPath = manifestManager.createManifestFilePath(
+    manifestInput ? manifestInput : "",
+  );
 
   const execPath = vsCodeConfigManager.readExecPath();
   if (!execPath) {
@@ -308,13 +395,13 @@ export const initManifest = async (vsCodeConfigManager: VsCodeConfigManager, man
       resolve(stdout);
     });
   });
-}
+};
 
-export const cloneManifest = async (vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager): Promise<any> => {
-  const entityType = await vscode.window.showQuickPick([
-    "bom",
-    "table",
-  ], {
+export const cloneManifest = async (
+  vsCodeConfigManager: VsCodeConfigManager,
+  manifestManager: ManifestManager,
+): Promise<any> => {
+  const entityType = await vscode.window.showQuickPick(["bom", "table"], {
     placeHolder: "Select the entity type",
   });
 
@@ -371,20 +458,18 @@ export const cloneManifest = async (vsCodeConfigManager: VsCodeConfigManager, ma
       }
       resolve(stdout);
     });
-  })
-}
+  });
+};
 
 /**********************************************************
  * Get the boms/tables for a given entity type and parent id
  ***********************************************************
  */
 
-export const getBoms = async(vsCodeConfigManager: VsCodeConfigManager): Promise<any> => {
-
-  const outputType = await vscode.window.showQuickPick([
-    "table",
-    "json",
-  ], {
+export const getBoms = async (
+  vsCodeConfigManager: VsCodeConfigManager,
+): Promise<any> => {
+  const outputType = await vscode.window.showQuickPick(["table", "json"], {
     placeHolder: "Select the output type",
   });
 
@@ -413,11 +498,10 @@ export const getBoms = async(vsCodeConfigManager: VsCodeConfigManager): Promise<
   });
 };
 
-export const getTables = async (vsCodeConfigManager: VsCodeConfigManager): Promise<any> => {
-  const outputType = await vscode.window.showQuickPick([
-    "table",
-    "json",
-  ], {
+export const getTables = async (
+  vsCodeConfigManager: VsCodeConfigManager,
+): Promise<any> => {
+  const outputType = await vscode.window.showQuickPick(["table", "json"], {
     placeHolder: "Select the output type",
   });
 
@@ -451,8 +535,9 @@ export const getTables = async (vsCodeConfigManager: VsCodeConfigManager): Promi
  ***********************************************************
  */
 
- export const describeBom = async (vsCodeConfigManager: VsCodeConfigManager): Promise<any> => {
-
+export const describeBom = async (
+  vsCodeConfigManager: VsCodeConfigManager,
+): Promise<any> => {
   const bomId = await vscode.window.showInputBox({
     prompt: "Enter the bom id",
     ignoreFocusOut: true,
@@ -461,10 +546,7 @@ export const getTables = async (vsCodeConfigManager: VsCodeConfigManager): Promi
     throw new Error("No bom id provided");
   }
 
-  const outputType = await vscode.window.showQuickPick([
-    "table",
-    "json",
-  ], {
+  const outputType = await vscode.window.showQuickPick(["table", "json"], {
     placeHolder: "Select the output type",
   });
 
@@ -490,11 +572,12 @@ export const getTables = async (vsCodeConfigManager: VsCodeConfigManager): Promi
       }
       resolve([stdout, outputType]);
     });
-  })
- }
+  });
+};
 
- 
- export const describeTable = async (vsCodeConfigManager: VsCodeConfigManager): Promise<any> => {
+export const describeTable = async (
+  vsCodeConfigManager: VsCodeConfigManager,
+): Promise<any> => {
   const tableId = await vscode.window.showInputBox({
     prompt: "Enter the table id",
     ignoreFocusOut: true,
@@ -503,10 +586,7 @@ export const getTables = async (vsCodeConfigManager: VsCodeConfigManager): Promi
     throw new Error("No table id provided");
   }
 
-  const outputType = await vscode.window.showQuickPick([
-    "table",
-    "json",
-  ], {
+  const outputType = await vscode.window.showQuickPick(["table", "json"], {
     placeHolder: "Select the output type",
   });
 
@@ -532,20 +612,22 @@ export const getTables = async (vsCodeConfigManager: VsCodeConfigManager): Promi
       }
       resolve([stdout, outputType]);
     });
-  })
-}
+  });
+};
 
- 
 /**********************************************************
  * Describe a bpm for a given bpm id, entity type (bom/table) and parent id
  ***********************************************************
  */
 
-export const describeBpm = async (vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager): Promise<any> => {
+export const describeBpm = async (
+  vsCodeConfigManager: VsCodeConfigManager,
+  manifestManager: ManifestManager,
+): Promise<any> => {
   let manifestInput = await vscode.window.showInputBox({
-    prompt: "(optional) enter the name of the manifest file", 
-    ignoreFocusOut: true
-  }) 
+    prompt: "(optional) enter the name of the manifest file",
+    ignoreFocusOut: true,
+  });
 
   if (manifestInput) {
     if (!manifestInput.endsWith(".json")) {
@@ -567,17 +649,13 @@ export const describeBpm = async (vsCodeConfigManager: VsCodeConfigManager, mani
       throw new Error("No bpm id provided");
     }
 
-    entityType = await vscode.window.showQuickPick([
-      "bom",
-      "table",
-    ], {
-    placeHolder: "Select the entity type",
+    entityType = await vscode.window.showQuickPick(["bom", "table"], {
+      placeHolder: "Select the entity type",
     });
 
     if (!entityType) {
       throw new Error("No entity type selected");
     }
-
 
     parentId = await vscode.window.showInputBox({
       prompt: "Enter the parent id",
@@ -589,17 +667,14 @@ export const describeBpm = async (vsCodeConfigManager: VsCodeConfigManager, mani
     }
   }
 
-  const outputType = await vscode.window.showQuickPick([
-    "table",
-    "json",
-  ], {
+  const outputType = await vscode.window.showQuickPick(["table", "json"], {
     placeHolder: "Select the output type",
   });
 
   if (!outputType) {
     throw new Error("No output type selected");
   }
-  
+
   const execPath = vsCodeConfigManager.readExecPath();
   if (!execPath) {
     throw new Error("No exec path set");
@@ -607,7 +682,7 @@ export const describeBpm = async (vsCodeConfigManager: VsCodeConfigManager, mani
 
   let command: string;
   if (manifestInput) {
-    command = `${execPath} describe bpm --file ${manifestManager.createManifestFilePath(manifestInput)} --output ${outputType}`
+    command = `${execPath} describe bpm --file ${manifestManager.createManifestFilePath(manifestInput)} --output ${outputType}`;
   } else {
     command = `${execPath} describe bpm --entity-id ${bpmId} --parent-type ${entityType} --parent-id ${parentId} --output ${outputType}`;
   }
@@ -626,14 +701,17 @@ export const describeBpm = async (vsCodeConfigManager: VsCodeConfigManager, mani
       resolve([stdout, outputType]);
     });
   });
-}
+};
 
 /**********************************************************
  * Apply a bom/table for a given entity type and entity id
  ***********************************************************
  */
 
-export const applyBpm = async (vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager): Promise<any> => {
+export const applyBpm = async (
+  vsCodeConfigManager: VsCodeConfigManager,
+  manifestManager: ManifestManager,
+): Promise<any> => {
   let manifestInput = await vscode.window.showInputBox({
     prompt: "Enter the name of the manifest file",
     ignoreFocusOut: true,
@@ -667,10 +745,12 @@ export const applyBpm = async (vsCodeConfigManager: VsCodeConfigManager, manifes
       resolve(stdout);
     });
   });
-}
+};
 
-export const updateBpm = async (vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager): Promise<any> => {
-
+export const updateBpm = async (
+  vsCodeConfigManager: VsCodeConfigManager,
+  manifestManager: ManifestManager,
+): Promise<any> => {
   let manifestInput = await vscode.window.showInputBox({
     prompt: "Enter the name of the manifest file",
     ignoreFocusOut: true,
@@ -682,7 +762,7 @@ export const updateBpm = async (vsCodeConfigManager: VsCodeConfigManager, manife
   if (!manifestInput.endsWith(".json")) {
     manifestInput = `${manifestInput}.json`;
   }
-  
+
   const manifestPath = manifestManager.createManifestFilePath(manifestInput);
 
   const flagsWithCmds: string[] = [];
@@ -696,7 +776,7 @@ export const updateBpm = async (vsCodeConfigManager: VsCodeConfigManager, manife
     throw new Error("No fields selected");
   }
 
-  let updateName  = false;
+  let updateName = false;
   let newName: string | undefined;
   let oldName: string | undefined;
 
@@ -726,11 +806,11 @@ export const updateBpm = async (vsCodeConfigManager: VsCodeConfigManager, manife
   return new Promise((resolve, reject) => {
     let command = `${execPath} update bpm --file ${manifestPath}`;
     for (const field of flagsWithCmds) {
-      command += ` ${field}`
+      command += ` ${field}`;
     }
     command += " --output json";
     exec(command, (error, stdout, stderr) => {
-      if (stderr) { 
+      if (stderr) {
         reject(`Error updating bpm: ${stderr}`);
         return;
       }
@@ -741,10 +821,12 @@ export const updateBpm = async (vsCodeConfigManager: VsCodeConfigManager, manife
       resolve([stdout, updateName, newName, oldName]);
     });
   });
-}
+};
 
-export const deleteBpm = async (vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager): Promise<any> => {
-
+export const deleteBpm = async (
+  vsCodeConfigManager: VsCodeConfigManager,
+  manifestManager: ManifestManager,
+): Promise<any> => {
   let manifestInput = await vscode.window.showInputBox({
     prompt: "Enter the name of the manifest file",
     ignoreFocusOut: true,
@@ -756,7 +838,7 @@ export const deleteBpm = async (vsCodeConfigManager: VsCodeConfigManager, manife
   if (!manifestInput.endsWith(".json")) {
     manifestInput = `${manifestInput}.json`;
   }
-  
+
   const manifestPath = manifestManager.createManifestFilePath(manifestInput);
 
   const execPath = vsCodeConfigManager.readExecPath();
@@ -778,18 +860,18 @@ export const deleteBpm = async (vsCodeConfigManager: VsCodeConfigManager, manife
       resolve(stdout);
     });
   });
-}
+};
 
 /**********************************************************
  * Validate the code for a given entity type and entity id
  ***********************************************************
  */
 
-export const validateCode = async (vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager): Promise<any> => {
-  const entityType = await vscode.window.showQuickPick([
-    "bom",
-    "table",
-  ], {
+export const validateCode = async (
+  vsCodeConfigManager: VsCodeConfigManager,
+  manifestManager: ManifestManager,
+): Promise<any> => {
+  const entityType = await vscode.window.showQuickPick(["bom", "table"], {
     placeHolder: "Select the entity type",
   });
   if (!entityType) {
@@ -807,8 +889,10 @@ export const validateCode = async (vsCodeConfigManager: VsCodeConfigManager, man
   fileName = path.parse(fileName).name;
 
   const manifestFiles = manifestManager.getManifests();
-  const targetManifest = manifestFiles.find((manifest) => path.parse(path.basename(manifest)).name === fileName);
-  
+  const targetManifest = manifestFiles.find(
+    (manifest) => path.parse(path.basename(manifest)).name === fileName,
+  );
+
   if (!targetManifest) {
     throw new Error("No manifest file found");
   }
@@ -836,6 +920,4 @@ export const validateCode = async (vsCodeConfigManager: VsCodeConfigManager, man
       resolve([stdout, outputType]);
     });
   });
-}
-
-  
+};
