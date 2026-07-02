@@ -8,6 +8,7 @@ import {
   createConfig,
   getConfig,
   setConfig,
+  setConfigCmd,
 
   setExecPath, 
   getExecPath, 
@@ -33,6 +34,7 @@ import {
   deleteBpm,
 
   validateCode,
+  deleteConfig,
 } from "./commandHandlers";
 
 import { VsCodeConfigManager } from "./managers/configManager";
@@ -111,12 +113,57 @@ export const cliConfigCommands = [
       }
     },
   },
+  // TODO: needs to call cli load_config command
   {
     name: "epictl: getConfig",
-    callback: async (_vsCodeConfigManager: VsCodeConfigManager) => {
-      getConfig();
-    },
+    callback: async (vsCodeConfigManager: VsCodeConfigManager) => {
+      const outputChannel = vscode.window.createOutputChannel("Epictl");
+      try {
+        const result = getConfig(vsCodeConfigManager);
+        outputChannel.appendLine(JSON.stringify(result, null, 2));
+        vscode.window.showInformationMessage("Config fetched successfully");
+        outputChannel.show();
+      } catch (err) {
+        outputChannel.appendLine(`Error getting config: ${err}`);
+        vscode.window.showErrorMessage("Failed to get config");
+        outputChannel.show();
+      }
+    }
   },
+
+  {
+    name: "epictl: setConfig",
+    callback: async (vsCodeConfigManager: VsCodeConfigManager) => {
+      const outputChannel = vscode.window.createOutputChannel("Epictl");
+      try {
+        const result = await setConfigCmd(vsCodeConfigManager);
+        outputChannel.appendLine(JSON.stringify(result, null, 2));
+        vscode.window.showInformationMessage("Config set successfully");
+        outputChannel.show();
+      } catch (err) {
+        outputChannel.appendLine(`Error setting config: ${err}`);
+        vscode.window.showErrorMessage("Failed to set config");
+        outputChannel.show();
+      }
+    }
+  },
+
+  {
+    name: "epictl: deleteConfig", 
+    callback: async (vsCodeConfigManager: VsCodeConfigManager) => {
+      const outputChannel = vscode.window.createOutputChannel("Epictl");
+      try {
+        const result = await deleteConfig(vsCodeConfigManager);
+        outputChannel.appendLine(result);
+        vscode.window.showInformationMessage("Config deleted successfully");
+        outputChannel.show();
+      } catch (err) {
+        outputChannel.appendLine(`Error deleting config: ${err}`);
+        vscode.window.showErrorMessage("Failed to delete config");
+        outputChannel.show();
+      }
+    }
+  }
 ]
 
 
@@ -287,7 +334,6 @@ export const manifestDependentCommands = [
       try {
         let result = await cloneManifest(vsCodeConfigManager, manifestManager);
         result = JSON.parse(result);
-        console.log("RESULT:", result);
         if (result.success) {
           vscode.window.showInformationMessage("Manifest cloned successfully");
           outputChannel.appendLine(result.message);
@@ -307,11 +353,11 @@ export const manifestDependentCommands = [
   },
 
   {
-    name: "epictl: getAllManifests",
+    name: "epictl: getManifests",
     callback: (_vsCodeConfigManager: VsCodeConfigManager, manifestManager: ManifestManager) => {
       const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {  
-        const manifests = manifestManager.getAllManifests();
+        const manifests = manifestManager.getManifests();
 
         if (manifests.length === 0) {
           outputChannel.appendLine("No manifests found");
@@ -382,7 +428,6 @@ export const manifestDependentCommands = [
       try {
         const [result, updateName, newName, oldName] = await updateBpm(vsCodeConfigManager, manifestManager);
         const parsedResult = JSON.parse(result);
-  
         if (parsedResult.success) {
           vscode.window.showInformationMessage("Bpm updated successfully");
           outputChannel.appendLine(parsedResult.message);
@@ -408,7 +453,6 @@ export const manifestDependentCommands = [
       const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
         const result = JSON.parse(await deleteBpm(vsCodeConfigManager, manifestManager));
-        console.log("RESULT:", result);
         if (result.success) {
           vscode.window.showInformationMessage("Bpm deleted successfully");
           outputChannel.appendLine(result.message);
