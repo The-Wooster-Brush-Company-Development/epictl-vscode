@@ -28,117 +28,117 @@
     "commands": [
       {
         "command": "epictl.createConfig",
-        "title": "Epiclt: Create Config",
+        "title": "Create Config",
         "category": "Epictl"
       },
       {
         "command": "epictl.getConfig",
-        "title": "Epictl: Get Config",
+        "title": "Get Config",
         "category": "Epictl"
       },
       {
         "command": "epictl.setConfig",
-        "title": "Epictl: Set Config",
+        "title": "Set Config",
         "category": "Epictl"
       },
       {
         "command": "epictl.deleteConfig",
-        "title": "Epictl: Delete Config",
+        "title": "Delete Config",
         "category": "Epictl"
       },
       {
         "command": "epictl.activeConfig",
-        "title": "Epictl: Active Config",
+        "title": "Active Config",
         "category": "Epictl"
       },
       {
         "command": "epictl.setExecPath",
-        "title": "Epictl: Set Executable Path",
+        "title": "Set Executable Path",
         "category": "Epictl"
       },
       {
         "command": "epictl.getExecPath",
-        "title": "Epictl: Get Executable Path",
+        "title": "Get Executable Path",
         "category": "Epictl"
       },
       {
         "command": "epictl.deleteExecPath",
-        "title": "Epictl: Delete Executable Path",
+        "title": "Delete Executable Path",
         "category": "Epictl"
       },
       {
         "command": "epictl.setManifestDirPath",
-        "title": "Epictl: Set Manifest Directory",
+        "title": "Set Manifest Directory",
         "category": "Epictl"
       },
       {
         "command": "epictl.getManifestDirPath",
-        "title": "Epictl: Get Manifest Directory",
+        "title": "Get Manifest Directory",
         "category": "Epictl"
       },
       {
         "command": "epictl.deleteLocalManifest",
-        "title": "Epictl: Delete Local Manifest",
+        "title": "Delete Local Manifest",
         "category": "Epictl"
       },
       {
         "command": "epictl.initManifest",
-        "title": "Epictl: Initialize Manifest",
+        "title": "Initialize Manifest",
         "category": "Epictl"
       },
       {
         "command": "epictl.cloneManifest",
-        "title": "Epictl: Clone Manifest",
+        "title": "Clone Manifest",
         "category": "Epictl"
       },
       {
         "command": "epictl.getManifests",
-        "title": "Epictl: Get Manifests",
+        "title": "Get Manifests",
         "category": "Epictl"
       },
       {
         "command": "epictl.getBoms",
-        "title": "Epictl: Get BOMs",
+        "title": "Get BOMs",
         "category": "Epictl"
       },
       {
         "command": "epictl.getTables",
-        "title": "Epictl: Get Tables",
+        "title": "Get Tables",
         "category": "Epictl"
       },
       {
         "command": "epictl.describeBom",
-        "title": "Epictl: Describe BOM",
+        "title": "Describe BOM",
         "category": "Epictl"
       },
       {
         "command": "epictl.describeTable",
-        "title": "Epictl: Describe Table",
+        "title": "Describe Table",
         "category": "Epictl"
       },
       {
         "command": "epictl.describeBpm",
-        "title": "Epictl: Describe BPM",
+        "title": "Describe BPM",
         "category": "Epictl"
       },
       {
         "command": "epictl.applyBpm",
-        "title": "Epictl: Apply BPM",
+        "title": "Apply BPM",
         "category": "Epictl"
       },
       {
         "command": "epictl.updateBpm",
-        "title": "Epictl: Update BPM",
+        "title": "Update BPM",
         "category": "Epictl"
       },
       {
         "command": "epictl.deleteBpm",
-        "title": "Epictl: Delete BPM",
+        "title": "Delete BPM",
         "category": "Epictl"
       },
       {
         "command": "epictl.validateCode",
-        "title": "Epictl: Validate Code",
+        "title": "Validate Code",
         "category": "Epictl"
       }
     ]
