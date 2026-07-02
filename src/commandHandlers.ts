@@ -218,7 +218,7 @@ export const deleteConfig = async (
 
   const configId = await vscode.window.showQuickPick(configIds, {
     placeHolder: "Select the config to delete",
-    canPickMany: false,
+    canPickMany: true,
   });
   if (!configId) {
     throw new Error("No config id provided");

@@ -27,92 +27,119 @@
     },
     "commands": [
       {
-        "command": "epictl: createConfig",
-        "title": "epictl: createConfig"
+        "command": "epictl.createConfig",
+        "title": "Epiclt: Create Config",
+        "category": "Epictl"
       },
       {
-        "command": "epictl: getConfig",
-        "title": "epictl: getConfig"
+        "command": "epictl.getConfig",
+        "title": "Epictl: Get Config",
+        "category": "Epictl"
       },
       {
-        "command": "epictl: setConfig",
-        "title": "epictl: setConfig"
+        "command": "epictl.setConfig",
+        "title": "Epictl: Set Config",
+        "category": "Epictl"
       },
       {
-        "command": "epictl: deleteConfig",
-        "title": "epictl: deleteConfig"
+        "command": "epictl.deleteConfig",
+        "title": "Epictl: Delete Config",
+        "category": "Epictl"
       },
       {
-        "command": "epictl: setExecPath",
-        "title": "epictl: setExecPath"
+        "command": "epictl.activeConfig",
+        "title": "Epictl: Active Config",
+        "category": "Epictl"
       },
       {
-        "command": "epictl: getExecPath",
-        "title": "epictl: getExecPath"
+        "command": "epictl.setExecPath",
+        "title": "Epictl: Set Executable Path",
+        "category": "Epictl"
       },
       {
-        "command": "epictl: deleteExecPath",
-        "title": "epictl: deleteExecPath"
+        "command": "epictl.getExecPath",
+        "title": "Epictl: Get Executable Path",
+        "category": "Epictl"
       },
       {
-        "command": "epictl: setManifestDirPath",
-        "title": "epictl: setManifestDirPath"
+        "command": "epictl.deleteExecPath",
+        "title": "Epictl: Delete Executable Path",
+        "category": "Epictl"
       },
       {
-        "command": "epictl: getManifestDirPath",
-        "title": "epictl: getManifestDirPath"
+        "command": "epictl.setManifestDirPath",
+        "title": "Epictl: Set Manifest Directory",
+        "category": "Epictl"
       },
       {
-        "command": "epictl: deleteLocalManifest",
-        "title": "epictl: deleteLocalManifest"
+        "command": "epictl.getManifestDirPath",
+        "title": "Epictl: Get Manifest Directory",
+        "category": "Epictl"
       },
       {
-        "command": "epictl: initManifest",
-        "title": "epictl: initManifest"
+        "command": "epictl.deleteLocalManifest",
+        "title": "Epictl: Delete Local Manifest",
+        "category": "Epictl"
       },
       {
-        "command": "epictl: cloneManifest",
-        "title": "epictl: cloneManifest"
+        "command": "epictl.initManifest",
+        "title": "Epictl: Initialize Manifest",
+        "category": "Epictl"
       },
       {
-        "command": "epictl: getManifests",
-        "title": "epictl: getManifests"
+        "command": "epictl.cloneManifest",
+        "title": "Epictl: Clone Manifest",
+        "category": "Epictl"
       },
       {
-        "command": "epictl: getBoms",
-        "title": "epictl: getBoms"
+        "command": "epictl.getManifests",
+        "title": "Epictl: Get Manifests",
+        "category": "Epictl"
       },
       {
-        "command": "epictl: getTables",
-        "title": "epictl: getTables"
+        "command": "epictl.getBoms",
+        "title": "Epictl: Get BOMs",
+        "category": "Epictl"
       },
       {
-        "command": "epictl: describeBom",
-        "title": "epictl: describeBom"
+        "command": "epictl.getTables",
+        "title": "Epictl: Get Tables",
+        "category": "Epictl"
       },
       {
-        "command": "epictl: describeTable",
-        "title": "epictl: describeTable"
+        "command": "epictl.describeBom",
+        "title": "Epictl: Describe BOM",
+        "category": "Epictl"
       },
       {
-        "command": "epictl: describeBpm",
-        "title": "epictl: describeBpm"
+        "command": "epictl.describeTable",
+        "title": "Epictl: Describe Table",
+        "category": "Epictl"
       },
       {
-        "command": "epictl: applyBpm",
-        "title": "epictl: applyBpm"
+        "command": "epictl.describeBpm",
+        "title": "Epictl: Describe BPM",
+        "category": "Epictl"
       },
       {
-        "command": "epictl: updateBpm",
-        "title": "epictl: updateBpm"
+        "command": "epictl.applyBpm",
+        "title": "Epictl: Apply BPM",
+        "category": "Epictl"
       },
       {
-        "command": "epictl: deleteBpm",
-        "title": "epictl: deleteBpm"
+        "command": "epictl.updateBpm",
+        "title": "Epictl: Update BPM",
+        "category": "Epictl"
       },
       {
-        "command": "epictl: validateCode",
-        "title": "epictl: validateCode"
+        "command": "epictl.deleteBpm",
+        "title": "Epictl: Delete BPM",
+        "category": "Epictl"
+      },
+      {
+        "command": "epictl.validateCode",
+        "title": "Epictl: Validate Code",
+        "category": "Epictl"
       }
     ]
   },
