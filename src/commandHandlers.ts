@@ -208,13 +208,9 @@ export const deleteConfig = async (
   );
   const activeConfigId = activeConfigResult.active_config;
 
-  console.log("activeConfigId: ", activeConfigId);
-  console.log("configsParsed: ", configsParsed);
-
   const configIds = configsParsed
     .filter((config: any) => config.id !== activeConfigId)
     .map((config: any) => config.id);
-  console.log("configIds: ", configIds);
 
   const configId = await vscode.window.showQuickPick(configIds, {
     placeHolder: "Select the config to delete",
@@ -319,18 +315,32 @@ export const getManifestDirPath = (manifestManager: ManifestManager) => {
 };
 
 export const deleteLocalManifest = async (manifestManager: ManifestManager) => {
-  let manifestInput = await vscode.window.showInputBox({
-    prompt: "Enter the name of the manifest file to delete",
-    ignoreFocusOut: true,
+  const manifestFIles = manifestManager.getManifests();
+
+  const manifestInput = await vscode.window.showQuickPick(manifestFIles, {
+    placeHolder: "Select the manifest file to delete",
+    canPickMany: true,
   });
+
   if (!manifestInput) {
-    throw new Error("No manifest file name provided");
-  }
-  if (!manifestInput.endsWith(".json")) {
-    manifestInput = `${manifestInput}.json`;
+    throw new Error("No manifest file selected");
   }
 
-  manifestManager.deleteManifest(manifestInput);
+  const confirm = await vscode.window.showInputBox({
+    prompt: "Are you sure you want to delete these manifest files?",
+    ignoreFocusOut: true,
+  });
+
+  if (!confirm) {
+    throw new Error("No confirmation provided");
+  }
+  if (confirm !== "Yes") {
+    throw new Error("Manifest files not deleted");
+  }
+
+  manifestFIles.forEach((manifest) => {
+    manifestManager.deleteManifest(manifest);
+  });
 
   return manifestInput;
 };
