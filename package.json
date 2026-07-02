@@ -35,6 +35,10 @@
         "title": "epictl: getConfig"
       },
       {
+        "command": "epictl: setConfig",
+        "title": "epictl: setConfig"
+      },
+      {
         "command": "epictl: deleteConfig",
         "title": "epictl: deleteConfig"
       },
@@ -71,8 +75,8 @@
         "title": "epictl: cloneManifest"
       },
       {
-        "command": "epictl: getAllManifests",
-        "title": "epictl: getAllManifests"
+        "command": "epictl: getManifests",
+        "title": "epictl: getManifests"
       },
       {
         "command": "epictl: getBoms",

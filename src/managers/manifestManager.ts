@@ -71,7 +71,7 @@ export class ManifestManager {
         return path.join(manifestDirPath, manifestName);
     }
 
-    public getAllManifests(): string[] {
+    public getManifests(): string[] {
         const manifests = fs.readdirSync(this.manifestDirPath)
             .filter(file => file.endsWith('.json'));
         

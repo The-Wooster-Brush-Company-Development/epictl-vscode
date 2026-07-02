@@ -3,8 +3,6 @@
 import * as vscode from 'vscode';
 
 import { commands, manifestDependentCommands, cliConfigCommands, vsCodeConfigCommands } from './commandRegistry';
-import {getConfig} from './commandHandlers';
-import { getExecPath } from './utils/extensionUtils';
 import { VsCodeConfigManager } from './managers/configManager';
 import { ManifestManager } from './managers/manifestManager';
 
