@@ -6,7 +6,7 @@ import fs from "fs";
 
 interface VsCodeConfigInterface {
   exec_path: string;
-  manifest_dir_path: string;
+  manifest_code_dir_path: string;
 }
 
 export class VsCodeConfigManager {
@@ -24,7 +24,7 @@ export class VsCodeConfigManager {
     if (!fs.existsSync(this.configPath)) {
       const data = {
         exec_path: "",
-        manifest_dir_path: "",
+        manifest_code_dir_path: "",
       };
       // create the config file directory if it doesn't exist
       fs.mkdirSync(this.context.globalStorageUri.fsPath, {
@@ -81,6 +81,32 @@ export class VsCodeConfigManager {
       throw new Error("No config file found");
     }
     data.exec_path = "";
+    fs.writeFileSync(this.configPath, JSON.stringify(data, null, 2));
+  }
+
+  public writeManifestCodeDirPath(manifestCodeDirPath: string) {
+    const data = this.loadConfig();
+    if (!data) {
+      throw new Error("No config file found");
+    }
+    data.manifest_code_dir_path = manifestCodeDirPath;
+    fs.writeFileSync(this.configPath, JSON.stringify(data, null, 2));
+  }
+
+  public readManifestCodeDirPath(): string | undefined {
+    const data = this.loadConfig();
+    if (!data) {
+      throw new Error("No config file found");
+    }
+    return data.manifest_code_dir_path;
+  }
+
+  public deleteManifestCodeDirPath() {
+    const data = this.loadConfig();
+    if (!data) {
+      throw new Error("No config file found");
+    }
+    data.manifest_code_dir_path = "";
     fs.writeFileSync(this.configPath, JSON.stringify(data, null, 2));
   }
 }

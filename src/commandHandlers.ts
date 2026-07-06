@@ -868,12 +868,12 @@ export const validateCode = async (
   vsCodeConfigManager: VsCodeConfigManager,
   manifestManager: ManifestManager,
 ): Promise<any> => {
-  const entityType = await vscode.window.showQuickPick(["bom", "table"], {
-    placeHolder: "Select the entity type",
-  });
-  if (!entityType) {
-    throw new Error("No entity type selected");
-  }
+  // const entityType = await vscode.window.showQuickPick(["bom", "table"], {
+  //   placeHolder: "Select the entity type",
+  // });
+  // if (!entityType) {
+  //   throw new Error("No entity type selected");
+  // }
 
   const editor = vscode.window.activeTextEditor;
   if (!editor) {
@@ -882,17 +882,28 @@ export const validateCode = async (
 
   const bodyFilePath = editor.document.fileName;
 
-  let fileName = path.basename(editor.document.fileName);
-  fileName = path.parse(fileName).name;
+  // let fileName = path.basename(editor.document.fileName);
+  // fileName = path.parse(fileName).name;
 
   const manifestFiles = manifestManager.getManifests();
-  const targetManifest = manifestFiles.find(
-    (manifest) => path.parse(path.basename(manifest)).name === fileName,
-  );
+  console.log(`Body file path test: ${bodyFilePath}`);
+
+  const targetManifest = manifestFiles.find((manifest) => {
+    console.log(`MANIFEST TEST: ${manifest}`);
+    const manifestData = manifestManager.readManifest(manifest);
+    if (manifestData.epictl.code_file.includes(bodyFilePath))
+      return path.basename(manifest);
+    return undefined;
+  });
 
   if (!targetManifest) {
     throw new Error("No manifest file found");
   }
+
+  console.log(`TARGET MANIFEST TEST: ${targetManifest}`);
+
+  const entityType =
+    manifestManager.readManifest(targetManifest).epictl.parent_type;
 
   const manifestPath = manifestManager.createManifestFilePath(targetManifest);
 
