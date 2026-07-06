@@ -406,7 +406,6 @@ export const manifestCommands = [
           outputChannel.appendLine(parsedResult.message);
 
           if (parsedResult.codeLines) {
-            console.log(`CODE FILE TEST: ${parsedResult.code_file}`);
             const bpmCodePath = initCodeFile(
               parsedResult.codeLines,
               codeFilePath,
@@ -425,7 +424,7 @@ export const manifestCommands = [
         }
       } catch (err: any) {
         vscode.window.showErrorMessage("Error cloning manifest");
-        outputChannel.appendLine(`${err}`);
+        outputChannel.appendLine(`${err.message}`);
         outputChannel.show();
       }
     },

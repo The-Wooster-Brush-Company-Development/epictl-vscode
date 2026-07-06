@@ -115,4 +115,13 @@ export class ManifestManager {
 
     fs.unlinkSync(manifestPath);
   }
+
+  public getManifestByCodeFilePath(codeFilePath: string): string | undefined {
+    const manifestFiles = this.getManifests();
+    return manifestFiles.find((manifest) => {
+      const manifestData = this.readManifest(manifest);
+      if (manifestData.epictl.code_file.includes(codeFilePath)) return manifest;
+      return undefined;
+    });
+  }
 }
