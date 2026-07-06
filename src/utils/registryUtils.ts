@@ -57,3 +57,17 @@ export const updateManifestMetadataWithCodeFile = (
 export const formatMessage = (results: string) => {
   return path.basename(results);
 };
+
+export const formatCliConfigResult = (result: any) => {
+  const parsedResult = JSON.parse(result)[0];
+
+  //format password
+  parsedResult.password = "********";
+
+  //format api key
+  const apiKeyLength = parsedResult.api_key?.length;
+  parsedResult.api_key =
+    parsedResult.api_key?.slice(0, 6) + "*".repeat(apiKeyLength - 6);
+
+  return parsedResult;
+};

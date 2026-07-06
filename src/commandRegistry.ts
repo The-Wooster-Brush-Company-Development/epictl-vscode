@@ -34,6 +34,7 @@ import {
   initCodeFile,
   updateManifestMetadataWithCodeFile,
   formatMessage,
+  formatCliConfigResult,
 } from "./utils/registryUtils";
 
 export const vsCodeConfigCommands = [
@@ -119,12 +120,13 @@ export const cliConfigCommands = [
       try {
         const [result, outputType] = await getConfig(
           vsCodeConfigManager,
-          undefined,
+          "json",
         );
+        const formattedResult = formatCliConfigResult(result);
         if (outputType === "json") {
-          outputChannel.appendLine(result);
+          outputChannel.appendLine(JSON.stringify(formattedResult, null, 2));
         } else {
-          outputChannel.appendLine(result);
+          outputChannel.appendLine(JSON.stringify(formattedResult, null, 2));
         }
         vscode.window.showInformationMessage("Config fetched successfully");
         outputChannel.show();
