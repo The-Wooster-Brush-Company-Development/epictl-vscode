@@ -17,6 +17,7 @@ export class ManifestManager {
       context.globalStorageUri,
       "manifest",
     ).fsPath;
+
     this.manifestConfigPath = path.join(this.manifestDirPath, "config.json");
 
     //initialize manifest directory and config file
@@ -51,12 +52,30 @@ export class ManifestManager {
     fs.writeFileSync(this.manifestConfigPath, JSON.stringify(data, null, 2));
   }
 
+  public writeManifestCodeFilePath(manifestName: string, codeFilePath: string) {
+    const manifestData = this.readManifest(manifestName);
+    if (!manifestData) {
+      throw new Error("No manifest data found");
+    }
+
+    const manifestFilePath = this.createManifestFilePath(manifestName);
+
+    manifestData.epictl.code_file = [codeFilePath];
+    fs.writeFileSync(manifestFilePath, JSON.stringify(manifestData, null, 2));
+  }
+
   public readManifestDirPath(): string | undefined {
     const data = this.loadManifestConfig();
     if (!data) {
       throw new Error("No manifest config file found");
     }
     return data.manifest_dir_path;
+  }
+
+  public readManifest(manifestName: string): any {
+    const manifestFilePath = this.createManifestFilePath(manifestName);
+    const manifestData = fs.readFileSync(manifestFilePath, "utf8");
+    return JSON.parse(manifestData);
   }
 
   public deleteManifestDirPath() {

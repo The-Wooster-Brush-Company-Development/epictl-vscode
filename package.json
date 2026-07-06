@@ -98,7 +98,7 @@
       },
       {
         "command": "epictl.getBoms",
-        "title": "Get BOMs",
+        "title": "Get Boms",
         "category": "Epictl"
       },
       {
@@ -108,7 +108,7 @@
       },
       {
         "command": "epictl.describeBom",
-        "title": "Describe BOM",
+        "title": "Describe Bom",
         "category": "Epictl"
       },
       {
@@ -118,7 +118,7 @@
       },
       {
         "command": "epictl.describeBpm",
-        "title": "Describe BPM",
+        "title": "Describe Bpm",
         "category": "Epictl"
       },
       {

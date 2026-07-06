@@ -1,8 +1,4 @@
 import * as vscode from "vscode";
-import { exec } from "child_process";
-
-const CONFIG_SECTION = "epictl";
-const CONFIG_KEY_EXEC_PATH = "command_path";
 
 import {
   createConfig,
@@ -33,7 +29,11 @@ import {
 import { VsCodeConfigManager } from "./managers/configManager";
 import { ManifestManager } from "./managers/manifestManager";
 
-import { updateFileName } from "./utils/registryUtils";
+import {
+  updateFileName,
+  initCodeFile,
+  updateManifestMetadataWithCodeFile,
+} from "./utils/registryUtils";
 
 export const vsCodeConfigCommands = [
   {
@@ -109,7 +109,8 @@ export const cliConfigCommands = [
       }
     },
   },
-  // TODO: needs to call cli load_config command
+
+  // Gets the cli config
   {
     name: "epictl.getConfig",
     callback: async (vsCodeConfigManager: VsCodeConfigManager) => {
@@ -288,14 +289,25 @@ export const commands = [
   },
 ];
 
-export const manifestDependentCommands = [
+export const manifestCommands = [
   {
     name: "epictl.setManifestDirPath",
     callback: (
       _vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
     ) => {
-      setManifestDirPath(manifestManager);
+      const outputChannel = vscode.window.createOutputChannel("Epictl");
+      try {
+        setManifestDirPath(manifestManager);
+        vscode.window.showInformationMessage("Success");
+        outputChannel.appendLine("Manifest directory path set successfully");
+      } catch (err) {
+        vscode.window.showErrorMessage("Error");
+        outputChannel.appendLine(
+          `Error setting manifest directory path: ${err}`,
+        );
+      }
+      outputChannel.show();
     },
   },
 
@@ -384,20 +396,36 @@ export const manifestDependentCommands = [
     ) => {
       const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
-        let result = await cloneManifest(vsCodeConfigManager, manifestManager);
-        result = JSON.parse(result);
-        if (result.success) {
+        const [result, codeFilePath] = await cloneManifest(
+          vsCodeConfigManager,
+          manifestManager,
+        );
+        const parsedResult = JSON.parse(result);
+        if (parsedResult.success) {
           vscode.window.showInformationMessage("Manifest cloned successfully");
-          outputChannel.appendLine(result.message);
+          outputChannel.appendLine(parsedResult.message);
+
+          if (parsedResult.codeLines) {
+            console.log(`CODE FILE TEST: ${parsedResult.code_file}`);
+            const bpmCodePath = initCodeFile(
+              parsedResult.codeLines,
+              codeFilePath,
+              parsedResult.name,
+            );
+            updateManifestMetadataWithCodeFile(manifestManager, bpmCodePath);
+          }
+          outputChannel.appendLine(
+            `Code file initialized successfully at ${codeFilePath}`,
+          );
           outputChannel.show();
         } else {
           vscode.window.showErrorMessage("Failed to clone manifest");
-          outputChannel.appendLine(result.message);
+          outputChannel.appendLine(parsedResult.message);
           outputChannel.show();
         }
-      } catch (err) {
-        vscode.window.showErrorMessage(`Error cloning manifest: ${err}`);
-        outputChannel.appendLine(`Error cloning manifest: ${err}`);
+      } catch (err: any) {
+        vscode.window.showErrorMessage("Error cloning manifest");
+        outputChannel.appendLine(`${err}`);
         outputChannel.show();
       }
     },

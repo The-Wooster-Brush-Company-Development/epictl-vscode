@@ -1,16 +1,9 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import { exec } from "child_process";
-import { manifestDirPath, formatCommand, fields } from "./utils/handlerUtils";
+import { formatCommand, fields } from "./utils/handlerUtils";
 import { VsCodeConfigManager } from "./managers/configManager";
 import { ManifestManager } from "./managers/manifestManager";
-import { json } from "stream/consumers";
-
-const CONFIG_SECTION = "epictl";
-const CONFIG_KEY_EXEC_PATH = "command_path";
-const CONFIG_KEY_MANIFEST_DIR_PATH = "manifest_dir_path";
-//const EXEC_PATH = vscode.workspace.getConfiguration(CONFIG_SECTION).get<string>(CONFIG_KEY_EXEC_PATH);
-//const MANIFEST_DIR_PATH = vscode.workspace.getConfiguration(CONFIG_SECTION).get<string>(CONFIG_KEY_MANIFEST_DIR_PATH);
 
 /**********************************************************
  * Create/Get/Delete a config file for the epictl command
@@ -70,7 +63,8 @@ export const createConfig = async (
   });
 };
 
-// retrieves the config from the cli config file
+// Retrieves the config from the cli config file
+// Might need to change this to not expose all of the config data
 export const getConfig = async (
   vsCodeConfigManager: VsCodeConfigManager,
   outputType: string | undefined,
@@ -289,21 +283,10 @@ export const setManifestDirPath = async (manifestManager: ManifestManager) => {
     prompt: "Enter the path to the manifest files",
     ignoreFocusOut: true,
   });
-  const outputChannel = vscode.window.createOutputChannel("Epictl");
-  if (userInput) {
-    vscode.workspace
-      .getConfiguration(CONFIG_SECTION)
-      .update(
-        CONFIG_KEY_MANIFEST_DIR_PATH,
-        userInput,
-        vscode.ConfigurationTarget.Global,
-      );
-    vscode.window.showInformationMessage(`Manifest Dir path set successfully`);
-    outputChannel.appendLine(`Manifest Dir path set successfully`);
-  } else {
-    vscode.window.showErrorMessage("No path provided");
+  if (!userInput) {
+    throw new Error("No path provided");
   }
-  outputChannel.show();
+  manifestManager.writeManifestDirPath(userInput);
 };
 
 export const getManifestDirPath = (manifestManager: ManifestManager) => {
@@ -441,23 +424,27 @@ export const cloneManifest = async (
     ignoreFocusOut: true,
   });
 
-  // if (manifestInput) {
-  //   if (!manifestInput.endsWith(".json")) {
-  //     manifestInput = `${manifestInput}.json`;
-  //   }
-  // } else {
-  //   manifestInput = "";
-  // }
-
   const manifestPath = manifestManager.createManifestFilePath("");
+
+  let codeFilePath = await vscode.window.showInputBox({
+    prompt: "Enter the path and name of the code file",
+    ignoreFocusOut: true,
+  });
+  if (!codeFilePath) {
+    throw new Error("No code file path provided");
+  }
 
   const execPath = vsCodeConfigManager.readExecPath();
   if (!execPath) {
     throw new Error("No exec path set");
   }
+
   return new Promise((resolve, reject) => {
-    const command = `${execPath} clone-manifest ${entityType} ${bpmId} ${parentId} --file ${manifestPath} --output json`;
+    const command = `${execPath} clone-manifest ${entityType} ${bpmId} ${parentId} --manifest-file ${manifestPath} --for-extension --output json`;
     exec(command, (error, stdout, stderr) => {
+      console.log(`STDERR TEST: ${stderr}`);
+      console.log(`ERROR TEST: ${error}`);
+      console.log(`STDOUT TEST: ${stdout}`);
       if (stderr) {
         reject(`Error cloning manifest: ${stderr}`);
         return;
@@ -466,7 +453,7 @@ export const cloneManifest = async (
         reject(`Error executing ${command}: ${error}`);
         return;
       }
-      resolve(stdout);
+      resolve([stdout, codeFilePath]);
     });
   });
 };
