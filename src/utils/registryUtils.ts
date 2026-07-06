@@ -30,9 +30,6 @@ export const initCodeFile = (
   codeFilePath: string,
   fileName: string,
 ) => {
-  console.log(`CODE DATA TEST: ${codeData}`);
-  console.log(`CODE FILE PATH TEST: ${codeFilePath}`);
-
   const stats = fs.statSync(codeFilePath);
 
   fileName = fileName.endsWith(".cs") ? fileName : `${fileName}.cs`;
@@ -43,7 +40,6 @@ export const initCodeFile = (
     codeFilePath = path.join(path.dirname(codeFilePath), fileName);
   }
 
-  console.log(`CODE FILE PATH TEST: ${codeFilePath}`);
   fs.writeFileSync(codeFilePath, codeData);
   return codeFilePath;
 };
@@ -53,11 +49,11 @@ export const updateManifestMetadataWithCodeFile = (
   codeFilePath: string,
 ) => {
   const manifestName = path.parse(path.basename(codeFilePath)).name + ".json";
-  console.log(`MANIFEST NAME TEST: ${manifestName}`);
 
   manifestManager.writeManifestCodeFilePath(manifestName, codeFilePath);
+};
 
-  console.log(
-    `MANIFEST AFTER CODE FILE PATH UPDATE: ${JSON.stringify(manifestManager.readManifest(manifestName))}`,
-  );
+// used to parse results
+export const formatMessage = (results: string) => {
+  return path.basename(results);
 };

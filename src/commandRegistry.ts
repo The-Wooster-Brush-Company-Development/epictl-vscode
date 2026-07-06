@@ -33,6 +33,7 @@ import {
   updateFileName,
   initCodeFile,
   updateManifestMetadataWithCodeFile,
+  formatMessage,
 } from "./utils/registryUtils";
 
 export const vsCodeConfigCommands = [
@@ -403,7 +404,10 @@ export const manifestCommands = [
         const parsedResult = JSON.parse(result);
         if (parsedResult.success) {
           vscode.window.showInformationMessage("Manifest cloned successfully");
-          outputChannel.appendLine(parsedResult.message);
+          const filePath = formatMessage(parsedResult.results);
+          outputChannel.appendLine(
+            "Manifest cloned successfully at " + filePath,
+          );
 
           if (parsedResult.codeLines) {
             const bpmCodePath = initCodeFile(
