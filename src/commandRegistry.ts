@@ -31,10 +31,11 @@ import { ManifestManager } from "./managers/manifestManager";
 
 import {
   updateFileName,
-  initCodeFile,
+  createCodeFile,
   updateManifestMetadataWithCodeFile,
   formatMessage,
   formatCliConfigResult,
+  initCodeFile,
 } from "./utils/registryUtils";
 
 export const vsCodeConfigCommands = [
@@ -368,20 +369,23 @@ export const manifestCommands = [
     ) => {
       const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
-        const result = JSON.parse(
-          await initManifest(vsCodeConfigManager, manifestManager),
+        const [result, codeFilePath, manifestInput] = await initManifest(
+          vsCodeConfigManager,
+          manifestManager,
         );
-        if (result.success) {
+        const parsedResult = JSON.parse(result);
+        if (parsedResult.success) {
           vscode.window.showInformationMessage(
             "Manifest initialized successfully",
           );
-          outputChannel.append(result.message);
-        } else if (result.duplicate) {
-          outputChannel.append(result.message);
+          initCodeFile(codeFilePath, manifestInput, manifestManager);
+          const filePath = formatMessage(parsedResult.results);
+          outputChannel.appendLine(
+            "Manifest initialized successfully at " + filePath,
+          );
+        } else if (parsedResult.duplicate) {
+          outputChannel.appendLine(parsedResult.message);
           vscode.window.showErrorMessage("Manifest already initialized");
-        } else {
-          outputChannel.append(result.message);
-          vscode.window.showErrorMessage("Failed to initialize manifest");
         }
         outputChannel.show();
       } catch (err) {
@@ -412,7 +416,7 @@ export const manifestCommands = [
           );
 
           if (parsedResult.codeLines) {
-            const bpmCodePath = initCodeFile(
+            const bpmCodePath = createCodeFile(
               parsedResult.codeLines,
               codeFilePath,
               parsedResult.name,

@@ -54,6 +54,7 @@ export class ManifestManager {
 
   public writeManifestCodeFilePath(manifestName: string, codeFilePath: string) {
     const manifestData = this.readManifest(manifestName);
+    console.log(`MANIFEST DATA TEST: ${JSON.stringify(manifestData, null, 2)}`);
     if (!manifestData) {
       throw new Error("No manifest data found");
     }
@@ -114,7 +115,7 @@ export class ManifestManager {
     fs.unlinkSync(manifestPath);
   }
 
-  public getManifestByCodeFilePath(codeFilePath: string): string | undefined {
+  public readManifestByCodeFilePath(codeFilePath: string): string | undefined {
     const manifestFiles = this.getManifests();
     return manifestFiles.find((manifest) => {
       const manifestData = this.readManifest(manifest);

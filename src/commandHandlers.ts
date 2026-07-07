@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
-import * as path from "path";
 import { exec } from "child_process";
+import * as fs from "fs";
 import { formatCommand, fields } from "./utils/handlerUtils";
 import { VsCodeConfigManager } from "./managers/configManager";
 import { ManifestManager } from "./managers/manifestManager";
@@ -317,7 +317,7 @@ export const deleteLocalManifest = async (manifestManager: ManifestManager) => {
   if (!confirm) {
     throw new Error("No confirmation provided");
   }
-  if (confirm !== "Yes") {
+  if (confirm.toLowerCase() !== "yes" && confirm.toLowerCase() !== "y") {
     throw new Error("Manifest files not deleted");
   }
 
@@ -369,12 +369,22 @@ export const initManifest = async (
     manifestInput ? manifestInput : "",
   );
 
+  let codeFilePath = await vscode.window.showInputBox({
+    prompt: "Enter the path and name of the code file",
+    ignoreFocusOut: true,
+  });
+  if (!codeFilePath) {
+    throw new Error("No code file path and name provided");
+  }
+  if (fs.existsSync(codeFilePath) && fs.statSync(codeFilePath).isDirectory()) {
+    throw new Error("Code file path is a directory");
+  }
+
   const execPath = vsCodeConfigManager.readExecPath();
   if (!execPath) {
     throw new Error("No exec path set");
   }
   const command = `${execPath} init-manifest ${entityType} ${parentId} --file ${manifestPath} --output json`;
-
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
@@ -385,7 +395,7 @@ export const initManifest = async (
         reject(`Error executing ${command}: ${error}`);
         return;
       }
-      resolve(stdout);
+      resolve([stdout, codeFilePath, manifestInput]);
     });
   });
 };
@@ -876,7 +886,7 @@ export const validateCode = async (
   const bodyFilePath = editor.document.fileName;
 
   const targetManifest =
-    manifestManager.getManifestByCodeFilePath(bodyFilePath);
+    manifestManager.readManifestByCodeFilePath(bodyFilePath);
 
   if (!targetManifest) {
     throw new Error("No manifest file found");

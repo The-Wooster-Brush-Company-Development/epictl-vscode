@@ -38,9 +38,12 @@ export class VsCodeConfigManager {
   //helper methods ------------------------------------------------------------
 
   private loadConfig(): VsCodeConfigInterface | undefined {
-    return JSON.parse(
+    console.log(`loading config from: ${this.configPath}`);
+    const config = JSON.parse(
       fs.readFileSync(this.configPath, "utf8"),
     ) as VsCodeConfigInterface;
+    console.log(`config: ${JSON.stringify(config, null, 2)}`);
+    return config;
   }
 
   // Executable methods ------------------------------------------------------------

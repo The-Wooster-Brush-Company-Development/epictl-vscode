@@ -25,7 +25,7 @@ export const updateFileName = (
   }
 };
 
-export const initCodeFile = (
+export const createCodeFile = (
   codeData: string,
   codeFilePath: string,
   fileName: string,
@@ -70,4 +70,18 @@ export const formatCliConfigResult = (result: any) => {
     parsedResult.api_key?.slice(0, 6) + "*".repeat(apiKeyLength - 6);
 
   return parsedResult;
+};
+
+export const initCodeFile = (
+  codeFilePath: string,
+  manifestInput: string,
+  manifestManager: ManifestManager,
+) => {
+  // create a new code file it does not exis
+  if (!fs.existsSync(codeFilePath)) {
+    fs.writeFileSync(codeFilePath, "");
+  }
+
+  // link code file to manifest if it exists
+  manifestManager.writeManifestCodeFilePath(manifestInput, codeFilePath);
 };
