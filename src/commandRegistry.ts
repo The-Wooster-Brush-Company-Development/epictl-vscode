@@ -200,21 +200,24 @@ export const commands = [
   {
     name: "epictl.getBoms",
     callback: async (vsCodeConfigManager: VsCodeConfigManager) => {
-      const outputType = await vscode.window.showQuickPick(["table", "json"], {
-        placeHolder: "Select the output type",
-      });
-      if (!outputType) {
-        throw new Error("No output type selected");
-      }
-
-      const execPath = vsCodeConfigManager.readExecPath();
-      if (!execPath) {
-        throw new Error("No exec path set");
-      }
-
       const outputChannel = vscode.window.createOutputChannel("Epictl");
 
       try {
+        const outputType = await vscode.window.showQuickPick(
+          ["table", "json"],
+          {
+            placeHolder: "Select the output type",
+          },
+        );
+        if (!outputType) {
+          throw new Error("No output type selected");
+        }
+
+        const execPath = vsCodeConfigManager.readExecPath();
+        if (!execPath) {
+          throw new Error("No exec path set");
+        }
+
         const result = await getBoms(execPath, outputType);
 
         if (outputType === "json") {
@@ -242,21 +245,22 @@ export const commands = [
     callback: async (
       vsCodeConfigManager: VsCodeConfigManager,
     ): Promise<any> => {
-      const outputType = await vscode.window.showQuickPick(["table", "json"], {
-        placeHolder: "Select the output type",
-      });
-      if (!outputType) {
-        throw new Error("No output type selected");
-      }
-
-      const execPath = vsCodeConfigManager.readExecPath();
-      if (!execPath) {
-        throw new Error("No exec path set");
-      }
-
       const outputChannel = vscode.window.createOutputChannel("Epictl");
-
       try {
+        const outputType = await vscode.window.showQuickPick(
+          ["table", "json"],
+          {
+            placeHolder: "Select the output type",
+          },
+        );
+        if (!outputType) {
+          throw new Error("No output type selected");
+        }
+
+        const execPath = vsCodeConfigManager.readExecPath();
+        if (!execPath) {
+          throw new Error("No exec path set");
+        }
         const result = await getTables(execPath, outputType);
         if (outputType === "json") {
           vscode.window.showInformationMessage("Tables fetched successfully");
@@ -541,9 +545,72 @@ export const manifestCommands = [
     ) => {
       const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
-        const [result, outputType] = await describeBpm(
-          vsCodeConfigManager,
-          manifestManager,
+        let manifestInput = await vscode.window.showInputBox({
+          prompt: "(optional) enter the name of the manifest file",
+          ignoreFocusOut: true,
+        });
+
+        if (manifestInput) {
+          if (!manifestInput.endsWith(".json")) {
+            manifestInput = `${manifestInput}.json`;
+          }
+          manifestInput = manifestManager.createManifestFilePath(manifestInput);
+        }
+
+        let bpmId: string | undefined;
+        let entityType: string | undefined;
+        let parentId: string | undefined;
+
+        if (!manifestInput) {
+          entityType = await vscode.window.showQuickPick(["bom", "table"], {
+            placeHolder: "Select the entity type",
+          });
+
+          if (!entityType) {
+            throw new Error("No entity type selected");
+          }
+          bpmId = await vscode.window.showInputBox({
+            prompt: "Enter the bpm id",
+            ignoreFocusOut: true,
+          });
+
+          if (!bpmId) {
+            throw new Error("No bpm id provided");
+          }
+
+          parentId = await vscode.window.showInputBox({
+            prompt: "Enter the parent id",
+            ignoreFocusOut: true,
+          });
+
+          if (!parentId) {
+            throw new Error("No parent id provided");
+          }
+        }
+
+        const outputType = await vscode.window.showQuickPick(
+          ["table", "json"],
+          {
+            placeHolder: "Select the output type",
+          },
+        );
+
+        if (!outputType) {
+          throw new Error("No output type selected");
+        }
+
+        const execPath = vsCodeConfigManager.readExecPath();
+        if (!execPath) {
+          throw new Error("No exec path set");
+        }
+
+        const result = await describeBpm(
+          execPath,
+          manifestInput,
+          bpmId,
+          entityType,
+          parentId,
+          outputType,
         );
 
         if (outputType === "json") {

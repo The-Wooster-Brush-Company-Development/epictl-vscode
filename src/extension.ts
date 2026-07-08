@@ -11,6 +11,8 @@ import {
 import { VsCodeConfigManager } from "./managers/configManager";
 import { ManifestManager } from "./managers/manifestManager";
 import { EpictlTreeView } from "./treeView/treeView";
+import { ContextWebview } from "./webviews/contextWebview";
+import { BpmWebview } from "./webviews/bpmWebview";
 
 export function activate(context: vscode.ExtensionContext) {
   console.log('Congratulations, your extension "epictl-vscode" is now active!');
@@ -18,11 +20,22 @@ export function activate(context: vscode.ExtensionContext) {
   const vsCodeConfigManager = new VsCodeConfigManager(context);
   const manifestManager = new ManifestManager(context);
 
+  const contextWebview = new ContextWebview(context.extensionUri);
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider("contextMenu", contextWebview),
+  );
+
+  const bpmWebview = new BpmWebview(context.extensionUri);
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider("bpmMenu", bpmWebview),
+  );
+
   const epictlTreeView = new EpictlTreeView(
     vsCodeConfigManager,
     manifestManager,
   );
   vscode.window.registerTreeDataProvider("epictlExplorer", epictlTreeView);
+
   // ***********************************************************
   // register all commands for the extension
   // ***********************************************************

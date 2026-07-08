@@ -6,6 +6,7 @@ import {
   getTables,
   describeBom,
   describeTable,
+  describeBpm,
 } from "../commandHandlers";
 import { VsCodeConfigManager } from "../managers/configManager";
 import { ManifestManager } from "../managers/manifestManager";
@@ -42,6 +43,15 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
           vscode.TreeItemCollapsibleState.Collapsed,
         ),
       ];
+    }
+
+    if (element instanceof BpmNode) {
+      if (element.parentType === "bom") {
+        await this.getBomBpmData(element);
+      } else {
+        await this.getTableBpmData(element);
+      }
+      return [];
     }
 
     if (element instanceof DirectiveNode) {
@@ -94,9 +104,6 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
     parentType: "bom" | "table",
     parentSysRowId: string,
   ): Promise<BpmNode[]> {
-    console.log("TREE ARGUMENTS");
-    console.log(`parentType: ${parentType}`);
-    console.log(`parentSysRowId: ${parentSysRowId}`);
     const bpmData = JSON.parse(
       await describeBom(this.execPath ?? "", parentSysRowId, "json"),
     );
@@ -108,6 +115,7 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
           vscode.TreeItemCollapsibleState.Collapsed,
           bpm.DirectiveId,
           parentType,
+          parentSysRowId,
         ),
     );
   }
@@ -127,7 +135,33 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
           vscode.TreeItemCollapsibleState.Collapsed,
           bpm.DirectiveId,
           parentType,
+          parentSysRowId,
         ),
+    );
+  }
+
+  private async getBomBpmData(element: BpmNode): Promise<void> {
+    const bpmData = JSON.parse(
+      await describeBpm(
+        this.execPath ?? "",
+        undefined,
+        `${element.directiveId}`,
+        "bom",
+        element.parentSysRowId,
+        "json",
+      ),
+    );
+  }
+  private async getTableBpmData(element: BpmNode): Promise<void> {
+    const bpmData = JSON.parse(
+      await describeBpm(
+        this.execPath ?? "",
+        undefined,
+        `${element.directiveId}`,
+        "table",
+        element.parentSysRowId,
+        "json",
+      ),
     );
   }
 
@@ -170,6 +204,7 @@ class BpmNode extends EpicorNode {
     collapsibleState: vscode.TreeItemCollapsibleState,
     public directiveId: string,
     public parentType: "bom" | "table",
+    public parentSysRowId: string,
   ) {
     super(label, collapsibleState);
     this.iconPath = new vscode.ThemeIcon("gear");

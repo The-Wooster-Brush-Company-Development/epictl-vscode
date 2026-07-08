@@ -38,6 +38,16 @@
     "views": {
       "wbc": [
         {
+          "type": "webview",
+          "id": "bpmMenu",
+          "name": "Bpm Menu"
+        },
+        {
+          "type": "webview",
+          "id": "contextMenu",
+          "name": "Context Menu"
+        },
+        {
           "id": "epictlExplorer",
           "name": "Epictl Explorer"
         }

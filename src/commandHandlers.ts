@@ -525,10 +525,6 @@ export const describeBom = async (
   bomId: string,
   outputType: string,
 ): Promise<any> => {
-  console.log("AGUMENTS");
-  console.log(`execPath: ${execPath}`);
-  console.log(`bomId: ${bomId}`);
-  console.log(`outputType: ${outputType}`);
   const command = `${execPath} describe bom --entity-id ${bomId} --output ${outputType}`;
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
@@ -572,73 +568,20 @@ export const describeTable = async (
  */
 
 export const describeBpm = async (
-  vsCodeConfigManager: VsCodeConfigManager,
-  manifestManager: ManifestManager,
+  execPath: string,
+  manifestInput: string | undefined,
+  bpmId: string | undefined,
+  entityType: string | undefined,
+  parentId: string | undefined,
+  outputType: string,
 ): Promise<any> => {
-  let manifestInput = await vscode.window.showInputBox({
-    prompt: "(optional) enter the name of the manifest file",
-    ignoreFocusOut: true,
-  });
-
-  if (manifestInput) {
-    if (!manifestInput.endsWith(".json")) {
-      manifestInput = `${manifestInput}.json`;
-    }
-  }
-
-  let bpmId: string | undefined;
-  let entityType: string | undefined;
-  let parentId: string | undefined;
-
-  if (!manifestInput) {
-    bpmId = await vscode.window.showInputBox({
-      prompt: "Enter the bpm id",
-      ignoreFocusOut: true,
-    });
-
-    if (!bpmId) {
-      throw new Error("No bpm id provided");
-    }
-
-    entityType = await vscode.window.showQuickPick(["bom", "table"], {
-      placeHolder: "Select the entity type",
-    });
-
-    if (!entityType) {
-      throw new Error("No entity type selected");
-    }
-
-    parentId = await vscode.window.showInputBox({
-      prompt: "Enter the parent id",
-      ignoreFocusOut: true,
-    });
-
-    if (!parentId) {
-      throw new Error("No parent id provided");
-    }
-  }
-
-  const outputType = await vscode.window.showQuickPick(["table", "json"], {
-    placeHolder: "Select the output type",
-  });
-
-  if (!outputType) {
-    throw new Error("No output type selected");
-  }
-
-  const execPath = vsCodeConfigManager.readExecPath();
-  if (!execPath) {
-    throw new Error("No exec path set");
-  }
-
   let command: string;
   if (manifestInput) {
-    command = `${execPath} describe bpm --file ${manifestManager.createManifestFilePath(manifestInput)} --output ${outputType}`;
+    command = `${execPath} describe bpm --file ${manifestInput} --output ${outputType}`;
   } else {
     command = `${execPath} describe bpm --entity-id ${bpmId} --parent-type ${entityType} --parent-id ${parentId} --output ${outputType}`;
   }
 
-  const manifests = manifestManager.getManifests();
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
