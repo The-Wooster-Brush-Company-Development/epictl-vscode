@@ -200,9 +200,22 @@ export const commands = [
   {
     name: "epictl.getBoms",
     callback: async (vsCodeConfigManager: VsCodeConfigManager) => {
+      const outputType = await vscode.window.showQuickPick(["table", "json"], {
+        placeHolder: "Select the output type",
+      });
+      if (!outputType) {
+        throw new Error("No output type selected");
+      }
+
+      const execPath = vsCodeConfigManager.readExecPath();
+      if (!execPath) {
+        throw new Error("No exec path set");
+      }
+
       const outputChannel = vscode.window.createOutputChannel("Epictl");
+
       try {
-        const [result, outputType] = await getBoms(vsCodeConfigManager);
+        const result = await getBoms(execPath, outputType);
 
         if (outputType === "json") {
           vscode.window.showInformationMessage("Boms fetched successfully");
@@ -229,9 +242,22 @@ export const commands = [
     callback: async (
       vsCodeConfigManager: VsCodeConfigManager,
     ): Promise<any> => {
+      const outputType = await vscode.window.showQuickPick(["table", "json"], {
+        placeHolder: "Select the output type",
+      });
+      if (!outputType) {
+        throw new Error("No output type selected");
+      }
+
+      const execPath = vsCodeConfigManager.readExecPath();
+      if (!execPath) {
+        throw new Error("No exec path set");
+      }
+
       const outputChannel = vscode.window.createOutputChannel("Epictl");
+
       try {
-        const [result, outputType] = await getTables(vsCodeConfigManager);
+        const result = await getTables(execPath, outputType);
         if (outputType === "json") {
           vscode.window.showInformationMessage("Tables fetched successfully");
           outputChannel.appendLine(result);
@@ -251,9 +277,30 @@ export const commands = [
   {
     name: "epictl.describeBom",
     callback: async (vsCodeConfigManager: VsCodeConfigManager) => {
+      const bomId = await vscode.window.showInputBox({
+        prompt: "Enter the bom id",
+        ignoreFocusOut: true,
+      });
+      if (!bomId) {
+        throw new Error("No bom id provided");
+      }
+
+      const outputType = await vscode.window.showQuickPick(["table", "json"], {
+        placeHolder: "Select the output type",
+      });
+
+      if (!outputType) {
+        throw new Error("No output type selected");
+      }
+
+      const execPath = vsCodeConfigManager.readExecPath();
+      if (!execPath) {
+        throw new Error("No exec path set");
+      }
+
       const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
-        const [result, outputType] = await describeBom(vsCodeConfigManager);
+        const result = await describeBom(execPath, bomId, outputType);
         if (outputType === "json") {
           vscode.window.showInformationMessage("Bom described successfully");
           outputChannel.append(result);
@@ -273,9 +320,30 @@ export const commands = [
   {
     name: "epictl.describeTable",
     callback: async (vsCodeConfigManager: VsCodeConfigManager) => {
+      const tableId = await vscode.window.showInputBox({
+        prompt: "Enter the table id",
+        ignoreFocusOut: true,
+      });
+      if (!tableId) {
+        throw new Error("No table id provided");
+      }
+
+      const outputType = await vscode.window.showQuickPick(["table", "json"], {
+        placeHolder: "Select the output type",
+      });
+
+      if (!outputType) {
+        throw new Error("No output type selected");
+      }
+
+      const execPath = vsCodeConfigManager.readExecPath();
+      if (!execPath) {
+        throw new Error("No exec path set");
+      }
+
       const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
-        const [result, outputType] = await describeTable(vsCodeConfigManager);
+        const result = await describeTable(execPath, tableId, outputType);
         if (outputType === "json") {
           vscode.window.showInformationMessage("Table described successfully");
           outputChannel.appendLine(result);

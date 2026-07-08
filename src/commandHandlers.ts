@@ -70,6 +70,7 @@ export const getConfig = async (
   outputType: string | undefined,
 ): Promise<any> => {
   const execPath = vsCodeConfigManager.readExecPath();
+  console.log(`dirname: ${__dirname}, filename: ${__filename}`);
   if (!execPath) {
     throw new Error("No exec path set");
   }
@@ -474,23 +475,12 @@ export const cloneManifest = async (
  */
 
 export const getBoms = async (
-  vsCodeConfigManager: VsCodeConfigManager,
+  execPath: string,
+  outputType: string,
 ): Promise<any> => {
-  const outputType = await vscode.window.showQuickPick(["table", "json"], {
-    placeHolder: "Select the output type",
-  });
-
-  if (!outputType) {
-    throw new Error("No output type selected");
-  }
-
-  const execPath = vsCodeConfigManager.readExecPath();
-  if (!execPath) {
-    throw new Error("No exec path set");
-  }
+  const command = `${execPath} get boms --output ${outputType}`;
 
   return new Promise((resolve, reject) => {
-    const command = `${execPath} get boms --output ${outputType}`;
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
         reject(`${stderr}`);
@@ -500,29 +490,17 @@ export const getBoms = async (
         reject(`Error executing ${command}: ${error}`);
         return;
       }
-      resolve([stdout, outputType]);
+      resolve(stdout);
     });
   });
 };
 
 export const getTables = async (
-  vsCodeConfigManager: VsCodeConfigManager,
+  execPath: string,
+  outputType: string,
 ): Promise<any> => {
-  const outputType = await vscode.window.showQuickPick(["table", "json"], {
-    placeHolder: "Select the output type",
-  });
-
-  if (!outputType) {
-    throw new Error("No output type selected");
-  }
-
-  const execPath = vsCodeConfigManager.readExecPath();
-  if (!execPath) {
-    throw new Error("No exec path set");
-  }
-
+  const command = `${execPath} get tables --output ${outputType}`;
   return new Promise((resolve, reject) => {
-    const command = `${execPath} get tables --output ${outputType}`;
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
         reject(`Error getting tables: ${stderr}`);
@@ -532,7 +510,7 @@ export const getTables = async (
         reject(`Error executing ${command}: ${error}`);
         return;
       }
-      resolve([stdout, outputType]);
+      resolve(stdout);
     });
   });
 };
@@ -543,31 +521,16 @@ export const getTables = async (
  */
 
 export const describeBom = async (
-  vsCodeConfigManager: VsCodeConfigManager,
+  execPath: string,
+  bomId: string,
+  outputType: string,
 ): Promise<any> => {
-  const bomId = await vscode.window.showInputBox({
-    prompt: "Enter the bom id",
-    ignoreFocusOut: true,
-  });
-  if (!bomId) {
-    throw new Error("No bom id provided");
-  }
-
-  const outputType = await vscode.window.showQuickPick(["table", "json"], {
-    placeHolder: "Select the output type",
-  });
-
-  if (!outputType) {
-    throw new Error("No output type selected");
-  }
-
-  const execPath = vsCodeConfigManager.readExecPath();
-  if (!execPath) {
-    throw new Error("No exec path set");
-  }
-
+  console.log("AGUMENTS");
+  console.log(`execPath: ${execPath}`);
+  console.log(`bomId: ${bomId}`);
+  console.log(`outputType: ${outputType}`);
+  const command = `${execPath} describe bom --entity-id ${bomId} --output ${outputType}`;
   return new Promise((resolve, reject) => {
-    const command = `${execPath} describe bom --entity-id ${bomId} --output ${outputType}`;
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
         reject(`Error describing bom: ${stderr}`);
@@ -577,37 +540,18 @@ export const describeBom = async (
         reject(`Error executing ${command}: ${error}`);
         return;
       }
-      resolve([stdout, outputType]);
+      resolve(stdout);
     });
   });
 };
 
 export const describeTable = async (
-  vsCodeConfigManager: VsCodeConfigManager,
+  execPath: string,
+  tableId: string,
+  outputType: string,
 ): Promise<any> => {
-  const tableId = await vscode.window.showInputBox({
-    prompt: "Enter the table id",
-    ignoreFocusOut: true,
-  });
-  if (!tableId) {
-    throw new Error("No table id provided");
-  }
-
-  const outputType = await vscode.window.showQuickPick(["table", "json"], {
-    placeHolder: "Select the output type",
-  });
-
-  if (!outputType) {
-    throw new Error("No output type selected");
-  }
-
-  const execPath = vsCodeConfigManager.readExecPath();
-  if (!execPath) {
-    throw new Error("No exec path set");
-  }
-
+  const command = `${execPath} describe table --entity-id ${tableId} --output ${outputType}`;
   return new Promise((resolve, reject) => {
-    const command = `${execPath} describe table --entity-id ${tableId} --output ${outputType}`;
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
         reject(`Error describing table: ${stderr}`);
@@ -617,7 +561,7 @@ export const describeTable = async (
         reject(`Error executing ${command}: ${error}`);
         return;
       }
-      resolve([stdout, outputType]);
+      resolve(stdout);
     });
   });
 };

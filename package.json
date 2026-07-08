@@ -31,7 +31,7 @@
         {
           "id": "wbc",
           "title": "WBC",
-          "icon": "assets/brush.png"
+          "icon": "$(brush)"
         }
       ]
     },

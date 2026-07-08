@@ -7,3 +7,4 @@ node_modules
 # additional files
 test.cs
 methodManifest.cs
+assets/

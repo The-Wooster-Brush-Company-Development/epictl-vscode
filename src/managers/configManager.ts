@@ -38,27 +38,13 @@ export class VsCodeConfigManager {
   //helper methods ------------------------------------------------------------
 
   private loadConfig(): VsCodeConfigInterface | undefined {
-    console.log(`loading config from: ${this.configPath}`);
     const config = JSON.parse(
       fs.readFileSync(this.configPath, "utf8"),
     ) as VsCodeConfigInterface;
-    console.log(`config: ${JSON.stringify(config, null, 2)}`);
     return config;
   }
 
   // Executable methods ------------------------------------------------------------
-
-  // overwrites the existing config file with the new exec path
-  public writeExecPath(execPath: string) {
-    const data = this.loadConfig();
-    if (!data) {
-      throw new Error("No config file found");
-    }
-    console.log(`writing exec path: ${execPath}`);
-    data.exec_path = execPath;
-    console.log(`data: ${JSON.stringify(data, null, 2)}`);
-    fs.writeFileSync(this.configPath, JSON.stringify(data, null, 2));
-  }
 
   public readConfig(): VsCodeConfigInterface {
     const data = this.loadConfig();
@@ -77,13 +63,21 @@ export class VsCodeConfigManager {
     return data.exec_path;
   }
 
-  // deletes the exec path from the config file
-  public deleteExecPath() {
+  public readManifestCodeDirPath(): string | undefined {
     const data = this.loadConfig();
     if (!data) {
       throw new Error("No config file found");
     }
-    data.exec_path = "";
+    return data.manifest_code_dir_path;
+  }
+
+  // overwrites the existing config file with the new exec path
+  public writeExecPath(execPath: string) {
+    const data = this.loadConfig();
+    if (!data) {
+      throw new Error("No config file found");
+    }
+    data.exec_path = execPath;
     fs.writeFileSync(this.configPath, JSON.stringify(data, null, 2));
   }
 
@@ -96,12 +90,14 @@ export class VsCodeConfigManager {
     fs.writeFileSync(this.configPath, JSON.stringify(data, null, 2));
   }
 
-  public readManifestCodeDirPath(): string | undefined {
+  // deletes the exec path from the config file
+  public deleteExecPath() {
     const data = this.loadConfig();
     if (!data) {
       throw new Error("No config file found");
     }
-    return data.manifest_code_dir_path;
+    data.exec_path = "";
+    fs.writeFileSync(this.configPath, JSON.stringify(data, null, 2));
   }
 
   public deleteManifestCodeDirPath() {
