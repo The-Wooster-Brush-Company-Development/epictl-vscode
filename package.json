@@ -26,6 +26,23 @@
         }
       }
     },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "wbc",
+          "title": "WBC",
+          "icon": "assets/brush.png"
+        }
+      ]
+    },
+    "views": {
+      "wbc": [
+        {
+          "id": "epictlExplorer",
+          "name": "Epictl Explorer"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "epictl.createConfig",
