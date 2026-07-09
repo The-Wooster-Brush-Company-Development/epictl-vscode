@@ -29,6 +29,23 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
     return this.vscodeConfigManager.readExecPath();
   }
 
+  private getDirectiveTypeNumber(directiveType: string): number {
+    switch (directiveType) {
+      case "Pre":
+        return 1;
+      case "Base":
+        return 2;
+      case "Post":
+        return 3;
+      case "Standard":
+        return 1;
+      case "In-Transition":
+        return 0;
+      default:
+        throw new Error(`Invalid directive type: ${directiveType}`);
+    }
+  }
+
   getTreeItem(element: any): vscode.TreeItem {
     return element;
   }
@@ -47,6 +64,38 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
       ];
     }
 
+    // 2nd level
+    if (element instanceof DirectiveNode) {
+      console.log("clicked directive node");
+      if (element.type === "bom") {
+        return this.getProcessingNodes("bom", element.sysRowId);
+      } else {
+        return this.getProcessingNodes("table", element.sysRowId);
+      }
+    }
+
+    //3rd level
+    if (
+      element instanceof BomProcessingNode ||
+      element instanceof TableProcessingNode
+    ) {
+      console.log("clicked processing node");
+      if (element instanceof BomProcessingNode) {
+        return await this.describeBom(
+          "bom",
+          element.parentSysRowId,
+          this.getDirectiveTypeNumber(element.directiveType),
+        );
+      } else {
+        return await this.describeTable(
+          "table",
+          element.parentSysRowId,
+          this.getDirectiveTypeNumber(element.directiveType),
+        );
+      }
+    }
+
+    // 4th level
     if (element instanceof BpmNode) {
       if (element.parentType === "bom") {
         await this.describeBomBpm(element);
@@ -56,14 +105,7 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
       return [];
     }
 
-    if (element instanceof DirectiveNode) {
-      if (element.type === "bom") {
-        return await this.describeBom(element.type, element.sysRowId);
-      } else {
-        return await this.describeTable(element.type, element.sysRowId);
-      }
-    }
-
+    // 1st level
     if (element instanceof EpicorNode) {
       if (element.label === "Method Directives") {
         return await this.getBoms();
@@ -102,44 +144,96 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
     );
   }
 
+  private getProcessingNodes(
+    directiveType: "bom" | "table",
+    parentSysRowId: string,
+  ): BomProcessingNode[] | TableProcessingNode[] {
+    if (directiveType === "bom") {
+      return [
+        new BomProcessingNode(
+          "Pre",
+          vscode.TreeItemCollapsibleState.Collapsed,
+          "Pre",
+          parentSysRowId,
+        ),
+        new BomProcessingNode(
+          "Base",
+          vscode.TreeItemCollapsibleState.Collapsed,
+          "Base",
+          parentSysRowId,
+        ),
+        new BomProcessingNode(
+          "Post",
+          vscode.TreeItemCollapsibleState.Collapsed,
+          "Post",
+          parentSysRowId,
+        ),
+      ];
+    } else {
+      return [
+        new TableProcessingNode(
+          "Standard",
+          vscode.TreeItemCollapsibleState.Collapsed,
+          "Standard",
+          parentSysRowId,
+        ),
+        new TableProcessingNode(
+          "In-Transition",
+          vscode.TreeItemCollapsibleState.Collapsed,
+          "In-Transition",
+          parentSysRowId,
+        ),
+      ];
+    }
+  }
+
   private async describeBom(
     parentType: "bom" | "table",
     parentSysRowId: string,
+    directiveType: number,
   ): Promise<BpmNode[]> {
-    const bpmData = JSON.parse(
+    const bomData = JSON.parse(
       await describeBom(this.execPath ?? "", parentSysRowId, "json"),
     );
-
-    return bpmData[1].returnObj.BpDirective.map(
-      (bpm: any) =>
-        new BpmNode(
-          bpm.Name,
-          vscode.TreeItemCollapsibleState.Collapsed,
-          bpm.DirectiveID,
-          parentType,
-          parentSysRowId,
-        ),
-    );
+    return bomData[1].returnObj.BpDirective.filter(
+      (bpm: any) => bpm.DirectiveType === directiveType,
+    )
+      .sort((a: any, b: any) => a.Order - b.Order)
+      .map(
+        (bpm: any) =>
+          new BpmNode(
+            bpm.Name,
+            vscode.TreeItemCollapsibleState.Collapsed,
+            bpm.DirectiveID,
+            parentType,
+            parentSysRowId,
+          ),
+      );
   }
 
   private async describeTable(
     parentType: "bom" | "table",
     parentSysRowId: string,
+    directiveType: number,
   ): Promise<BpmNode[]> {
     const bpmData = JSON.parse(
       await describeTable(this.execPath ?? "", parentSysRowId, "json"),
     );
 
-    return bpmData[1].returnObj.BpDirective.map(
-      (bpm: any) =>
-        new BpmNode(
-          bpm.Name,
-          vscode.TreeItemCollapsibleState.Collapsed,
-          bpm.DirectiveId,
-          parentType,
-          parentSysRowId,
-        ),
-    );
+    return bpmData[1].returnObj.BpDirective.filter(
+      (bpm: any) => bpm.DirectiveType === directiveType,
+    )
+      .sort((a: any, b: any) => a.Order - b.Order)
+      .map(
+        (bpm: any) =>
+          new BpmNode(
+            bpm.Name,
+            vscode.TreeItemCollapsibleState.Collapsed,
+            bpm.DirectiveId,
+            parentType,
+            parentSysRowId,
+          ),
+      );
   }
 
   private async describeBomBpm(element: BpmNode): Promise<void> {
@@ -196,6 +290,30 @@ class EpicorNode extends vscode.TreeItem {
       "assets",
       "epicorIcon.png",
     );
+  }
+}
+
+class BomProcessingNode extends EpicorNode {
+  constructor(
+    label: string,
+    collapsibleState: vscode.TreeItemCollapsibleState,
+    public directiveType: "Pre" | "Base" | "Post",
+    public parentSysRowId: string,
+  ) {
+    super(label, collapsibleState);
+    this.iconPath = new vscode.ThemeIcon("file-directory");
+  }
+}
+
+class TableProcessingNode extends EpicorNode {
+  constructor(
+    label: string,
+    collapsibleState: vscode.TreeItemCollapsibleState,
+    public directiveType: "Standard" | "In-Transition",
+    public parentSysRowId: string,
+  ) {
+    super(label, collapsibleState);
+    this.iconPath = new vscode.ThemeIcon("file-directory");
   }
 }
 
