@@ -33,6 +33,7 @@ export function activate(context: vscode.ExtensionContext) {
   const epictlTreeView = new EpictlTreeView(
     vsCodeConfigManager,
     manifestManager,
+    bpmWebview,
   );
   vscode.window.registerTreeDataProvider("epictlExplorer", epictlTreeView);
 

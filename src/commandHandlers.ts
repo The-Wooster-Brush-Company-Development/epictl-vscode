@@ -4,6 +4,7 @@ import * as fs from "fs";
 import { formatCommand, fields } from "./utils/handlerUtils";
 import { VsCodeConfigManager } from "./managers/configManager";
 import { ManifestManager } from "./managers/manifestManager";
+import path from "path";
 
 /**********************************************************
  * Create/Get/Delete a config file for the epictl command
@@ -330,6 +331,27 @@ export const deleteLocalManifest = async (manifestManager: ManifestManager) => {
 };
 
 /**********************************************************
+ * Add/Delete code files to/from a manifest
+ ***********************************************************
+ */
+
+export const addFileToManifest = (
+  manifestManager: ManifestManager,
+  manifestName: string,
+  filePath: string,
+) => {
+  manifestManager.writeManifestCodeFilePath(manifestName, filePath);
+};
+
+export const deleteCodeFileFromManifest = (
+  manifestManager: ManifestManager,
+  manifestName: string,
+  filePath: string,
+) => {
+  manifestManager.deleteCodeFileFromManifest(manifestName, filePath);
+};
+
+/**********************************************************
  * Initialize/Clone a manifest for a given entity type and parent id
  ***********************************************************
  */
@@ -575,6 +597,13 @@ export const describeBpm = async (
   parentId: string | undefined,
   outputType: string,
 ): Promise<any> => {
+  console.log("ARGS TEST");
+  console.log("EXEC PATH: " + execPath);
+  console.log("MANIFEST INPUT: " + manifestInput);
+  console.log("BPM ID: " + bpmId);
+  console.log("ENTITY TYPE: " + entityType);
+  console.log("PARENT ID: " + parentId);
+  console.log("OUTPUT TYPE: " + outputType);
   let command: string;
   if (manifestInput) {
     command = `${execPath} describe bpm --file ${manifestInput} --output ${outputType}`;
@@ -592,7 +621,7 @@ export const describeBpm = async (
         reject(`Error executing ${command}: ${error}`);
         return;
       }
-      resolve([stdout, outputType]);
+      resolve(stdout);
     });
   });
 };

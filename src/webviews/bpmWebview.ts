@@ -18,6 +18,20 @@ export class BpmWebview implements vscode.WebviewViewProvider {
     webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
   }
 
+  public postMessage(message: any) {
+    this._webviewView?.webview.postMessage(message);
+    if (message.command === "describeBomBpm") {
+      this.displayBomBpm(message);
+    }
+  }
+
+  private displayBomBpm(data: any) {
+    this._webviewView?.webview.postMessage({
+      command: "displayBomBpm",
+      data: data,
+    });
+  }
+
   private _getHtmlForWebview(webview: vscode.Webview) {
     return `
     <!DOCTYPE html>
@@ -81,6 +95,10 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           letter-spacing: 0.06em;
           color: #808080;
           margin: 0 0 8px 2px;
+        }
+
+        .section-hidden {
+          display: none;
         }
 
         .btn-group {
@@ -163,24 +181,68 @@ export class BpmWebview implements vscode.WebviewViewProvider {
       <h1>WBC</h1>
       <div class="accent-bar"></div>
 
-      <div class="section">
-        <p class="section-label">BPM</p>
-        <div class="btn-group">
-          <button class="wbc-btn" data-command="PLACEHOLDER">
-            <span class="dot"></span> BPM Menu
-          </button>
-        </div>
+      <div class="section-hidden">
+        <h4 class="section-label">BPM</h4>
+        <ul id="directive-fields">
+            <li data-key="DirectiveID">DirectiveID</li>
+            <li data-key="Source">Source</li>
+            <li data-key="BpMethodCode">BpMethodCode</li>
+            <li data-key="DirectiveType">DirectiveType</li>
+            <li data-key="Name">Name</li>
+            <li data-key="Order">Order</li>
+            <li data-key="IsEnabled">IsEnabled</li>
+            <li data-key="ReenterMax">ReenterMax</li>
+            <li data-key="PreventDeadloops">PreventDeadloops</li>
+            <li data-key="VisibilityScope">VisibilityScope</li>
+            <li data-key="Company">Company</li>
+            <li data-key="DirectiveGroup">DirectiveGroup</li>
+            <li data-key="IsUpToDate">IsUpToDate</li>
+            <li data-key="CGCCode">CGCCode</li>
+            <li data-key="Body">Body</li>
+            <li data-key="SysRevID">SysRevID</li>
+            <li data-key="SysRowID">SysRowID</li>
+            <li data-key="Description">Description</li>
+            <li data-key="IsProtected">IsProtected</li>
+            <li data-key="DisplayOrder">DisplayOrder</li>
+            <li data-key="CompilerDiagnostics">CompilerDiagnostics</li>
+            <li data-key="BitFlag">BitFlag</li>
+            <li data-key="RowMod">RowMod</li>
+        </ul>
       </div>
+
+      <div class="section">
+       <p class="section-label"></p>
 
       <script>
         const vscode = acquireVsCodeApi();
 
-        // document.querySelectorAll('.wbc-btn').forEach(btn => {
-        //   btn.addEventListener('click', () => {
-        //     const command = btn.getAttribute('data-command');
-        //     vscode.postMessage({ command });
-        //   });
-        // });
+        const bpmSection = document.querySelectorAll('.section-hidden li');
+
+        window.addEventListener('message', event => {
+            const message = event.data as { command: string; data: any };
+            switch (message.command) {
+            case "displayBomBpm": {
+            const items = bpmSection?.querySelectorAll('li');
+            items?.forEach(item => {
+                const key = item.getAttribute('data-key');
+                if (key && message.data[key] !== undefined) {
+                item.textContent = message.data[key];
+                }
+            });
+            bpmSection?.classList.remove('section-hidden');
+            break;
+            }
+            default:
+            break;
+        }
+        });
+
+        document.querySelectorAll('.wbc-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const command = btn.getAttribute('data-command');
+            vscode.postMessage({ command });
+          });
+        });
       </script>
     </body>
     </html>

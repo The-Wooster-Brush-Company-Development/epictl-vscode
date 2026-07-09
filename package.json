@@ -110,6 +110,16 @@
         "category": "Epictl"
       },
       {
+        "command": "epictl.addFileToManifest",
+        "title": "Add Code File to Manifest",
+        "category": "Epictl"
+      },
+      {
+        "command": "epictl.deleteCodeFileFromManifest",
+        "title": "Delete Code File from Manifest",
+        "category": "Epictl"
+      },
+      {
         "command": "epictl.initManifest",
         "title": "Initialize Manifest",
         "category": "Epictl"

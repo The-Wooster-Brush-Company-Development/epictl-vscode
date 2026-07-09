@@ -10,6 +10,7 @@ import {
 } from "../commandHandlers";
 import { VsCodeConfigManager } from "../managers/configManager";
 import { ManifestManager } from "../managers/manifestManager";
+import { BpmWebview } from "../webviews/bpmWebview";
 
 export class EpictlTreeView implements vscode.TreeDataProvider<any> {
   private vscodeConfigManager: VsCodeConfigManager;
@@ -18,6 +19,7 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
   constructor(
     vscodeConfigManager: VsCodeConfigManager,
     manifestManager: ManifestManager,
+    private readonly bpmWebview: BpmWebview,
   ) {
     this.vscodeConfigManager = vscodeConfigManager;
     this.manifestManager = manifestManager;
@@ -47,18 +49,18 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
 
     if (element instanceof BpmNode) {
       if (element.parentType === "bom") {
-        await this.getBomBpmData(element);
+        await this.describeBomBpm(element);
       } else {
-        await this.getTableBpmData(element);
+        await this.describeTableBpm(element);
       }
       return [];
     }
 
     if (element instanceof DirectiveNode) {
       if (element.type === "bom") {
-        return await this.getBomBpms(element.type, element.sysRowId);
+        return await this.describeBom(element.type, element.sysRowId);
       } else {
-        return await this.getTableBpms(element.type, element.sysRowId);
+        return await this.describeTable(element.type, element.sysRowId);
       }
     }
 
@@ -100,7 +102,7 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
     );
   }
 
-  private async getBomBpms(
+  private async describeBom(
     parentType: "bom" | "table",
     parentSysRowId: string,
   ): Promise<BpmNode[]> {
@@ -113,14 +115,14 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
         new BpmNode(
           bpm.Name,
           vscode.TreeItemCollapsibleState.Collapsed,
-          bpm.DirectiveId,
+          bpm.DirectiveID,
           parentType,
           parentSysRowId,
         ),
     );
   }
 
-  private async getTableBpms(
+  private async describeTable(
     parentType: "bom" | "table",
     parentSysRowId: string,
   ): Promise<BpmNode[]> {
@@ -140,7 +142,9 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
     );
   }
 
-  private async getBomBpmData(element: BpmNode): Promise<void> {
+  private async describeBomBpm(element: BpmNode): Promise<void> {
+    console.log(`element type: ${typeof element}`);
+    console.log(`element: ${JSON.stringify(element)}`);
     const bpmData = JSON.parse(
       await describeBpm(
         this.execPath ?? "",
@@ -151,8 +155,17 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
         "json",
       ),
     );
+
+    const message = {
+      command: "describeBomBpm",
+      data: bpmData,
+    };
+
+    this.bpmWebview.postMessage(message);
   }
-  private async getTableBpmData(element: BpmNode): Promise<void> {
+  private async describeTableBpm(element: BpmNode): Promise<void> {
+    console.log(`element type: ${typeof element}`);
+    console.log(`element: ${element}`);
     const bpmData = JSON.parse(
       await describeBpm(
         this.execPath ?? "",

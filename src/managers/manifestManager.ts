@@ -53,15 +53,17 @@ export class ManifestManager {
   }
 
   public writeManifestCodeFilePath(manifestName: string, codeFilePath: string) {
+    if (path.extname(manifestName) !== ".json") {
+      manifestName = `${manifestName}.json`;
+    }
     const manifestData = this.readManifest(manifestName);
-    console.log(`MANIFEST DATA TEST: ${JSON.stringify(manifestData, null, 2)}`);
     if (!manifestData) {
       throw new Error("No manifest data found");
     }
 
     const manifestFilePath = this.createManifestFilePath(manifestName);
 
-    manifestData.epictl.code_file = [codeFilePath];
+    manifestData.epictl.code_file.push(codeFilePath);
     fs.writeFileSync(manifestFilePath, JSON.stringify(manifestData, null, 2));
   }
 
@@ -79,13 +81,13 @@ export class ManifestManager {
     return JSON.parse(manifestData);
   }
 
-  public deleteManifestDirPath() {
-    const data = this.loadManifestConfig();
-    if (!data) {
-      throw new Error("No manifest config file found");
-    }
-    data.manifest_dir_path = "";
-    fs.writeFileSync(this.manifestConfigPath, JSON.stringify(data, null, 2));
+  public readManifestByCodeFilePath(codeFilePath: string): string | undefined {
+    const manifestFiles = this.getManifests();
+    return manifestFiles.find((manifest) => {
+      const manifestData = this.readManifest(manifest);
+      if (manifestData.epictl.code_file.includes(codeFilePath)) return manifest;
+      return undefined;
+    });
   }
 
   public createManifestFilePath(manifestName: string): string {
@@ -110,17 +112,47 @@ export class ManifestManager {
     return manifests;
   }
 
+  public deleteManifestDirPath() {
+    const data = this.loadManifestConfig();
+    if (!data) {
+      throw new Error("No manifest config file found");
+    }
+    data.manifest_dir_path = "";
+    fs.writeFileSync(this.manifestConfigPath, JSON.stringify(data, null, 2));
+  }
+
   public deleteManifest(manifestName: string) {
     const manifestPath = this.createManifestFilePath(manifestName);
     fs.unlinkSync(manifestPath);
   }
 
-  public readManifestByCodeFilePath(codeFilePath: string): string | undefined {
-    const manifestFiles = this.getManifests();
-    return manifestFiles.find((manifest) => {
-      const manifestData = this.readManifest(manifest);
-      if (manifestData.epictl.code_file.includes(codeFilePath)) return manifest;
-      return undefined;
-    });
+  public deleteCodeFileFromManifest(
+    manifestName: string,
+    codeFilePath: string,
+  ) {
+    console.log(`manifest name: ${manifestName}`);
+    console.log(`code file path: ${codeFilePath}`);
+    if (path.extname(manifestName) !== ".json") {
+      manifestName = `${manifestName}.json`;
+    }
+    const manifestData = this.readManifest(manifestName);
+    if (!manifestData) {
+      throw new Error("No manifest data found");
+    }
+    let manifestCodeFiles = manifestData.epictl.code_file;
+    if (!manifestCodeFiles.includes(codeFilePath)) {
+      throw new Error("Code file not found in manifest");
+    }
+
+    console.log(`manifest code files: ${manifestCodeFiles}`);
+
+    manifestCodeFiles = manifestCodeFiles.filter(
+      (file: string) => file !== codeFilePath,
+    );
+    manifestData.epictl.code_file = manifestCodeFiles;
+    console.log(`manifest code files: ${manifestCodeFiles}`);
+
+    const manifestFilePath = this.createManifestFilePath(manifestName);
+    fs.writeFileSync(manifestFilePath, JSON.stringify(manifestData, null, 2));
   }
 }

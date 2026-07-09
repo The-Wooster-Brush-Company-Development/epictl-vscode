@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-
+import path from "path";
 import {
   createConfig,
   getConfig,
@@ -10,6 +10,8 @@ import {
   setExecPath,
   getExecPath,
   deleteExecPath,
+  addFileToManifest,
+  deleteCodeFileFromManifest,
   initManifest,
   cloneManifest,
   setManifestDirPath,
@@ -261,6 +263,7 @@ export const commands = [
         if (!execPath) {
           throw new Error("No exec path set");
         }
+
         const result = await getTables(execPath, outputType);
         if (outputType === "json") {
           vscode.window.showInformationMessage("Tables fetched successfully");
@@ -429,6 +432,110 @@ export const manifestCommands = [
       } catch (err) {
         vscode.window.showErrorMessage("Failed to delete local manifest");
         outputChannel.appendLine(`Error deleting local manifest: ${err}`);
+      }
+      outputChannel.show();
+    },
+  },
+  {
+    name: "epictl.addFileToManifest",
+    callback: async (
+      _vsCodeConfigManager: VsCodeConfigManager,
+      manifestManager: ManifestManager,
+    ) => {
+      const outputChannel = vscode.window.createOutputChannel("Epictl");
+      try {
+        const editor = vscode.window.activeTextEditor;
+        let filePath = editor?.document.uri.fsPath;
+        console.log(`FILE PATH TEST: ${filePath}`);
+        if (filePath && path.extname(filePath) !== ".cs") {
+          filePath = undefined;
+        }
+
+        if (!filePath) {
+          filePath = await vscode.window.showInputBox({
+            prompt: "Enter the path to the code file",
+            ignoreFocusOut: true,
+          });
+        }
+
+        if (!filePath) {
+          throw new Error("No file path provided");
+        }
+
+        const manifestName = await vscode.window.showInputBox({
+          prompt: "Enter the name of the manifest",
+          ignoreFocusOut: true,
+        });
+
+        if (!manifestName) {
+          throw new Error("No manifest name provided");
+        }
+
+        const result = addFileToManifest(
+          manifestManager,
+          manifestName,
+          filePath,
+        );
+        vscode.window.showInformationMessage("Success");
+        outputChannel.appendLine(
+          `File ${filePath} added to manifest ${manifestName} successfully`,
+        );
+        outputChannel.show();
+      } catch (err: any) {
+        outputChannel.appendLine(`${err.message}`);
+        vscode.window.showErrorMessage(`Error`);
+        outputChannel.show();
+      }
+    },
+  },
+  {
+    name: "epictl.deleteCodeFileFromManifest",
+    callback: async (
+      _vsCodeConfigManager: VsCodeConfigManager,
+      manifestManager: ManifestManager,
+    ) => {
+      const outputChannel = vscode.window.createOutputChannel("Epictl");
+      try {
+        const editor = vscode.window.activeTextEditor;
+        let filePath = editor?.document.uri.fsPath;
+        if (filePath && path.extname(filePath) !== ".cs") {
+          filePath = undefined;
+        }
+
+        if (!filePath) {
+          filePath = await vscode.window.showInputBox({
+            prompt: "Enter the path to the code file",
+            ignoreFocusOut: true,
+          });
+        }
+
+        if (!filePath) {
+          throw new Error("No file path provided");
+        }
+
+        const manifestName = await vscode.window.showInputBox({
+          prompt: "Enter the name of the manifest",
+          ignoreFocusOut: true,
+        });
+
+        if (!manifestName) {
+          throw new Error("No manifest name provided");
+        }
+
+        const result = deleteCodeFileFromManifest(
+          manifestManager,
+          manifestName,
+          filePath,
+        );
+        vscode.window.showInformationMessage("Success");
+        outputChannel.appendLine(
+          `File ${filePath} deleted from manifest ${manifestName} successfully`,
+        );
+        outputChannel.show();
+      } catch (err: any) {
+        outputChannel.appendLine(`${err.message}`);
+        vscode.window.showErrorMessage(`Error`);
+        outputChannel.show();
       }
       outputChannel.show();
     },
