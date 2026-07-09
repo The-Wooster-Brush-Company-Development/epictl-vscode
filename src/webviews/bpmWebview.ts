@@ -16,19 +16,26 @@ export class BpmWebview implements vscode.WebviewViewProvider {
       localResourceRoots: [this._extensionUri],
     };
     webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
+
+    webviewView.webview.onDidReceiveMessage((message) => {
+      console.log("onDidReceiveMessage called");
+    });
   }
 
-  public postMessage(message: any) {
-    this._webviewView?.webview.postMessage(message);
+  public postMessageHelper(message: any) {
+    console.log("post message helper called");
+    console.log("post message helper message: ", message);
     if (message.command === "describeBomBpm") {
       this.displayBomBpm(message);
     }
   }
 
-  private displayBomBpm(data: any) {
-    this._webviewView?.webview.postMessage({
+  private displayBomBpm(message: any) {
+    console.log("displayBomBpm called");
+    console.log("displayBomBpm message: ", message);
+    this._webviewView!.webview.postMessage({
       command: "displayBomBpm",
-      data: data,
+      data: message.data,
     });
   }
 
@@ -183,31 +190,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
 
       <div class="section-hidden">
         <h4 class="section-label">BPM</h4>
-        <ul id="directive-fields">
-            <li data-key="DirectiveID">DirectiveID</li>
-            <li data-key="Source">Source</li>
-            <li data-key="BpMethodCode">BpMethodCode</li>
-            <li data-key="DirectiveType">DirectiveType</li>
-            <li data-key="Name">Name</li>
-            <li data-key="Order">Order</li>
-            <li data-key="IsEnabled">IsEnabled</li>
-            <li data-key="ReenterMax">ReenterMax</li>
-            <li data-key="PreventDeadloops">PreventDeadloops</li>
-            <li data-key="VisibilityScope">VisibilityScope</li>
-            <li data-key="Company">Company</li>
-            <li data-key="DirectiveGroup">DirectiveGroup</li>
-            <li data-key="IsUpToDate">IsUpToDate</li>
-            <li data-key="CGCCode">CGCCode</li>
-            <li data-key="Body">Body</li>
-            <li data-key="SysRevID">SysRevID</li>
-            <li data-key="SysRowID">SysRowID</li>
-            <li data-key="Description">Description</li>
-            <li data-key="IsProtected">IsProtected</li>
-            <li data-key="DisplayOrder">DisplayOrder</li>
-            <li data-key="CompilerDiagnostics">CompilerDiagnostics</li>
-            <li data-key="BitFlag">BitFlag</li>
-            <li data-key="RowMod">RowMod</li>
-        </ul>
+        <ul id="directive-fields"></ul>
       </div>
 
       <div class="section">
@@ -215,27 +198,37 @@ export class BpmWebview implements vscode.WebviewViewProvider {
 
       <script>
         const vscode = acquireVsCodeApi();
+        const dataKeys = ['DirectiveID', 'Source', 'BpMethodCode', 'DirectiveType', 'Name', 'Order', 'IsEnabled', 'ReenterMax', 'PreventDeadloops', 'VisibilityScope', 'Company', 'DirectiveGroup', 'IsUpToDate', 'CGCCode', 'SysRevID', 'SysRowID', 'Description', 'IsProtected', 'DisplayOrder', 'CompilerDiagnostics', 'BitFlag', 'RowMod'];
+        
+        const directiveList = document.getElementById('directive-fields');
+        const bpmSectionDiv = document.querySelector('.section-hidden');
 
-        const bpmSection = document.querySelectorAll('.section-hidden li');
-
-        window.addEventListener('message', event => {
-            const message = event.data as { command: string; data: any };
-            switch (message.command) {
-            case "displayBomBpm": {
-            const items = bpmSection?.querySelectorAll('li');
-            items?.forEach(item => {
-                const key = item.getAttribute('data-key');
-                if (key && message.data[key] !== undefined) {
-                item.textContent = message.data[key];
-                }
-            });
-            bpmSection?.classList.remove('section-hidden');
-            break;
-            }
+        window.addEventListener('message', (event) => {
+          const message = event.data;
+          switch (message.command) {
+            case "displayBomBpm": 
+              displayBomBpm(message.data);
+              bpmSectionDiv.classList.remove('section-hidden');
+              break;
             default:
-            break;
-        }
+              break;
+          }
         });
+       
+        function displayBomBpm(data) {
+          console.log("data: ", data);
+          directiveList.replaceChildren();
+          dataKeys.forEach(key => {
+            const li = document.createElement('li');
+            if (data !== undefined) {
+              li.textContent = key + ": " + data[key];
+            } else {
+              li.textContent = key + ": None";
+            }
+            directiveList.appendChild(li);
+          });
+        }
+
 
         document.querySelectorAll('.wbc-btn').forEach(btn => {
           btn.addEventListener('click', () => {
@@ -249,3 +242,27 @@ export class BpmWebview implements vscode.WebviewViewProvider {
     `;
   }
 }
+
+// <li data-key="DirectiveID">DirectiveID</li>
+//             <li data-key="Source">Source</li>
+//             <li data-key="BpMethodCode">BpMethodCode</li>
+//             <li data-key="DirectiveType">DirectiveType</li>
+//             <li data-key="Name">Name</li>
+//             <li data-key="Order">Order</li>
+//             <li data-key="IsEnabled">IsEnabled</li>
+//             <li data-key="ReenterMax">ReenterMax</li>
+//             <li data-key="PreventDeadloops">PreventDeadloops</li>
+//             <li data-key="VisibilityScope">VisibilityScope</li>
+//             <li data-key="Company">Company</li>
+//             <li data-key="DirectiveGroup">DirectiveGroup</li>
+//             <li data-key="IsUpToDate">IsUpToDate</li>
+//             <li data-key="CGCCode">CGCCode</li>
+//             <li data-key="Body">Body</li>
+//             <li data-key="SysRevID">SysRevID</li>
+//             <li data-key="SysRowID">SysRowID</li>
+//             <li data-key="Description">Description</li>
+//             <li data-key="IsProtected">IsProtected</li>
+//             <li data-key="DisplayOrder">DisplayOrder</li>
+//             <li data-key="CompilerDiagnostics">CompilerDiagnostics</li>
+//             <li data-key="BitFlag">BitFlag</li>
+//             <li data-key="RowMod">RowMod</li>

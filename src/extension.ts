@@ -10,7 +10,15 @@ import {
 } from "./commandRegistry";
 import { VsCodeConfigManager } from "./managers/configManager";
 import { ManifestManager } from "./managers/manifestManager";
-import { EpictlTreeView } from "./treeView/treeView";
+import {
+  EpictlTreeView,
+  EpicorNode,
+  BpmNode,
+  DirectiveNode,
+  BomProcessingNode,
+  TableProcessingNode,
+  registerTreeEvents,
+} from "./treeView/treeView";
 import { ContextWebview } from "./webviews/contextWebview";
 import { BpmWebview } from "./webviews/bpmWebview";
 
@@ -35,7 +43,11 @@ export function activate(context: vscode.ExtensionContext) {
     manifestManager,
     bpmWebview,
   );
-  vscode.window.registerTreeDataProvider("epictlExplorer", epictlTreeView);
+  const treeView = vscode.window.createTreeView("epictlExplorer", {
+    treeDataProvider: epictlTreeView,
+  });
+
+  registerTreeEvents(treeView, epictlTreeView);
 
   // ***********************************************************
   // register all commands for the extension

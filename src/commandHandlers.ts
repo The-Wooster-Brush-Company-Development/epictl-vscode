@@ -475,9 +475,6 @@ export const cloneManifest = async (
   return new Promise((resolve, reject) => {
     const command = `${execPath} clone-manifest ${entityType} ${bpmId} ${parentId} --manifest-file ${manifestPath} --for-extension --output json`;
     exec(command, (error, stdout, stderr) => {
-      console.log(`STDERR TEST: ${stderr}`);
-      console.log(`ERROR TEST: ${error}`);
-      console.log(`STDOUT TEST: ${stdout}`);
       if (stderr) {
         reject(`Error cloning manifest: ${stderr}`);
         return;
@@ -597,13 +594,6 @@ export const describeBpm = async (
   parentId: string | undefined,
   outputType: string,
 ): Promise<any> => {
-  console.log("ARGS TEST");
-  console.log("EXEC PATH: " + execPath);
-  console.log("MANIFEST INPUT: " + manifestInput);
-  console.log("BPM ID: " + bpmId);
-  console.log("ENTITY TYPE: " + entityType);
-  console.log("PARENT ID: " + parentId);
-  console.log("OUTPUT TYPE: " + outputType);
   let command: string;
   if (manifestInput) {
     command = `${execPath} describe bpm --file ${manifestInput} --output ${outputType}`;

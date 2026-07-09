@@ -12,6 +12,25 @@ import { VsCodeConfigManager } from "../managers/configManager";
 import { ManifestManager } from "../managers/manifestManager";
 import { BpmWebview } from "../webviews/bpmWebview";
 
+export const registerTreeEvents = (
+  tree: vscode.TreeView<any>,
+  treeProvider: EpictlTreeView,
+) => {
+  tree.onDidChangeSelection((event) => {
+    const element = event.selection[0];
+    console.log("element: ", element);
+    console.log("element.parentType: ", element.parentType);
+
+    if (element instanceof BpmNode) {
+      if (element.parentType === "bom") {
+        treeProvider.describeBomBpm(element);
+      } else {
+        treeProvider.describeTableBpm(element);
+      }
+    }
+  });
+};
+
 export class EpictlTreeView implements vscode.TreeDataProvider<any> {
   private vscodeConfigManager: VsCodeConfigManager;
   private manifestManager: ManifestManager;
@@ -66,7 +85,6 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
 
     // 2nd level
     if (element instanceof DirectiveNode) {
-      console.log("clicked directive node");
       if (element.type === "bom") {
         return this.getProcessingNodes("bom", element.sysRowId);
       } else {
@@ -79,7 +97,6 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
       element instanceof BomProcessingNode ||
       element instanceof TableProcessingNode
     ) {
-      console.log("clicked processing node");
       if (element instanceof BomProcessingNode) {
         return await this.describeBom(
           "bom",
@@ -93,16 +110,6 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
           this.getDirectiveTypeNumber(element.directiveType),
         );
       }
-    }
-
-    // 4th level
-    if (element instanceof BpmNode) {
-      if (element.parentType === "bom") {
-        await this.describeBomBpm(element);
-      } else {
-        await this.describeTableBpm(element);
-      }
-      return [];
     }
 
     // 1st level
@@ -201,13 +208,7 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
       .sort((a: any, b: any) => a.Order - b.Order)
       .map(
         (bpm: any) =>
-          new BpmNode(
-            bpm.Name,
-            vscode.TreeItemCollapsibleState.Collapsed,
-            bpm.DirectiveID,
-            parentType,
-            parentSysRowId,
-          ),
+          new BpmNode(bpm.Name, bpm.DirectiveID, parentType, parentSysRowId),
       );
   }
 
@@ -226,19 +227,12 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
       .sort((a: any, b: any) => a.Order - b.Order)
       .map(
         (bpm: any) =>
-          new BpmNode(
-            bpm.Name,
-            vscode.TreeItemCollapsibleState.Collapsed,
-            bpm.DirectiveId,
-            parentType,
-            parentSysRowId,
-          ),
+          new BpmNode(bpm.Name, bpm.DirectiveID, parentType, parentSysRowId),
       );
   }
 
-  private async describeBomBpm(element: BpmNode): Promise<void> {
-    console.log(`element type: ${typeof element}`);
-    console.log(`element: ${JSON.stringify(element)}`);
+  public async describeBomBpm(element: BpmNode): Promise<void> {
+    console.log("describing bom bpm");
     const bpmData = JSON.parse(
       await describeBpm(
         this.execPath ?? "",
@@ -255,11 +249,9 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
       data: bpmData,
     };
 
-    this.bpmWebview.postMessage(message);
+    this.bpmWebview.postMessageHelper(message);
   }
-  private async describeTableBpm(element: BpmNode): Promise<void> {
-    console.log(`element type: ${typeof element}`);
-    console.log(`element: ${element}`);
+  public async describeTableBpm(element: BpmNode): Promise<void> {
     const bpmData = JSON.parse(
       await describeBpm(
         this.execPath ?? "",
@@ -270,6 +262,13 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
         "json",
       ),
     );
+
+    const message = {
+      command: "describeTableBpm",
+      data: bpmData,
+    };
+
+    this.bpmWebview.postMessageHelper(message);
   }
 
   private formatBpMethodCode(bpMethodCode: string): string {
@@ -277,7 +276,7 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
   }
 }
 
-class EpicorNode extends vscode.TreeItem {
+export class EpicorNode extends vscode.TreeItem {
   constructor(
     label: string,
     collapsibleState: vscode.TreeItemCollapsibleState,
@@ -293,7 +292,7 @@ class EpicorNode extends vscode.TreeItem {
   }
 }
 
-class BomProcessingNode extends EpicorNode {
+export class BomProcessingNode extends EpicorNode {
   constructor(
     label: string,
     collapsibleState: vscode.TreeItemCollapsibleState,
@@ -305,7 +304,7 @@ class BomProcessingNode extends EpicorNode {
   }
 }
 
-class TableProcessingNode extends EpicorNode {
+export class TableProcessingNode extends EpicorNode {
   constructor(
     label: string,
     collapsibleState: vscode.TreeItemCollapsibleState,
@@ -317,7 +316,7 @@ class TableProcessingNode extends EpicorNode {
   }
 }
 
-class DirectiveNode extends EpicorNode {
+export class DirectiveNode extends EpicorNode {
   constructor(
     label: string,
     collapsibleState: vscode.TreeItemCollapsibleState,
@@ -329,15 +328,14 @@ class DirectiveNode extends EpicorNode {
   }
 }
 
-class BpmNode extends EpicorNode {
+export class BpmNode extends EpicorNode {
   constructor(
     label: string,
-    collapsibleState: vscode.TreeItemCollapsibleState,
     public directiveId: string,
     public parentType: "bom" | "table",
     public parentSysRowId: string,
   ) {
-    super(label, collapsibleState);
+    super(label, vscode.TreeItemCollapsibleState.None);
     this.iconPath = new vscode.ThemeIcon("gear");
   }
 }

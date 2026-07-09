@@ -446,7 +446,6 @@ export const manifestCommands = [
       try {
         const editor = vscode.window.activeTextEditor;
         let filePath = editor?.document.uri.fsPath;
-        console.log(`FILE PATH TEST: ${filePath}`);
         if (filePath && path.extname(filePath) !== ".cs") {
           filePath = undefined;
         }
