@@ -77,6 +77,7 @@ export class ManifestManager {
 
   public readManifest(manifestName: string): any {
     const manifestFilePath = this.createManifestFilePath(manifestName);
+    console.log("manifest file path: ", manifestFilePath);
     const manifestData = fs.readFileSync(manifestFilePath, "utf8");
     return JSON.parse(manifestData);
   }

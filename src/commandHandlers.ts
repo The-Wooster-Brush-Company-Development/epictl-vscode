@@ -424,56 +424,15 @@ export const initManifest = async (
 };
 
 export const cloneManifest = async (
-  vsCodeConfigManager: VsCodeConfigManager,
-  manifestManager: ManifestManager,
+  execPath: string,
+  entityType: string,
+  bpmId: string,
+  parentId: string,
+  manifestPath: string,
+  codeFilePath: string,
 ): Promise<any> => {
-  const entityType = await vscode.window.showQuickPick(["bom", "table"], {
-    placeHolder: "Select the entity type",
-  });
-
-  if (!entityType) {
-    throw new Error("No entity type selected");
-  }
-
-  const bpmId = await vscode.window.showInputBox({
-    prompt: "Enter the bpm id",
-    ignoreFocusOut: true,
-  });
-  if (!bpmId) {
-    throw new Error("No bpm id provided");
-  }
-
-  const parentId = await vscode.window.showInputBox({
-    prompt: "Enter the parent id",
-    ignoreFocusOut: true,
-  });
-  if (!parentId) {
-    throw new Error("No parent id provided");
-  }
-
-  let manifestInput: string | undefined;
-  manifestInput = await vscode.window.showInputBox({
-    prompt: "(optional) enter the name of the new manifest file",
-    ignoreFocusOut: true,
-  });
-
-  const manifestPath = manifestManager.createManifestFilePath("");
-
-  let codeFilePath = await vscode.window.showInputBox({
-    prompt: "Enter the path and name of the code file",
-    ignoreFocusOut: true,
-  });
-  if (!codeFilePath) {
-    throw new Error("No code file path provided");
-  }
-
-  const execPath = vsCodeConfigManager.readExecPath();
-  if (!execPath) {
-    throw new Error("No exec path set");
-  }
-
+  const command = `${execPath} clone-manifest ${entityType} ${bpmId} ${parentId} --manifest-file ${manifestPath} --for-extension --output json`;
   return new Promise((resolve, reject) => {
-    const command = `${execPath} clone-manifest ${entityType} ${bpmId} ${parentId} --manifest-file ${manifestPath} --for-extension --output json`;
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
         reject(`Error cloning manifest: ${stderr}`);

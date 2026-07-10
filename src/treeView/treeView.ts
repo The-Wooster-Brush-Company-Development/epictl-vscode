@@ -18,8 +18,6 @@ export const registerTreeEvents = (
 ) => {
   tree.onDidChangeSelection((event) => {
     const element = event.selection[0];
-    console.log("element: ", element);
-    console.log("element.parentType: ", element.parentType);
 
     if (element instanceof BpmNode) {
       if (element.parentType === "bom") {
@@ -232,7 +230,6 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
   }
 
   public async describeBomBpm(element: BpmNode): Promise<void> {
-    console.log("describing bom bpm");
     const bpmData = JSON.parse(
       await describeBpm(
         this.execPath ?? "",
@@ -245,7 +242,7 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
     );
 
     const message = {
-      command: "describeBomBpm",
+      command: "describeDirectiveBpm",
       data: bpmData,
     };
 
@@ -264,7 +261,7 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
     );
 
     const message = {
-      command: "describeTableBpm",
+      command: "describeDirectiveBpm",
       data: bpmData,
     };
 

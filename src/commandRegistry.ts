@@ -163,7 +163,8 @@ export const cliConfigCommands = [
     callback: async (vsCodeConfigManager: VsCodeConfigManager) => {
       const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
-        const result = JSON.parse(await activeConfig(vsCodeConfigManager));
+        const response = await activeConfig(vsCodeConfigManager);
+        const result = JSON.parse(response);
         if (result.success) {
           outputChannel.appendLine(`Active config: ${result.active_config}`);
           vscode.window.showInformationMessage("Config active successfully");
@@ -172,6 +173,7 @@ export const cliConfigCommands = [
           vscode.window.showErrorMessage("Error active config");
         }
         outputChannel.show();
+        return response;
       } catch (err) {
         outputChannel.appendLine(`Error active config: ${err}`);
         vscode.window.showErrorMessage("Failed to active config");
@@ -579,11 +581,60 @@ export const manifestCommands = [
       vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
     ) => {
+      const entityType = await vscode.window.showQuickPick(["bom", "table"], {
+        placeHolder: "Select the entity type",
+      });
+
+      if (!entityType) {
+        throw new Error("No entity type selected");
+      }
+
+      const bpmId = await vscode.window.showInputBox({
+        prompt: "Enter the bpm id",
+        ignoreFocusOut: true,
+      });
+      if (!bpmId) {
+        throw new Error("No bpm id provided");
+      }
+
+      const parentId = await vscode.window.showInputBox({
+        prompt: "Enter the parent id",
+        ignoreFocusOut: true,
+      });
+      if (!parentId) {
+        throw new Error("No parent id provided");
+      }
+
+      let manifestInput: string | undefined;
+      manifestInput = await vscode.window.showInputBox({
+        prompt: "(optional) enter the name of the new manifest file",
+        ignoreFocusOut: true,
+      });
+
+      const manifestPath = manifestManager.createManifestFilePath("");
+
+      let codeFilePath = await vscode.window.showInputBox({
+        prompt: "Enter the path and name of the code file",
+        ignoreFocusOut: true,
+      });
+      if (!codeFilePath) {
+        throw new Error("No code file path provided");
+      }
+
+      const execPath = vsCodeConfigManager.readExecPath();
+      if (!execPath) {
+        throw new Error("No exec path set");
+      }
+
       const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
-        const [result, codeFilePath] = await cloneManifest(
-          vsCodeConfigManager,
-          manifestManager,
+        const [result, codeResultPath] = await cloneManifest(
+          execPath,
+          entityType,
+          bpmId,
+          parentId,
+          manifestPath,
+          codeFilePath,
         );
         const parsedResult = JSON.parse(result);
         if (parsedResult.success) {
@@ -596,13 +647,13 @@ export const manifestCommands = [
           if (parsedResult.codeLines) {
             const bpmCodePath = createCodeFile(
               parsedResult.codeLines,
-              codeFilePath,
+              codeResultPath,
               parsedResult.name,
             );
             updateManifestMetadataWithCodeFile(manifestManager, bpmCodePath);
           }
           outputChannel.appendLine(
-            `Code file initialized successfully at ${codeFilePath}`,
+            `Code file initialized successfully at ${codeResultPath}`,
           );
           outputChannel.show();
         } else {

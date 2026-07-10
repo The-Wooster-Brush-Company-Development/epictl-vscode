@@ -1,9 +1,23 @@
 import * as vscode from "vscode";
+import { VsCodeConfigManager } from "../managers/configManager";
+import {
+  activeConfig,
+  deleteConfig,
+  deleteExecPath,
+  setConfig,
+  setExecPath,
+} from "../commandHandlers";
 
 export class ContextWebview implements vscode.WebviewViewProvider {
   private _webviewView: vscode.WebviewView | undefined;
+  private _configManager: VsCodeConfigManager;
 
-  constructor(private readonly _extensionUri: vscode.Uri) {}
+  constructor(
+    private readonly _extensionUri: vscode.Uri,
+    configManager: VsCodeConfigManager,
+  ) {
+    this._configManager = configManager;
+  }
 
   public resolveWebviewView(
     webviewView: vscode.WebviewView,
@@ -11,31 +25,65 @@ export class ContextWebview implements vscode.WebviewViewProvider {
     _token: vscode.CancellationToken,
   ) {
     this._webviewView = webviewView;
+
     webviewView.webview.options = {
       enableScripts: true,
       localResourceRoots: [this._extensionUri],
     };
     webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
-    webviewView.webview.onDidReceiveMessage((message) => {
+    webviewView.webview.onDidReceiveMessage(async (message) => {
+      console.log("Received message: ", message);
       switch (message.command) {
-        case "changeContext":
-          vscode.commands.executeCommand("epictl.changeContext");
-          break;
-        case "activeConfig":
-          vscode.commands.executeCommand("epictl.activeConfig");
+        case "setConfig":
+          await setConfig(undefined, this._configManager);
+          await this.displayConfigInfo();
           break;
         case "deleteConfig":
-          vscode.commands.executeCommand("epictl.deleteConfig");
+          await deleteConfig(this._configManager);
+          await this.displayConfigInfo();
           break;
-        case "getExecPath":
-          vscode.commands.executeCommand("epictl.getExecPath");
+        case "setExecPath":
+          await setExecPath(this._configManager);
+          await this.displayConfigInfo();
           break;
         case "deleteExecPath":
-          vscode.commands.executeCommand("epictl.deleteExecPath");
+          await deleteExecPath(this._configManager);
+          await this.displayConfigInfo();
           break;
       }
     });
+
+    this.displayConfigInfo();
+  }
+
+  private async displayConfigInfo() {
+    let message: any;
+    let execPath: string | undefined;
+    let activeConfigResult: string | undefined;
+
+    try {
+      execPath = this._configManager.readExecPath();
+    } catch (error) {
+      execPath = "No exec path";
+    }
+    try {
+      const activeConfigResponse = JSON.parse(
+        await activeConfig(this._configManager),
+      );
+      activeConfigResult = activeConfigResponse.active_config;
+    } catch (error) {
+      activeConfigResult = "No active config (possibly bad exec path)";
+    }
+
+    message = {
+      command: "displayConfigInfo",
+      execPath: execPath,
+      activeConfig: activeConfigResult,
+    };
+
+    console.log("message: ", message);
+    this._webviewView!.webview.postMessage(message);
   }
 
   private _getHtmlForWebview(webview: vscode.Webview) {
@@ -84,7 +132,7 @@ export class ContextWebview implements vscode.WebviewViewProvider {
 
         .accent-bar {
           height: 3px;
-          width: 40px;
+          width: 100%;
           background: var(--wbc-red);
           border-radius: 2px;
           margin-bottom: 20px;
@@ -180,44 +228,68 @@ export class ContextWebview implements vscode.WebviewViewProvider {
       </style>
     </head>
     <body>
-      <h1>WBC</h1>
+      <h1 id="title">Config</h1>
       <div class="accent-bar"></div>
 
+      <div id="config-info" class="section"></div>
+
       <div class="section">
-        <p class="section-label">Configuration</p>
-        <div class="btn-group">
-          <button class="wbc-btn" data-command="changeContext">
-            <span class="dot"></span> Change context
-          </button>
-          <button class="wbc-btn" data-command="activeConfig">
-            <span class="dot"></span> Active config
-          </button>
-          <button class="wbc-btn danger" data-command="deleteConfig">
-            <span class="dot"></span> Delete config
-          </button>
-        </div>
+      <p class="section-label">Configuration</p>
+      <div class="btn-group">
+        <button class="wbc-btn" data-command="setConfig">
+          <span class="dot"></span> Set config
+        </button>
+        <button class="wbc-btn danger" data-command="deleteConfig">
+          <span class="dot"></span> Delete config
+        </button>
+      </div>
       </div>
 
       <div class="section">
-        <p class="section-label">Executable</p>
-        <div class="btn-group">
-          <button class="wbc-btn" data-command="getExecPath">
-            <span class="dot"></span> Get exec path
-          </button>
-          <button class="wbc-btn danger" data-command="deleteExecPath">
-            <span class="dot"></span> Delete exec path
-          </button>
-        </div>
+      <p class="section-label">Executable</p>
+      <div class="btn-group">
+        <button class="wbc-btn" data-command="setExecPath">
+          <span class="dot"></span> Set exec path
+        </button>
+        <button class="wbc-btn danger" data-command="deleteExecPath">
+          <span class="dot"></span> Delete exec path
+        </button>
+      </div>
       </div>
 
-      <p id="status"></p>
+     
 
       <script>
         const vscode = acquireVsCodeApi();
         const statusEl = document.getElementById('status');
 
+        window.addEventListener('message', (event) => {
+          const message = event.data;
+          console.log("message in javascript: ", message);
+          switch (message.command) {
+            case "displayConfigInfo":
+              displayConfigInfo(message);
+              break;
+          }
+        });
+
+
+        const displayConfigInfo = (message) => {
+          const configSection = document.getElementById('config-info');
+          configSection.replaceChildren();
+
+          const execPath = document.createElement('h4');
+          execPath.textContent = "Exec path: " + message.execPath;
+
+          const activeConfig = document.createElement('h4');
+          activeConfig.textContent = "Active config: " + message.activeConfig;
+
+          configSection.append(execPath, activeConfig); 
+        }
+
         document.querySelectorAll('.wbc-btn').forEach(btn => {
           btn.addEventListener('click', () => {
+            console.log("Button clicked: ", btn.getAttribute('data-command'));
             const command = btn.getAttribute('data-command');
             vscode.postMessage({ command });
           });
@@ -228,3 +300,32 @@ export class ContextWebview implements vscode.WebviewViewProvider {
     `;
   }
 }
+
+// <div class="section">
+// <p class="section-label">Configuration</p>
+// <div class="btn-group">
+//   <button class="wbc-btn" data-command="changeContext">
+//     <span class="dot"></span> Change context
+//   </button>
+//   <button class="wbc-btn" data-command="activeConfig">
+//     <span class="dot"></span> Active config
+//   </button>
+//   <button class="wbc-btn danger" data-command="deleteConfig">
+//     <span class="dot"></span> Delete config
+//   </button>
+// </div>
+// </div>
+
+// <div class="section">
+// <p class="section-label">Executable</p>
+// <div class="btn-group">
+//   <button class="wbc-btn" data-command="getExecPath">
+//     <span class="dot"></span> Get exec path
+//   </button>
+//   <button class="wbc-btn danger" data-command="deleteExecPath">
+//     <span class="dot"></span> Delete exec path
+//   </button>
+// </div>
+// </div>
+
+// <p id="status"></p>

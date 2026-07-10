@@ -28,12 +28,15 @@ export function activate(context: vscode.ExtensionContext) {
   const vsCodeConfigManager = new VsCodeConfigManager(context);
   const manifestManager = new ManifestManager(context);
 
-  const contextWebview = new ContextWebview(context.extensionUri);
+  const contextWebview = new ContextWebview(
+    context.extensionUri,
+    vsCodeConfigManager,
+  );
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider("contextMenu", contextWebview),
   );
 
-  const bpmWebview = new BpmWebview(context.extensionUri);
+  const bpmWebview = new BpmWebview(context.extensionUri, manifestManager);
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider("bpmMenu", bpmWebview),
   );
