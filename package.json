@@ -53,6 +53,20 @@
         }
       ]
     },
+    "menus": {
+      "view/title": [
+        {
+          "command": "epictl.initManifest",
+          "when": "view == bpmMenu",
+          "title": "Initialize Manifest"
+        },
+        {
+          "command": "epictl.cloneManifest",
+          "when": "view == bpmMenu",
+          "title": "Clone Manifest"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "epictl.createConfig",

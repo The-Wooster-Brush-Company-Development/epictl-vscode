@@ -4,7 +4,7 @@ import {
   activeConfig,
   deleteConfig,
   deleteExecPath,
-  setConfig,
+  setConfigCmd,
   setExecPath,
 } from "../commandHandlers";
 
@@ -36,7 +36,7 @@ export class ContextWebview implements vscode.WebviewViewProvider {
       console.log("Received message: ", message);
       switch (message.command) {
         case "setConfig":
-          await setConfig(undefined, this._configManager);
+          await vscode.commands.executeCommand("epictl.setConfig");
           await this.displayConfigInfo();
           break;
         case "deleteConfig":
@@ -233,8 +233,21 @@ export class ContextWebview implements vscode.WebviewViewProvider {
 
       <div id="config-info" class="section"></div>
 
+
       <div class="section">
-      <p class="section-label">Configuration</p>
+      <p class="section-label">Epictl Path</p>
+      <div class="btn-group">
+        <button class="wbc-btn" data-command="setExecPath">
+          <span class="dot"></span> Set exec path
+        </button>
+        <button class="wbc-btn danger" data-command="deleteExecPath">
+          <span class="dot"></span> Delete exec path
+        </button>
+      </div>
+      </div>
+
+      <div class="section">
+      <p class="section-label">Epicor Config</p>
       <div class="btn-group">
         <button class="wbc-btn" data-command="setConfig">
           <span class="dot"></span> Set config
@@ -246,15 +259,8 @@ export class ContextWebview implements vscode.WebviewViewProvider {
       </div>
 
       <div class="section">
-      <p class="section-label">Executable</p>
-      <div class="btn-group">
-        <button class="wbc-btn" data-command="setExecPath">
-          <span class="dot"></span> Set exec path
-        </button>
-        <button class="wbc-btn danger" data-command="deleteExecPath">
-          <span class="dot"></span> Delete exec path
-        </button>
-      </div>
+      <p class="section-label">Extension Config</p>
+     
       </div>
 
      

@@ -42,8 +42,9 @@ export class BpmWebview implements vscode.WebviewViewProvider {
       command: "displayDirectiveBpm",
       data: message.data,
     });
+    // console.log("code before: ", message.data.code);
     const codeLines = this.getCodeToDisplay(message.data);
-    console.log("code lines test: ", codeLines);
+    // console.log("code lines test: ", codeLines);
     this._webviewView!.webview.postMessage({
       command: "displayCode",
       data: codeLines,
@@ -52,25 +53,33 @@ export class BpmWebview implements vscode.WebviewViewProvider {
 
   private getCodeToDisplay(message: any): string {
     try {
-      if (!message.Name.endsWith(".json")) {
-        message.Name += ".json";
+      if (message.code === "") {
+        return "No code found";
       }
 
-      const manifest = this.manifestManager.readManifest(message.Name);
-      const codeFilePaths = manifest.epictl.code_file;
+      if (!message.code) {
+        if (!message.Name.endsWith(".json")) {
+          message.Name += ".json";
+        }
 
-      let code = "";
+        const manifest = this.manifestManager.readManifest(message.Name);
+        const codeFilePaths = manifest.epictl.code_file;
 
-      for (const filePath of codeFilePaths) {
-        code += `${path.basename(filePath)}:\n`;
-        const csCode = fs.readFileSync(filePath, "utf8");
-        code += csCode.split("\n").slice(15).join("\n");
-        code += "\n\n";
+        let code = "";
+
+        for (const filePath of codeFilePaths) {
+          code += `${path.basename(filePath)}:\n`;
+          const csCode = fs.readFileSync(filePath, "utf8");
+          code += csCode.split("\n").slice(0, 15).join("\n");
+          code += "\n\n";
+        }
+
+        return code;
+      } else {
+        return message.code.split("\n").slice(0, 15).join("\n");
       }
-
-      return code;
     } catch {
-      return "No code found";
+      return "Error getting code";
     }
   }
 

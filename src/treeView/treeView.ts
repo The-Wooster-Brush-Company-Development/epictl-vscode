@@ -260,6 +260,8 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
       ),
     );
 
+    console.log("table data: ", bpmData);
+
     const message = {
       command: "describeDirectiveBpm",
       data: bpmData,

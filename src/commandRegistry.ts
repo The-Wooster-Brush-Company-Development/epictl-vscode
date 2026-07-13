@@ -149,7 +149,32 @@ export const cliConfigCommands = [
     callback: async (vsCodeConfigManager: VsCodeConfigManager) => {
       const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
-        const result = await setConfigCmd(vsCodeConfigManager);
+        const [configs, _outputType] = await getConfig(
+          vsCodeConfigManager,
+          "json",
+        );
+
+        const configsParsed = JSON.parse(configs);
+        console.log("configsParsed: ", JSON.stringify(configsParsed, null, 2));
+
+        const configId = await vscode.window.showQuickPick(
+          configsParsed.map(
+            (config: any) =>
+              `${path.basename(config.base_url)} : ${config.id.slice(0, 6)}`,
+          ),
+          {
+            placeHolder: "Select the config to set",
+          },
+        );
+        if (!configId) {
+          throw new Error("No config selected");
+        }
+        const execPath = vsCodeConfigManager.readExecPath();
+        if (!execPath) {
+          throw new Error("No exec path set");
+        }
+
+        const result = await setConfigCmd(execPath, configId);
         outputChannel.appendLine(JSON.stringify(result, null, 2));
         vscode.window.showInformationMessage("Config set successfully");
         outputChannel.show();

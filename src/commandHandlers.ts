@@ -107,6 +107,14 @@ export const setConfig = async (
   configId: string | undefined,
   vsCodeConfigManager: VsCodeConfigManager,
 ): Promise<any> => {
+  //TODO: get all configs and dispaly them in a quick pick
+  const configs = await getConfig(vsCodeConfigManager, "json");
+  console.log("conifg type: ", typeof configs);
+  for (const config of configs) {
+    console.log("config: ", config);
+  }
+  //console.log("configsParsed: ", JSON.stringify(configsParsed, null, 2));
+
   if (!configId) {
     configId = await vscode.window.showInputBox({
       prompt: "Enter the config id",
@@ -141,19 +149,9 @@ export const setConfig = async (
 // if we make it so the active config is the one that is set, will want to write it to the config file
 // and perform all of our actions on that config
 export const setConfigCmd = async (
-  vsCodeConfigManager: VsCodeConfigManager,
+  execPath: string,
+  configId: string,
 ): Promise<any> => {
-  const configId = await vscode.window.showInputBox({
-    prompt: "Enter the config id",
-    ignoreFocusOut: true,
-  });
-  if (!configId) {
-    throw new Error("No config id provided");
-  }
-  const execPath = vsCodeConfigManager.readExecPath();
-  if (!execPath) {
-    throw new Error("No exec path set");
-  }
   const command = `${execPath} config-set ${configId}`;
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
@@ -503,9 +501,16 @@ export const describeBom = async (
   bomId: string,
   outputType: string,
 ): Promise<any> => {
+  console.log("args");
+  console.log("bomId: ", bomId);
+  console.log("outputType: ", outputType);
   const command = `${execPath} describe bom --entity-id ${bomId} --output ${outputType}`;
+  console.log("command: ", command);
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
+      console.log("stderr: ", stderr);
+      console.log("error: ", error);
+      console.log("stdout: ", stdout);
       if (stderr) {
         reject(`Error describing bom: ${stderr}`);
         return;
@@ -527,6 +532,9 @@ export const describeTable = async (
   const command = `${execPath} describe table --entity-id ${tableId} --output ${outputType}`;
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
+      console.log("stderr: ", stderr);
+      console.log("error: ", error);
+      console.log("stdout: ", stdout);
       if (stderr) {
         reject(`Error describing table: ${stderr}`);
         return;
@@ -555,10 +563,12 @@ export const describeBpm = async (
 ): Promise<any> => {
   let command: string;
   if (manifestInput) {
-    command = `${execPath} describe bpm --file ${manifestInput} --output ${outputType}`;
+    command = `${execPath} describe bpm --file ${manifestInput} --with-code --output ${outputType}`;
   } else {
-    command = `${execPath} describe bpm --entity-id ${bpmId} --parent-type ${entityType} --parent-id ${parentId} --output ${outputType}`;
+    command = `${execPath} describe bpm --entity-id ${bpmId} --parent-type ${entityType} --parent-id ${parentId} --with-code --output ${outputType}`;
   }
+
+  console.log("command: ", command);
 
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
