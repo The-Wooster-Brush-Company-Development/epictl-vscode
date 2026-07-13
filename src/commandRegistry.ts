@@ -28,6 +28,9 @@ import {
   validateCode,
 } from "./commandHandlers";
 
+import { getActiveFilename } from "./utils/extensionUtils";
+import { fields, formatCommand } from "./utils/handlerUtils";
+
 import { VsCodeConfigManager } from "./managers/configManager";
 import { ManifestManager } from "./managers/manifestManager";
 
@@ -794,9 +797,42 @@ export const manifestCommands = [
     ) => {
       const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
-        const result = await JSON.parse(
-          await applyBpm(vsCodeConfigManager, manifestManager),
-        );
+        const openFilename = getActiveFilename();
+        let manifestInput: string | undefined;
+
+        console.log("openFilename: ", openFilename);
+
+        const manifestFile =
+          manifestManager.isCodeFileInManifests(openFilename);
+
+        console.log("manifestFile: ", manifestFile);
+        if (!manifestFile) {
+          manifestInput = await vscode.window.showInputBox({
+            prompt:
+              "Manifest file not found, enter the name of the manifest file",
+            ignoreFocusOut: true,
+          });
+        } else {
+          manifestInput = manifestFile;
+        }
+
+        if (!manifestInput) {
+          throw new Error("No manifest file path provided");
+        }
+
+        if (!manifestInput.endsWith(".json")) {
+          manifestInput = `${manifestInput}.json`;
+        }
+
+        const manifestPath =
+          manifestManager.createManifestFilePath(manifestInput);
+
+        const execPath = vsCodeConfigManager.readExecPath();
+        if (!execPath) {
+          throw new Error("No exec path set");
+        }
+
+        const result = JSON.parse(await applyBpm(execPath, manifestPath));
         if (result.success) {
           vscode.window.showInformationMessage("Manifest applied successfully");
           outputChannel.appendLine(result.message);
@@ -821,16 +857,102 @@ export const manifestCommands = [
     ) => {
       const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
-        const [result, updateName, newName, oldName] = await updateBpm(
-          vsCodeConfigManager,
-          manifestManager,
+        const openFilename = getActiveFilename();
+        let manifestInput: string | undefined =
+          manifestManager.isCodeFileInManifests(openFilename);
+        const haveValidCodeFile =
+          !!openFilename && openFilename.endsWith(".cs");
+        if (!manifestInput) {
+          manifestInput = await vscode.window.showInputBox({
+            prompt:
+              "Manifest file not found, enter the name of the manifest file",
+            ignoreFocusOut: true,
+          });
+        }
+
+        if (!manifestInput) {
+          throw new Error("No manifest file name provided");
+        }
+
+        if (!manifestInput.endsWith(".json")) {
+          manifestInput = `${manifestInput}.json`;
+        }
+
+        console.log("manifestFile: ", manifestInput);
+        console.log(
+          "manifestManager.getManifests(): ",
+          manifestManager.getManifests(),
         );
+
+        const manifestPath =
+          manifestManager.createManifestFilePath(manifestInput);
+
+        console.log("manifestPath: ", manifestPath);
+
+        const flagsWithCmds: string[] = [];
+
+        const selectedFields = await vscode.window.showQuickPick(fields, {
+          canPickMany: true,
+          placeHolder: "Select the fields you want to update",
+        });
+
+        if (!selectedFields) {
+          throw new Error("No fields selected");
+        }
+
+        let updateName = false;
+        let newName: string | undefined;
+        let oldName: string | undefined;
+
+        for (const field of selectedFields) {
+          let userInput: string | undefined;
+          if (field.key === "codefile") {
+            if (!haveValidCodeFile) {
+              userInput = await vscode.window.showInputBox({
+                prompt: "Enter the path to the code file",
+                ignoreFocusOut: true,
+              });
+              if (!userInput) {
+                throw new Error("No code file path provided");
+              }
+              if (!userInput.endsWith(".cs")) {
+                throw new Error("Code file must be a .cs file");
+              }
+            } else {
+              userInput = openFilename;
+            }
+            console.log("cs file userInput: ", userInput);
+          } else {
+            userInput = await vscode.window.showInputBox({
+              prompt: `Enter the value for ${field.label}`,
+              ignoreFocusOut: true,
+            });
+          }
+          if (!userInput) {
+            throw new Error(`No value provided for ${field.label}`);
+          }
+
+          if (field.key === "name") {
+            updateName = true;
+            newName = userInput;
+            oldName = manifestInput;
+          }
+
+          flagsWithCmds.push(formatCommand[field.key](userInput));
+        }
+
+        const execPath = vsCodeConfigManager.readExecPath();
+        if (!execPath) {
+          throw new Error("No exec path set");
+        }
+
+        const result = await updateBpm(execPath, manifestPath, flagsWithCmds);
         const parsedResult = JSON.parse(result);
         if (parsedResult.success) {
           vscode.window.showInformationMessage("Bpm updated successfully");
           outputChannel.appendLine(parsedResult.message);
           if (updateName) {
-            updateFileName(manifestManager, newName, oldName);
+            updateFileName(manifestManager, newName!, oldName!);
           }
         } else {
           vscode.window.showErrorMessage("Failed to update bpm");
@@ -879,18 +1001,49 @@ export const manifestCommands = [
     ) => {
       const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
-        const [result, outputType] = await validateCode(
-          vsCodeConfigManager,
-          manifestManager,
-        );
-        if (outputType === "json") {
-          const parsed = JSON.parse(result);
-          vscode.window.showInformationMessage("Code validated successfully");
-          outputChannel.appendLine(result);
-        } else if (outputType === "table") {
-          vscode.window.showInformationMessage("Code validated successfully");
-          outputChannel.appendLine(result);
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+          throw new Error("No editor open");
         }
+
+        const bodyFilePath = editor.document.fileName;
+
+        const targetManifest =
+          manifestManager.readManifestByCodeFilePath(bodyFilePath);
+
+        if (!targetManifest) {
+          throw new Error("No manifest file found");
+        }
+
+        const entityType =
+          manifestManager.readManifest(targetManifest).epictl.parent_type;
+
+        const manifestPath =
+          manifestManager.createManifestFilePath(targetManifest);
+
+        const displayType = "table";
+        const execPath = vsCodeConfigManager.readExecPath();
+        if (!execPath) {
+          throw new Error("No exec path set");
+        }
+
+        const result = await validateCode(
+          execPath,
+          entityType,
+          manifestPath,
+          bodyFilePath,
+          displayType,
+        );
+        vscode.window.showInformationMessage("Code validated successfully");
+        outputChannel.appendLine(result);
+        // if (displayType === "json") {
+        //   const parsed = JSON.parse(result);
+        //   vscode.window.showInformationMessage("Code validated successfully");
+        //   outputChannel.appendLine(result);
+        // } else if (displayType === "table") {
+        //   vscode.window.showInformationMessage("Code validated successfully");
+        //   outputChannel.appendLine(result);
+        // }
         outputChannel.show();
       } catch (err) {
         outputChannel.appendLine(`Error validating code: ${err}`);

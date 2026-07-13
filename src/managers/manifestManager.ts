@@ -91,6 +91,20 @@ export class ManifestManager {
     });
   }
 
+  public isCodeFileInManifests(
+    codeFilePath: string | undefined,
+  ): string | undefined {
+    if (!codeFilePath) {
+      return undefined;
+    }
+    const manifests = this.getManifests();
+    for (const manifest of manifests) {
+      const manifestData = this.readManifest(manifest);
+      if (manifestData.epictl.code_file.includes(codeFilePath)) return manifest;
+    }
+    return undefined;
+  }
+
   public createManifestFilePath(manifestName: string): string {
     const manifestDirPath = this.readManifestDirPath();
     if (!manifestDirPath) {
