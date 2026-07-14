@@ -33,6 +33,9 @@ import { fields, formatCommand } from "./utils/handlerUtils";
 
 import { VsCodeConfigManager } from "./managers/configManager";
 import { ManifestManager } from "./managers/manifestManager";
+import { NotificationManager } from "./managers/notificationManager";
+
+import fs from "fs";
 
 import {
   updateFileName,
@@ -46,39 +49,41 @@ import {
 export const vsCodeConfigCommands = [
   {
     name: "epictl.setExecPath",
-    callback: async (vsCodeConfigManager: VsCodeConfigManager) => {
-      const outputChannel = vscode.window.createOutputChannel("Epictl");
+    callback: async (
+      vsCodeConfigManager: VsCodeConfigManager,
+      notificationManager: NotificationManager,
+    ) => {
       try {
         await setExecPath(vsCodeConfigManager);
-        outputChannel.appendLine("Exec path set successfully");
-        vscode.window.showInformationMessage("Exec path set successfully");
+        notificationManager.success("Exec path set successfully");
       } catch (err) {
-        vscode.window.showErrorMessage("Error setting exec path");
-        outputChannel.appendLine(`Error setting exec path: ${err}`);
+        notificationManager.error(`Error setting exec path: ${err}`);
       }
-      outputChannel.show();
     },
   },
 
   {
     name: "epictl.getExecPath",
-    callback: (vsCodeConfigManager: VsCodeConfigManager) => {
-      const outputChannel = vscode.window.createOutputChannel("Epictl");
+    callback: (
+      vsCodeConfigManager: VsCodeConfigManager,
+      notificationManager: NotificationManager,
+    ) => {
       try {
         const execPath = getExecPath(vsCodeConfigManager);
-        outputChannel.appendLine(`Exec path: ${execPath}`);
-        vscode.window.showInformationMessage("Exec path found");
+        notificationManager.success(`Exec path: ${execPath}`);
       } catch (err: any) {
         vscode.window.showErrorMessage("Error getting exec path");
-        outputChannel.appendLine(`Error getting exec path: ${err.message}`);
+        notificationManager.error(`Error getting exec path: ${err.message}`);
       }
-      outputChannel.show();
     },
   },
 
   {
     name: "epictl.deleteExecPath",
-    callback: (vsCodeConfigManager: VsCodeConfigManager) => {
+    callback: (
+      vsCodeConfigManager: VsCodeConfigManager,
+      _notificationManager: NotificationManager,
+    ) => {
       deleteExecPath(vsCodeConfigManager);
     },
   },
@@ -87,33 +92,31 @@ export const vsCodeConfigCommands = [
 export const cliConfigCommands = [
   {
     name: "epictl.createConfig",
-    callback: async (vsCodeConfigManager: VsCodeConfigManager) => {
-      let outputChannel = vscode.window.createOutputChannel("Epictl");
+    callback: async (
+      vsCodeConfigManager: VsCodeConfigManager,
+      notificationManager: NotificationManager,
+    ) => {
       try {
         const result = JSON.parse(await createConfig(vsCodeConfigManager));
         if (result.success) {
-          outputChannel.appendLine(result.message);
+          notificationManager.success(result.message);
           if (result.config_id) {
             try {
               const message = await setConfig(
                 result.config_id,
                 vsCodeConfigManager,
               );
-              outputChannel.appendLine(message);
+              notificationManager.success(message);
             } catch (err) {
-              outputChannel.appendLine(`Error setting config: ${err}`);
+              notificationManager.error(`Error setting config: ${err}`);
             }
-            vscode.window.showInformationMessage("Config created successfully");
+            notificationManager.success("Config created successfully");
           }
         } else {
-          vscode.window.showErrorMessage("Failed to create config");
-          outputChannel.appendLine(result.message);
+          notificationManager.error(result.message);
         }
-        outputChannel.show();
       } catch (err) {
-        outputChannel.appendLine(`Error creating config: ${err}`);
-        vscode.window.showErrorMessage("Failed to create config");
-        outputChannel.show();
+        notificationManager.error(`Error creating config: ${err}`);
       }
     },
   },
@@ -121,8 +124,10 @@ export const cliConfigCommands = [
   // Gets the cli config
   {
     name: "epictl.getConfig",
-    callback: async (vsCodeConfigManager: VsCodeConfigManager) => {
-      const outputChannel = vscode.window.createOutputChannel("Epictl");
+    callback: async (
+      vsCodeConfigManager: VsCodeConfigManager,
+      notificationManager: NotificationManager,
+    ) => {
       try {
         const [result, outputType] = await getConfig(
           vsCodeConfigManager,
@@ -130,24 +135,22 @@ export const cliConfigCommands = [
         );
         const formattedResult = formatCliConfigResult(result);
         if (outputType === "json") {
-          outputChannel.appendLine(JSON.stringify(formattedResult, null, 2));
+          notificationManager.success(JSON.stringify(formattedResult, null, 2));
         } else {
-          outputChannel.appendLine(JSON.stringify(formattedResult, null, 2));
+          notificationManager.success(JSON.stringify(formattedResult, null, 2));
         }
-        vscode.window.showInformationMessage("Config fetched successfully");
-        outputChannel.show();
       } catch (err) {
-        outputChannel.appendLine(`Error getting config: ${err}`);
-        vscode.window.showErrorMessage("Failed to get config");
-        outputChannel.show();
+        notificationManager.error(`Error getting config: ${err}`);
       }
     },
   },
 
   {
     name: "epictl.setConfig",
-    callback: async (vsCodeConfigManager: VsCodeConfigManager) => {
-      const outputChannel = vscode.window.createOutputChannel("Epictl");
+    callback: async (
+      vsCodeConfigManager: VsCodeConfigManager,
+      notificationManager: NotificationManager,
+    ) => {
       try {
         const [configs, _outputType] = await getConfig(
           vsCodeConfigManager,
@@ -155,7 +158,6 @@ export const cliConfigCommands = [
         );
 
         const configsParsed = JSON.parse(configs);
-        console.log("configsParsed: ", JSON.stringify(configsParsed, null, 2));
 
         const configId = await vscode.window.showQuickPick(
           configsParsed.map(
@@ -173,56 +175,49 @@ export const cliConfigCommands = [
         if (!execPath) {
           throw new Error("No exec path set");
         }
-
         const result = await setConfigCmd(execPath, configId);
-        outputChannel.appendLine(JSON.stringify(result, null, 2));
-        vscode.window.showInformationMessage("Config set successfully");
-        outputChannel.show();
+        notificationManager.success(JSON.stringify(result, null, 2));
+        notificationManager.success("Config set successfully");
       } catch (err) {
-        outputChannel.appendLine(`Error setting config: ${err}`);
-        vscode.window.showErrorMessage("Failed to set config");
-        outputChannel.show();
+        notificationManager.error(`Error setting config: ${err}`);
       }
     },
   },
 
   {
     name: "epictl.activeConfig",
-    callback: async (vsCodeConfigManager: VsCodeConfigManager) => {
-      const outputChannel = vscode.window.createOutputChannel("Epictl");
+    callback: async (
+      vsCodeConfigManager: VsCodeConfigManager,
+      notificationManager: NotificationManager,
+    ) => {
       try {
         const response = await activeConfig(vsCodeConfigManager);
         const result = JSON.parse(response);
         if (result.success) {
-          outputChannel.appendLine(`Active config: ${result.active_config}`);
-          vscode.window.showInformationMessage("Config active successfully");
+          notificationManager.success(`Active config: ${result.active_config}`);
+          notificationManager.success("Config active successfully");
         } else {
-          outputChannel.appendLine("Failed to active config");
-          vscode.window.showErrorMessage("Error active config");
+          notificationManager.error("Failed to active config");
         }
-        outputChannel.show();
         return response;
       } catch (err) {
-        outputChannel.appendLine(`Error active config: ${err}`);
-        vscode.window.showErrorMessage("Failed to active config");
-        outputChannel.show();
+        notificationManager.error(`Error active config: ${err}`);
       }
     },
   },
 
   {
     name: "epictl.deleteConfig",
-    callback: async (vsCodeConfigManager: VsCodeConfigManager) => {
-      const outputChannel = vscode.window.createOutputChannel("Epictl");
+    callback: async (
+      vsCodeConfigManager: VsCodeConfigManager,
+      notificationManager: NotificationManager,
+    ) => {
       try {
         const result = await deleteConfig(vsCodeConfigManager);
-        outputChannel.appendLine(result);
-        vscode.window.showInformationMessage("Config deleted successfully");
-        outputChannel.show();
+        notificationManager.success(result);
+        notificationManager.success("Config deleted successfully");
       } catch (err) {
-        outputChannel.appendLine(`Error deleting config: ${err}`);
-        vscode.window.showErrorMessage("Failed to delete config");
-        outputChannel.show();
+        notificationManager.error(`Error deleting config: ${err}`);
       }
     },
   },
@@ -231,9 +226,10 @@ export const cliConfigCommands = [
 export const commands = [
   {
     name: "epictl.getBoms",
-    callback: async (vsCodeConfigManager: VsCodeConfigManager) => {
-      const outputChannel = vscode.window.createOutputChannel("Epictl");
-
+    callback: async (
+      vsCodeConfigManager: VsCodeConfigManager,
+      notificationManager: NotificationManager,
+    ) => {
       try {
         const outputType = await vscode.window.showQuickPick(
           ["table", "json"],
@@ -253,21 +249,14 @@ export const commands = [
         const result = await getBoms(execPath, outputType);
 
         if (outputType === "json") {
-          vscode.window.showInformationMessage("Boms fetched successfully");
-          outputChannel.appendLine(result);
+          notificationManager.success(result);
         } else if (outputType === "table") {
-          vscode.window.showInformationMessage("Boms fetched successfully");
-          outputChannel.appendLine(result);
+          notificationManager.success(result);
         } else {
-          vscode.window.showErrorMessage("Invalid output type");
-          outputChannel.appendLine(result);
+          notificationManager.error(result);
         }
-        outputChannel.show();
       } catch (err) {
-        outputChannel.appendLine(`${err}`);
-        outputChannel.appendLine("");
-        vscode.window.showErrorMessage("Error fetching boms");
-        outputChannel.show();
+        notificationManager.error(`${err}`);
       }
     },
   },
@@ -276,8 +265,8 @@ export const commands = [
     name: "epictl.getTables",
     callback: async (
       vsCodeConfigManager: VsCodeConfigManager,
+      notificationManager: NotificationManager,
     ): Promise<any> => {
-      const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
         const outputType = await vscode.window.showQuickPick(
           ["table", "json"],
@@ -296,24 +285,23 @@ export const commands = [
 
         const result = await getTables(execPath, outputType);
         if (outputType === "json") {
-          vscode.window.showInformationMessage("Tables fetched successfully");
-          outputChannel.appendLine(result);
+          notificationManager.success(result);
         } else if (outputType === "table") {
-          vscode.window.showInformationMessage("Tables fetched successfully");
-          outputChannel.appendLine(result);
+          notificationManager.success(result);
         }
-        outputChannel.show();
+        notificationManager.success("Tables fetched successfully");
       } catch (err: any) {
-        outputChannel.appendLine(`${err.message}`);
-        vscode.window.showErrorMessage("Error fetching tables");
-        outputChannel.show();
+        notificationManager.error(`${err.message}`);
       }
     },
   },
 
   {
     name: "epictl.describeBom",
-    callback: async (vsCodeConfigManager: VsCodeConfigManager) => {
+    callback: async (
+      vsCodeConfigManager: VsCodeConfigManager,
+      notificationManager: NotificationManager,
+    ) => {
       const bomId = await vscode.window.showInputBox({
         prompt: "Enter the bom id",
         ignoreFocusOut: true,
@@ -339,24 +327,24 @@ export const commands = [
       try {
         const result = await describeBom(execPath, bomId, outputType);
         if (outputType === "json") {
-          vscode.window.showInformationMessage("Bom described successfully");
+          notificationManager.success(result);
           outputChannel.append(result);
         } else if (outputType === "table") {
-          vscode.window.showInformationMessage("Bom described successfully");
-          outputChannel.append(result);
+          notificationManager.success(result);
         }
-        outputChannel.show();
+        notificationManager.success("Bom described successfully");
       } catch (err) {
-        outputChannel.appendLine(`Error describing bom: ${err}`);
-        vscode.window.showErrorMessage(`Error describing bom: ${err}`);
-        outputChannel.show();
+        notificationManager.error(`Error describing bom: ${err}`);
       }
     },
   },
 
   {
     name: "epictl.describeTable",
-    callback: async (vsCodeConfigManager: VsCodeConfigManager) => {
+    callback: async (
+      vsCodeConfigManager: VsCodeConfigManager,
+      notificationManager: NotificationManager,
+    ) => {
       const tableId = await vscode.window.showInputBox({
         prompt: "Enter the table id",
         ignoreFocusOut: true,
@@ -378,21 +366,16 @@ export const commands = [
         throw new Error("No exec path set");
       }
 
-      const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
         const result = await describeTable(execPath, tableId, outputType);
         if (outputType === "json") {
-          vscode.window.showInformationMessage("Table described successfully");
-          outputChannel.appendLine(result);
+          notificationManager.success(result);
         } else if (outputType === "table") {
-          vscode.window.showInformationMessage("Table described successfully");
-          outputChannel.appendLine(result);
+          notificationManager.success(result);
         }
-        outputChannel.show();
+        notificationManager.success("Table described successfully");
       } catch (err) {
-        outputChannel.appendLine(`Error describing table:f ${err}`);
-        vscode.window.showErrorMessage(`Error describing table: ${err}`);
-        outputChannel.show();
+        notificationManager.error(`Error describing table:f ${err}`);
       }
     },
   },
@@ -404,19 +387,16 @@ export const manifestCommands = [
     callback: (
       _vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
+      notificationManager: NotificationManager,
     ) => {
-      const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
         setManifestDirPath(manifestManager);
-        vscode.window.showInformationMessage("Success");
-        outputChannel.appendLine("Manifest directory path set successfully");
+        notificationManager.success("Manifest directory path set successfully");
       } catch (err) {
-        vscode.window.showErrorMessage("Error");
-        outputChannel.appendLine(
+        notificationManager.error(
           `Error setting manifest directory path: ${err}`,
         );
       }
-      outputChannel.show();
     },
   },
 
@@ -425,21 +405,17 @@ export const manifestCommands = [
     callback: (
       _vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
+      notificationManager: NotificationManager,
     ) => {
-      const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
         const manifestDirPath = getManifestDirPath(manifestManager);
-        vscode.window.showInformationMessage("Manifest directory path found");
-        outputChannel.appendLine(`Manifest directory path: ${manifestDirPath}`);
-        outputChannel.show();
-      } catch (err: any) {
-        vscode.window.showErrorMessage(
-          "Failed getting manifest directory path",
+        notificationManager.success(
+          `Manifest directory path: ${manifestDirPath}`,
         );
-        outputChannel.appendLine(
+      } catch (err: any) {
+        notificationManager.error(
           `Error getting manifest directory path: ${err.message}`,
         );
-        outputChannel.show();
       }
     },
   },
@@ -449,21 +425,16 @@ export const manifestCommands = [
     callback: async (
       _vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
+      notificationManager: NotificationManager,
     ) => {
-      const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
         const manifestName = await deleteLocalManifest(manifestManager);
-        vscode.window.showInformationMessage(
-          `Local manifest deleted successfully`,
-        );
-        outputChannel.appendLine(
+        notificationManager.success(
           `Local manifest ${manifestName} deleted successfully`,
         );
       } catch (err) {
-        vscode.window.showErrorMessage("Failed to delete local manifest");
-        outputChannel.appendLine(`Error deleting local manifest: ${err}`);
+        notificationManager.error(`Error deleting local manifest: ${err}`);
       }
-      outputChannel.show();
     },
   },
   {
@@ -471,8 +442,8 @@ export const manifestCommands = [
     callback: async (
       _vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
+      notificationManager: NotificationManager,
     ) => {
-      const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
         const editor = vscode.window.activeTextEditor;
         let filePath = editor?.document.uri.fsPath;
@@ -505,15 +476,11 @@ export const manifestCommands = [
           manifestName,
           filePath,
         );
-        vscode.window.showInformationMessage("Success");
-        outputChannel.appendLine(
+        notificationManager.success(
           `File ${filePath} added to manifest ${manifestName} successfully`,
         );
-        outputChannel.show();
       } catch (err: any) {
-        outputChannel.appendLine(`${err.message}`);
-        vscode.window.showErrorMessage(`Error`);
-        outputChannel.show();
+        notificationManager.error(`${err.message}`);
       }
     },
   },
@@ -522,8 +489,8 @@ export const manifestCommands = [
     callback: async (
       _vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
+      notificationManager: NotificationManager,
     ) => {
-      const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
         const editor = vscode.window.activeTextEditor;
         let filePath = editor?.document.uri.fsPath;
@@ -556,17 +523,12 @@ export const manifestCommands = [
           manifestName,
           filePath,
         );
-        vscode.window.showInformationMessage("Success");
-        outputChannel.appendLine(
+        notificationManager.success(
           `File ${filePath} deleted from manifest ${manifestName} successfully`,
         );
-        outputChannel.show();
       } catch (err: any) {
-        outputChannel.appendLine(`${err.message}`);
-        vscode.window.showErrorMessage(`Error`);
-        outputChannel.show();
+        notificationManager.error(`${err.message}`);
       }
-      outputChannel.show();
     },
   },
   {
@@ -574,31 +536,81 @@ export const manifestCommands = [
     callback: async (
       vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
+      notificationManager: NotificationManager,
     ) => {
-      const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
-        const [result, codeFilePath, manifestInput] = await initManifest(
-          vsCodeConfigManager,
+        const entityType = await vscode.window.showQuickPick(["bom", "table"], {
+          placeHolder: "Select the entity type",
+        });
+
+        if (!entityType) {
+          throw new Error("No entity type selected");
+        }
+
+        // get the parent id
+        const parentId = await vscode.window.showInputBox({
+          prompt: "Enter the parent id",
+          ignoreFocusOut: true,
+        });
+
+        if (!parentId) {
+          throw new Error("No parent id provided");
+        }
+
+        let manifestInput = await vscode.window.showInputBox({
+          prompt: "enter the name of the manifest file",
+          ignoreFocusOut: true,
+        });
+
+        if (manifestInput && !manifestInput.endsWith(".json")) {
+          manifestInput = `${manifestInput}.json`;
+        }
+
+        const manifestPath = manifestManager.createManifestFilePath(
+          manifestInput ? manifestInput : "",
+        );
+
+        let codeFilePath = await vscode.window.showInputBox({
+          prompt: "Enter the path and name of the code file",
+          ignoreFocusOut: true,
+        });
+        if (!codeFilePath) {
+          throw new Error("No code file path and name provided");
+        }
+        if (
+          fs.existsSync(codeFilePath) &&
+          fs.statSync(codeFilePath).isDirectory()
+        ) {
+          throw new Error("Code file path is a directory");
+        }
+
+        const execPath = vsCodeConfigManager.readExecPath();
+        if (!execPath) {
+          throw new Error("No exec path set");
+        }
+
+        const result = await initManifest(
+          execPath,
+          entityType,
+          parentId,
+          manifestPath,
+          undefined,
           manifestManager,
         );
         const parsedResult = JSON.parse(result);
         if (parsedResult.success) {
-          vscode.window.showInformationMessage(
-            "Manifest initialized successfully",
-          );
-          initCodeFile(codeFilePath, manifestInput, manifestManager);
+          notificationManager.success("Manifest initialized successfully");
+          initCodeFile(codeFilePath, manifestPath, manifestManager);
           const filePath = formatMessage(parsedResult.results);
-          outputChannel.appendLine(
+          notificationManager.success(
             "Manifest initialized successfully at " + filePath,
           );
         } else if (parsedResult.duplicate) {
-          outputChannel.appendLine(parsedResult.message);
-          vscode.window.showErrorMessage("Manifest already initialized");
+          notificationManager.error(parsedResult.message);
+          notificationManager.error("Manifest already initialized");
         }
-        outputChannel.show();
       } catch (err) {
-        outputChannel.appendLine(`Error initializing manifest: ${err}`);
-        outputChannel.show();
+        notificationManager.error(`Error initializing manifest: ${err}`);
       }
     },
   },
@@ -608,6 +620,7 @@ export const manifestCommands = [
     callback: async (
       vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
+      notificationManager: NotificationManager,
     ) => {
       const entityType = await vscode.window.showQuickPick(["bom", "table"], {
         placeHolder: "Select the entity type",
@@ -666,9 +679,9 @@ export const manifestCommands = [
         );
         const parsedResult = JSON.parse(result);
         if (parsedResult.success) {
-          vscode.window.showInformationMessage("Manifest cloned successfully");
+          notificationManager.success("Manifest cloned successfully");
           const filePath = formatMessage(parsedResult.results);
-          outputChannel.appendLine(
+          notificationManager.success(
             "Manifest cloned successfully at " + filePath,
           );
 
@@ -680,19 +693,16 @@ export const manifestCommands = [
             );
             updateManifestMetadataWithCodeFile(manifestManager, bpmCodePath);
           }
-          outputChannel.appendLine(
+          notificationManager.success(
             `Code file initialized successfully at ${codeResultPath}`,
           );
-          outputChannel.show();
         } else {
-          vscode.window.showErrorMessage("Failed to clone manifest");
-          outputChannel.appendLine(parsedResult.message);
-          outputChannel.show();
+          notificationManager.error("Failed to clone manifest");
+          notificationManager.error(parsedResult.message);
         }
       } catch (err: any) {
-        vscode.window.showErrorMessage("Error cloning manifest");
-        outputChannel.appendLine(`${err.message}`);
-        outputChannel.show();
+        notificationManager.error("Error cloning manifest");
+        notificationManager.error(`${err.message}`);
       }
     },
   },
@@ -702,23 +712,21 @@ export const manifestCommands = [
     callback: (
       _vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
+      notificationManager: NotificationManager,
     ) => {
-      const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
         const manifests = manifestManager.getManifests();
 
         if (manifests.length === 0) {
-          outputChannel.appendLine("No manifests found");
+          notificationManager.error("No manifests found");
         } else {
           for (const manifest of manifests) {
-            outputChannel.appendLine(`- ${manifest}`);
+            notificationManager.success(`- ${manifest}`);
           }
         }
       } catch (err) {
-        outputChannel.appendLine(`Error listing manifests: ${err}`);
-        vscode.window.showErrorMessage(`Error listing manifests: ${err}`);
+        notificationManager.error(`Error listing manifests: ${err}`);
       }
-      outputChannel.show();
     },
   },
 
@@ -727,8 +735,8 @@ export const manifestCommands = [
     callback: async (
       vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
+      notificationManager: NotificationManager,
     ) => {
-      const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
         let manifestInput = await vscode.window.showInputBox({
           prompt: "(optional) enter the name of the manifest file",
@@ -799,17 +807,12 @@ export const manifestCommands = [
         );
 
         if (outputType === "json") {
-          vscode.window.showInformationMessage("Bpm described successfully");
-          outputChannel.appendLine(result);
+          notificationManager.success("Bpm described successfully");
         } else if (outputType === "table") {
-          vscode.window.showInformationMessage("Bpm described successfully");
-          outputChannel.appendLine(result);
+          notificationManager.success("Bpm described successfully");
         }
-        outputChannel.show();
       } catch (err) {
-        outputChannel.appendLine(`Error describing bpm: ${err}`);
-        vscode.window.showErrorMessage(`Error describing bpm: ${err}`);
-        outputChannel.show();
+        notificationManager.error(`Error describing bpm: ${err}`);
       }
     },
   },
@@ -819,18 +822,15 @@ export const manifestCommands = [
     callback: async (
       vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
+      notificationManager: NotificationManager,
     ) => {
-      const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
         const openFilename = getActiveFilename();
         let manifestInput: string | undefined;
 
-        console.log("openFilename: ", openFilename);
-
         const manifestFile =
           manifestManager.isCodeFileInManifests(openFilename);
 
-        console.log("manifestFile: ", manifestFile);
         if (!manifestFile) {
           manifestInput = await vscode.window.showInputBox({
             prompt:
@@ -859,17 +859,13 @@ export const manifestCommands = [
 
         const result = JSON.parse(await applyBpm(execPath, manifestPath));
         if (result.success) {
-          vscode.window.showInformationMessage("Manifest applied successfully");
-          outputChannel.appendLine(result.message);
+          notificationManager.success("Manifest applied successfully");
         } else {
-          vscode.window.showErrorMessage("Failed to apply manifest");
-          outputChannel.appendLine(result.message);
+          notificationManager.error("Failed to apply manifest");
+          notificationManager.error(result.message);
         }
-        outputChannel.show();
       } catch (err: any) {
-        outputChannel.appendLine(`${err.message}`);
-        vscode.window.showErrorMessage("Error applying manifest");
-        outputChannel.show();
+        notificationManager.error(`${err.message}`);
       }
     },
   },
@@ -879,8 +875,8 @@ export const manifestCommands = [
     callback: async (
       vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
+      notificationManager: NotificationManager,
     ) => {
-      const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
         const openFilename = getActiveFilename();
         let manifestInput: string | undefined =
@@ -903,16 +899,8 @@ export const manifestCommands = [
           manifestInput = `${manifestInput}.json`;
         }
 
-        console.log("manifestFile: ", manifestInput);
-        console.log(
-          "manifestManager.getManifests(): ",
-          manifestManager.getManifests(),
-        );
-
         const manifestPath =
           manifestManager.createManifestFilePath(manifestInput);
-
-        console.log("manifestPath: ", manifestPath);
 
         const flagsWithCmds: string[] = [];
 
@@ -946,7 +934,6 @@ export const manifestCommands = [
             } else {
               userInput = openFilename;
             }
-            console.log("cs file userInput: ", userInput);
           } else {
             userInput = await vscode.window.showInputBox({
               prompt: `Enter the value for ${field.label}`,
@@ -974,20 +961,17 @@ export const manifestCommands = [
         const result = await updateBpm(execPath, manifestPath, flagsWithCmds);
         const parsedResult = JSON.parse(result);
         if (parsedResult.success) {
-          vscode.window.showInformationMessage("Bpm updated successfully");
-          outputChannel.appendLine(parsedResult.message);
+          notificationManager.success("Bpm updated successfully");
           if (updateName) {
             updateFileName(manifestManager, newName!, oldName!);
           }
         } else {
-          vscode.window.showErrorMessage("Failed to update bpm");
-          outputChannel.appendLine(parsedResult.message);
+          notificationManager.error("Failed to update bpm");
+          notificationManager.error(parsedResult.message);
         }
-        outputChannel.show();
       } catch (err: any) {
-        outputChannel.appendLine(`${err}`);
-        vscode.window.showErrorMessage("Error updating bpm");
-        outputChannel.show();
+        notificationManager.error("Error updating bpm");
+        notificationManager.error(`${err}`);
       }
     },
   },
@@ -997,23 +981,21 @@ export const manifestCommands = [
     callback: async (
       vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
+      notificationManager: NotificationManager,
     ) => {
-      const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
         const result = JSON.parse(
           await deleteBpm(vsCodeConfigManager, manifestManager),
         );
         if (result.success) {
-          vscode.window.showInformationMessage("Bpm deleted successfully");
-          outputChannel.appendLine(result.message);
+          notificationManager.success("Bpm deleted successfully");
         } else {
-          vscode.window.showErrorMessage("Failed to delete bpm");
-          outputChannel.appendLine(result.message);
+          notificationManager.error("Failed to delete bpm");
+          notificationManager.error(result.message);
         }
       } catch (err) {
-        outputChannel.appendLine(`Error deleting bpm: ${err}`);
-        vscode.window.showErrorMessage(`Error deleting bpm: ${err}`);
-        outputChannel.show();
+        notificationManager.error("Error deleting bpm");
+        notificationManager.error(`${err}`);
       }
     },
   },
@@ -1023,8 +1005,8 @@ export const manifestCommands = [
     callback: async (
       vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
+      notificationManager: NotificationManager,
     ) => {
-      const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
@@ -1059,21 +1041,10 @@ export const manifestCommands = [
           bodyFilePath,
           displayType,
         );
-        vscode.window.showInformationMessage("Code validated successfully");
-        outputChannel.appendLine(result);
-        // if (displayType === "json") {
-        //   const parsed = JSON.parse(result);
-        //   vscode.window.showInformationMessage("Code validated successfully");
-        //   outputChannel.appendLine(result);
-        // } else if (displayType === "table") {
-        //   vscode.window.showInformationMessage("Code validated successfully");
-        //   outputChannel.appendLine(result);
-        // }
-        outputChannel.show();
+        notificationManager.success("Code validated successfully");
       } catch (err) {
-        outputChannel.appendLine(`Error validating code: ${err}`);
-        vscode.window.showErrorMessage(`Error validating code: ${err}`);
-        outputChannel.show();
+        notificationManager.error("Error validating code");
+        notificationManager.error(`${err}`);
       }
     },
   },
