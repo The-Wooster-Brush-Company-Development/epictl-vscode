@@ -16,4 +16,18 @@ export class NotificationManager {
     this.outputChannel.show();
     vscode.window.showInformationMessage("Success");
   }
+
+  public write(message: string) {
+    this.outputChannel.clear();
+    this.outputChannel.appendLine(message);
+    this.outputChannel.show();
+  }
+
+  public notifySuccess(message: string) {
+    vscode.window.showInformationMessage(message);
+  }
+
+  public notifyError(message: string) {
+    vscode.window.showErrorMessage(message);
+  }
 }

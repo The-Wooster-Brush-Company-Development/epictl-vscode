@@ -5,11 +5,14 @@ import {
   getConfig,
   setConfig,
   activeConfig,
-  setConfigCmd,
   deleteConfig,
+  setConfigCli,
   setExecPath,
   getExecPath,
   deleteExecPath,
+  setCodeDirPath,
+  getCodeDirPath,
+  deleteCodeDirPath,
   addFileToManifest,
   deleteCodeFileFromManifest,
   initManifest,
@@ -44,7 +47,9 @@ import {
   formatMessage,
   formatCliConfigResult,
   initCodeFile,
+  ConfigQuickPickItem,
 } from "./utils/registryUtils";
+import { PromptManager } from "./managers/promptManager";
 
 export const vsCodeConfigCommands = [
   {
@@ -52,9 +57,10 @@ export const vsCodeConfigCommands = [
     callback: async (
       vsCodeConfigManager: VsCodeConfigManager,
       notificationManager: NotificationManager,
+      promptManager: PromptManager,
     ) => {
       try {
-        await setExecPath(vsCodeConfigManager);
+        await setExecPath(vsCodeConfigManager, promptManager);
         notificationManager.success("Exec path set successfully");
       } catch (err) {
         notificationManager.error(`Error setting exec path: ${err}`);
@@ -67,9 +73,10 @@ export const vsCodeConfigCommands = [
     callback: (
       vsCodeConfigManager: VsCodeConfigManager,
       notificationManager: NotificationManager,
+      promptManager: PromptManager,
     ) => {
       try {
-        const execPath = getExecPath(vsCodeConfigManager);
+        const execPath = getExecPath(vsCodeConfigManager, promptManager);
         notificationManager.success(`Exec path: ${execPath}`);
       } catch (err: any) {
         vscode.window.showErrorMessage("Error getting exec path");
@@ -82,9 +89,71 @@ export const vsCodeConfigCommands = [
     name: "epictl.deleteExecPath",
     callback: (
       vsCodeConfigManager: VsCodeConfigManager,
-      _notificationManager: NotificationManager,
+      notificationManager: NotificationManager,
+      promptManager: PromptManager,
     ) => {
-      deleteExecPath(vsCodeConfigManager);
+      try {
+        deleteExecPath(vsCodeConfigManager);
+        notificationManager.success("Exec path deleted successfully");
+      } catch (err: any) {
+        notificationManager.error(`${err.message}`);
+      }
+    },
+  },
+
+  {
+    name: "epictl.setCodeDirPath",
+    callback: async (
+      vsCodeConfigManager: VsCodeConfigManager,
+      notificationManager: NotificationManager,
+      promptManager: PromptManager,
+    ) => {
+      try {
+        const codeDirPath = await vscode.window.showInputBox({
+          prompt: "Enter the path to the code directory",
+          ignoreFocusOut: true,
+        });
+        if (!codeDirPath) {
+          throw new Error("No code directory path provided");
+        }
+        setCodeDirPath(vsCodeConfigManager, codeDirPath);
+        notificationManager.success("Code directory path set successfully");
+      } catch (err: any) {
+        notificationManager.error(`${err.message}`);
+      }
+    },
+  },
+
+  {
+    name: "epictl.getCodeDirPath",
+    callback: (
+      vsCodeConfigManager: VsCodeConfigManager,
+      notificationManager: NotificationManager,
+      promptManager: PromptManager,
+    ) => {
+      try {
+        const codeDirPath = getCodeDirPath(vsCodeConfigManager);
+        notificationManager.success(`Code directory path: ${codeDirPath}`);
+      } catch (err: any) {
+        notificationManager.notifyError("Error getting code directory path");
+        notificationManager.write(err.message);
+      }
+    },
+  },
+
+  {
+    name: "epictl.deleteCodeDirPath",
+    callback: (
+      vsCodeConfigManager: VsCodeConfigManager,
+      notificationManager: NotificationManager,
+      promptManager: PromptManager,
+    ) => {
+      try {
+        deleteCodeDirPath(vsCodeConfigManager);
+        notificationManager.success("Code directory path deleted successfully");
+      } catch (err: any) {
+        notificationManager.error(`${err.message}`);
+      }
     },
   },
 ];
@@ -95,6 +164,7 @@ export const cliConfigCommands = [
     callback: async (
       vsCodeConfigManager: VsCodeConfigManager,
       notificationManager: NotificationManager,
+      promptManager: PromptManager,
     ) => {
       try {
         const result = JSON.parse(await createConfig(vsCodeConfigManager));
@@ -107,16 +177,15 @@ export const cliConfigCommands = [
                 vsCodeConfigManager,
               );
               notificationManager.success(message);
-            } catch (err) {
-              notificationManager.error(`Error setting config: ${err}`);
+            } catch (err: any) {
+              notificationManager.error(`${err.message}`);
             }
-            notificationManager.success("Config created successfully");
           }
         } else {
           notificationManager.error(result.message);
         }
-      } catch (err) {
-        notificationManager.error(`Error creating config: ${err}`);
+      } catch (err: any) {
+        notificationManager.error(`${err.message}`);
       }
     },
   },
@@ -127,6 +196,7 @@ export const cliConfigCommands = [
     callback: async (
       vsCodeConfigManager: VsCodeConfigManager,
       notificationManager: NotificationManager,
+      promptManager: PromptManager,
     ) => {
       try {
         const [result, outputType] = await getConfig(
@@ -150,6 +220,7 @@ export const cliConfigCommands = [
     callback: async (
       vsCodeConfigManager: VsCodeConfigManager,
       notificationManager: NotificationManager,
+      promptManager: PromptManager,
     ) => {
       try {
         const [configs, _outputType] = await getConfig(
@@ -159,25 +230,25 @@ export const cliConfigCommands = [
 
         const configsParsed = JSON.parse(configs);
 
-        const configId = await vscode.window.showQuickPick(
-          configsParsed.map(
-            (config: any) =>
-              `${path.basename(config.base_url)} : ${config.id.slice(0, 6)}`,
-          ),
-          {
-            placeHolder: "Select the config to set",
-          },
+        const configOptions: ConfigQuickPickItem[] = configsParsed.map(
+          (config: any) => ({
+            label: `${path.basename(config.base_url)} : ${config.id.slice(0, 6)}`,
+            id: config.id,
+          }),
         );
-        if (!configId) {
+        const selection = await vscode.window.showQuickPick(configOptions, {
+          placeHolder: "Select the config to set",
+        });
+
+        if (!selection) {
           throw new Error("No config selected");
         }
         const execPath = vsCodeConfigManager.readExecPath();
         if (!execPath) {
           throw new Error("No exec path set");
         }
-        const result = await setConfigCmd(execPath, configId);
-        notificationManager.success(JSON.stringify(result, null, 2));
-        notificationManager.success("Config set successfully");
+        const result = await setConfigCli(execPath, selection.id);
+        notificationManager.success(result);
       } catch (err) {
         notificationManager.error(`Error setting config: ${err}`);
       }
@@ -189,13 +260,13 @@ export const cliConfigCommands = [
     callback: async (
       vsCodeConfigManager: VsCodeConfigManager,
       notificationManager: NotificationManager,
+      promptManager: PromptManager,
     ) => {
       try {
         const response = await activeConfig(vsCodeConfigManager);
         const result = JSON.parse(response);
         if (result.success) {
           notificationManager.success(`Active config: ${result.active_config}`);
-          notificationManager.success("Config active successfully");
         } else {
           notificationManager.error("Failed to active config");
         }
@@ -211,11 +282,11 @@ export const cliConfigCommands = [
     callback: async (
       vsCodeConfigManager: VsCodeConfigManager,
       notificationManager: NotificationManager,
+      promptManager: PromptManager,
     ) => {
       try {
         const result = await deleteConfig(vsCodeConfigManager);
         notificationManager.success(result);
-        notificationManager.success("Config deleted successfully");
       } catch (err) {
         notificationManager.error(`Error deleting config: ${err}`);
       }
@@ -229,6 +300,7 @@ export const commands = [
     callback: async (
       vsCodeConfigManager: VsCodeConfigManager,
       notificationManager: NotificationManager,
+      promptManager: PromptManager,
     ) => {
       try {
         const outputType = await vscode.window.showQuickPick(
@@ -249,14 +321,18 @@ export const commands = [
         const result = await getBoms(execPath, outputType);
 
         if (outputType === "json") {
-          notificationManager.success(result);
+          notificationManager.notifySuccess("Boms fetched successfully");
+          notificationManager.write(result);
         } else if (outputType === "table") {
-          notificationManager.success(result);
+          notificationManager.notifySuccess("Boms fetched successfully");
+          notificationManager.write(result);
         } else {
-          notificationManager.error(result);
+          notificationManager.notifyError("Failed to fetch boms");
+          notificationManager.write(result);
         }
-      } catch (err) {
-        notificationManager.error(`${err}`);
+      } catch (err: any) {
+        notificationManager.notifyError("Error fetching boms");
+        notificationManager.write(err.message);
       }
     },
   },
@@ -266,6 +342,7 @@ export const commands = [
     callback: async (
       vsCodeConfigManager: VsCodeConfigManager,
       notificationManager: NotificationManager,
+      promptManager: PromptManager,
     ): Promise<any> => {
       try {
         const outputType = await vscode.window.showQuickPick(
@@ -285,13 +362,18 @@ export const commands = [
 
         const result = await getTables(execPath, outputType);
         if (outputType === "json") {
-          notificationManager.success(result);
+          notificationManager.notifySuccess("Tables fetched successfully");
+          notificationManager.write(result);
         } else if (outputType === "table") {
-          notificationManager.success(result);
+          notificationManager.notifySuccess("Tables fetched successfully");
+          notificationManager.write(result);
+        } else {
+          notificationManager.notifyError("Failed to fetch tables");
+          notificationManager.write(result);
         }
-        notificationManager.success("Tables fetched successfully");
       } catch (err: any) {
-        notificationManager.error(`${err.message}`);
+        notificationManager.notifyError("Error fetching tables");
+        notificationManager.write(err.message);
       }
     },
   },
@@ -301,6 +383,7 @@ export const commands = [
     callback: async (
       vsCodeConfigManager: VsCodeConfigManager,
       notificationManager: NotificationManager,
+      promptManager: PromptManager,
     ) => {
       const bomId = await vscode.window.showInputBox({
         prompt: "Enter the bom id",
@@ -323,18 +406,18 @@ export const commands = [
         throw new Error("No exec path set");
       }
 
-      const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
         const result = await describeBom(execPath, bomId, outputType);
         if (outputType === "json") {
-          notificationManager.success(result);
-          outputChannel.append(result);
+          notificationManager.notifySuccess("Bom described successfully");
+          notificationManager.write(result);
         } else if (outputType === "table") {
-          notificationManager.success(result);
+          notificationManager.notifySuccess("Bom described successfully");
+          notificationManager.write(result);
         }
-        notificationManager.success("Bom described successfully");
-      } catch (err) {
-        notificationManager.error(`Error describing bom: ${err}`);
+      } catch (err: any) {
+        notificationManager.notifyError("Error describing bom");
+        notificationManager.write(err.message);
       }
     },
   },
@@ -344,6 +427,7 @@ export const commands = [
     callback: async (
       vsCodeConfigManager: VsCodeConfigManager,
       notificationManager: NotificationManager,
+      promptManager: PromptManager,
     ) => {
       const tableId = await vscode.window.showInputBox({
         prompt: "Enter the table id",
@@ -369,13 +453,18 @@ export const commands = [
       try {
         const result = await describeTable(execPath, tableId, outputType);
         if (outputType === "json") {
-          notificationManager.success(result);
+          notificationManager.notifySuccess("Table described successfully");
+          notificationManager.write(result);
         } else if (outputType === "table") {
-          notificationManager.success(result);
+          notificationManager.notifySuccess("Table described successfully");
+          notificationManager.write(result);
+        } else {
+          notificationManager.notifyError("Failed to describe table");
+          notificationManager.write(result);
         }
-        notificationManager.success("Table described successfully");
-      } catch (err) {
-        notificationManager.error(`Error describing table:f ${err}`);
+      } catch (err: any) {
+        notificationManager.notifyError("Error describing table");
+        notificationManager.write(err.message);
       }
     },
   },
@@ -388,6 +477,7 @@ export const manifestCommands = [
       _vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
       notificationManager: NotificationManager,
+      promptManager: PromptManager,
     ) => {
       try {
         setManifestDirPath(manifestManager);
@@ -406,6 +496,7 @@ export const manifestCommands = [
       _vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
       notificationManager: NotificationManager,
+      promptManager: PromptManager,
     ) => {
       try {
         const manifestDirPath = getManifestDirPath(manifestManager);
@@ -426,6 +517,7 @@ export const manifestCommands = [
       _vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
       notificationManager: NotificationManager,
+      promptManager: PromptManager,
     ) => {
       try {
         const manifestName = await deleteLocalManifest(manifestManager);
@@ -443,6 +535,7 @@ export const manifestCommands = [
       _vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
       notificationManager: NotificationManager,
+      promptManager: PromptManager,
     ) => {
       try {
         const editor = vscode.window.activeTextEditor;
@@ -490,6 +583,7 @@ export const manifestCommands = [
       _vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
       notificationManager: NotificationManager,
+      promptManager: PromptManager,
     ) => {
       try {
         const editor = vscode.window.activeTextEditor;
@@ -537,6 +631,7 @@ export const manifestCommands = [
       vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
       notificationManager: NotificationManager,
+      promptManager: PromptManager,
     ) => {
       try {
         const entityType = await vscode.window.showQuickPick(["bom", "table"], {
@@ -562,7 +657,11 @@ export const manifestCommands = [
           ignoreFocusOut: true,
         });
 
-        if (manifestInput && !manifestInput.endsWith(".json")) {
+        if (!manifestInput) {
+          throw new Error("No manifest file name provided");
+        }
+
+        if (!manifestInput.endsWith(".json")) {
           manifestInput = `${manifestInput}.json`;
         }
 
@@ -594,13 +693,11 @@ export const manifestCommands = [
           entityType,
           parentId,
           manifestPath,
-          undefined,
-          manifestManager,
         );
         const parsedResult = JSON.parse(result);
         if (parsedResult.success) {
           notificationManager.success("Manifest initialized successfully");
-          initCodeFile(codeFilePath, manifestPath, manifestManager);
+          initCodeFile(codeFilePath, manifestInput, manifestManager);
           const filePath = formatMessage(parsedResult.results);
           notificationManager.success(
             "Manifest initialized successfully at " + filePath,
@@ -621,6 +718,7 @@ export const manifestCommands = [
       vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
       notificationManager: NotificationManager,
+      promptManager: PromptManager,
     ) => {
       const entityType = await vscode.window.showQuickPick(["bom", "table"], {
         placeHolder: "Select the entity type",
@@ -713,6 +811,7 @@ export const manifestCommands = [
       _vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
       notificationManager: NotificationManager,
+      promptManager: PromptManager,
     ) => {
       try {
         const manifests = manifestManager.getManifests();
@@ -736,6 +835,7 @@ export const manifestCommands = [
       vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
       notificationManager: NotificationManager,
+      promptManager: PromptManager,
     ) => {
       try {
         let manifestInput = await vscode.window.showInputBox({
@@ -823,6 +923,7 @@ export const manifestCommands = [
       vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
       notificationManager: NotificationManager,
+      promptManager: PromptManager,
     ) => {
       try {
         const openFilename = getActiveFilename();
@@ -876,6 +977,7 @@ export const manifestCommands = [
       vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
       notificationManager: NotificationManager,
+      promptManager: PromptManager,
     ) => {
       try {
         const openFilename = getActiveFilename();
@@ -982,6 +1084,7 @@ export const manifestCommands = [
       vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
       notificationManager: NotificationManager,
+      promptManager: PromptManager,
     ) => {
       try {
         const result = JSON.parse(
@@ -1006,6 +1109,7 @@ export const manifestCommands = [
       vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
       notificationManager: NotificationManager,
+      promptManager: PromptManager,
     ) => {
       try {
         const editor = vscode.window.activeTextEditor;
