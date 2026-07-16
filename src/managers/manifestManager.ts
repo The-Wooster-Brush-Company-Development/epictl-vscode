@@ -7,29 +7,27 @@ interface ManifestManagerInterface {
 }
 
 export class ManifestManager {
-  private context: vscode.ExtensionContext;
-  private manifestDirPath: string;
-  private manifestConfigPath: string;
+  private _manifestDirPath: string;
+  private _manifestConfigPath: string;
 
   public constructor(context: vscode.ExtensionContext) {
-    this.context = context;
-    this.manifestDirPath = vscode.Uri.joinPath(
+    this._manifestDirPath = vscode.Uri.joinPath(
       context.globalStorageUri,
       "manifest",
     ).fsPath;
 
-    this.manifestConfigPath = path.join(this.manifestDirPath, "config.json");
+    this._manifestConfigPath = path.join(this._manifestDirPath, "config.json");
 
     //initialize manifest directory and config file
-    fs.mkdirSync(this.manifestDirPath, {
+    fs.mkdirSync(this._manifestDirPath, {
       recursive: true,
     });
 
-    if (!fs.existsSync(this.manifestConfigPath)) {
+    if (!fs.existsSync(this._manifestConfigPath)) {
       const data = {
-        manifest_dir_path: this.manifestDirPath, //set as default, user can change later
+        manifest_dir_path: this._manifestDirPath, //set as default, user can change later
       };
-      fs.writeFileSync(this.manifestConfigPath, JSON.stringify(data, null, 2));
+      fs.writeFileSync(this._manifestConfigPath, JSON.stringify(data, null, 2));
     }
   }
 
@@ -37,7 +35,7 @@ export class ManifestManager {
 
   private loadManifestConfig(): ManifestManagerInterface | undefined {
     return JSON.parse(
-      fs.readFileSync(this.manifestConfigPath, "utf8"),
+      fs.readFileSync(this._manifestConfigPath, "utf8"),
     ) as ManifestManagerInterface;
   }
 
@@ -49,7 +47,7 @@ export class ManifestManager {
       throw new Error("No manifest config file found");
     }
     data.manifest_dir_path = manifestDirPath;
-    fs.writeFileSync(this.manifestConfigPath, JSON.stringify(data, null, 2));
+    fs.writeFileSync(this._manifestConfigPath, JSON.stringify(data, null, 2));
   }
 
   public writeManifestCodeFilePath(manifestName: string, codeFilePath: string) {
@@ -62,6 +60,10 @@ export class ManifestManager {
     }
 
     const manifestFilePath = this.createManifestFilePath(manifestName);
+
+    if (!manifestData.epictl.code_file) {
+      manifestData.epictl.code_file = [];
+    }
 
     manifestData.epictl.code_file.push(codeFilePath);
     fs.writeFileSync(manifestFilePath, JSON.stringify(manifestData, null, 2));
@@ -110,12 +112,16 @@ export class ManifestManager {
     if (!manifestDirPath) {
       throw new Error("No manifest directory path set");
     }
+    if (path.extname(manifestName) !== ".json") {
+      manifestName = `${manifestName}.json`;
+    }
     return path.join(manifestDirPath, manifestName);
   }
 
+  //TODO: rename to readManifests
   public getManifests(): string[] {
     const manifests = fs
-      .readdirSync(this.manifestDirPath)
+      .readdirSync(this._manifestDirPath)
       .filter(
         (file) =>
           file.endsWith(".json") && path.basename(file) !== "config.json",
@@ -133,7 +139,7 @@ export class ManifestManager {
       throw new Error("No manifest config file found");
     }
     data.manifest_dir_path = "";
-    fs.writeFileSync(this.manifestConfigPath, JSON.stringify(data, null, 2));
+    fs.writeFileSync(this._manifestConfigPath, JSON.stringify(data, null, 2));
   }
 
   public deleteManifest(manifestName: string) {
