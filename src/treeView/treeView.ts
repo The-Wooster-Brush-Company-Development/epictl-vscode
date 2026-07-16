@@ -11,13 +11,21 @@ import {
 import { VsCodeConfigManager } from "../managers/configManager";
 import { ManifestManager } from "../managers/manifestManager";
 import { BpmWebview } from "../webviews/bpmWebview";
+import { StateManager } from "../managers/stateManager";
 
 export const registerTreeEvents = (
   tree: vscode.TreeView<any>,
   treeProvider: EpictlTreeView,
+  stateManager: StateManager,
 ) => {
   tree.onDidChangeSelection((event) => {
+    console.log("event: ", event);
     const element = event.selection[0];
+    if (!element) return;
+
+    console.log("element: ", element);
+
+    stateManager.updateFromTree(element);
 
     if (element instanceof BpmNode) {
       if (element.parentType === "bom") {
@@ -37,12 +45,13 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
     vscodeConfigManager: VsCodeConfigManager,
     manifestManager: ManifestManager,
     private readonly bpmWebview: BpmWebview,
+    stateManager: StateManager,
   ) {
     this.vscodeConfigManager = vscodeConfigManager;
     this.manifestManager = manifestManager;
   }
 
-  get execPath(): string | undefined {
+  private get execPath(): string | undefined {
     return this.vscodeConfigManager.readExecPath();
   }
 
@@ -56,7 +65,7 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
         return 3;
       case "Standard":
         return 1;
-      case "In-Transition":
+      case "In-Transaction":
         return 0;
       default:
         throw new Error(`Invalid directive type: ${directiveType}`);
@@ -69,6 +78,7 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
 
   async getChildren(element?: EpicorNode): Promise<EpicorNode[]> {
     if (!element) {
+      //1st level
       return [
         new EpicorNode(
           "Method Directives",
@@ -81,16 +91,37 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
       ];
     }
 
-    // 2nd level
+    // 3rd level
+    // TODO: this is where we can update the state manager
     if (element instanceof DirectiveNode) {
       if (element.type === "bom") {
+        console.log("calling canInitManifest for bom");
+        const data = {
+          sysRowId: element.sysRowId,
+          name: element.label,
+          type: "bom",
+        };
+        this.bpmWebview.postMessageHelper({
+          command: "canInitManifest",
+          data: data,
+        });
+
         return this.getProcessingNodes("bom", element.sysRowId);
       } else {
+        const data = {
+          sysRowId: element.sysRowId,
+          name: element.label,
+          type: "table",
+        };
+        this.bpmWebview.postMessageHelper({
+          command: "canInitManifest",
+          data: data,
+        });
         return this.getProcessingNodes("table", element.sysRowId);
       }
     }
 
-    //3rd level
+    //4th level
     if (
       element instanceof BomProcessingNode ||
       element instanceof TableProcessingNode
@@ -110,7 +141,7 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
       }
     }
 
-    // 1st level
+    // 2nd level
     if (element instanceof EpicorNode) {
       if (element.label === "Method Directives") {
         return await this.getBoms();
@@ -149,10 +180,10 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
     );
   }
 
-  private getProcessingNodes(
+  private async getProcessingNodes(
     directiveType: "bom" | "table",
     parentSysRowId: string,
-  ): BomProcessingNode[] | TableProcessingNode[] {
+  ): Promise<BomProcessingNode[] | TableProcessingNode[]> {
     if (directiveType === "bom") {
       return [
         new BomProcessingNode(
@@ -183,9 +214,9 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
           parentSysRowId,
         ),
         new TableProcessingNode(
-          "In-Transition",
+          "In-Transaction",
           vscode.TreeItemCollapsibleState.Collapsed,
-          "In-Transition",
+          "In-Transaction",
           parentSysRowId,
         ),
       ];
@@ -200,6 +231,7 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
     const bomData = JSON.parse(
       await describeBom(this.execPath ?? "", parentSysRowId, "json"),
     );
+
     return bomData[1].returnObj.BpDirective.filter(
       (bpm: any) => bpm.DirectiveType === directiveType,
     )
@@ -218,6 +250,11 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
     const bpmData = JSON.parse(
       await describeTable(this.execPath ?? "", parentSysRowId, "json"),
     );
+
+    this.bpmWebview.postMessageHelper({
+      command: "displayTable",
+      data: bpmData,
+    });
 
     return bpmData[1].returnObj.BpDirective.filter(
       (bpm: any) => bpm.DirectiveType === directiveType,
@@ -260,8 +297,6 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
       ),
     );
 
-    console.log("table data: ", bpmData);
-
     const message = {
       command: "describeDirectiveBpm",
       data: bpmData,
@@ -297,6 +332,7 @@ export class BomProcessingNode extends EpicorNode {
     collapsibleState: vscode.TreeItemCollapsibleState,
     public directiveType: "Pre" | "Base" | "Post",
     public parentSysRowId: string,
+    public type = "bom",
   ) {
     super(label, collapsibleState);
     this.iconPath = new vscode.ThemeIcon("file-directory");
@@ -307,8 +343,9 @@ export class TableProcessingNode extends EpicorNode {
   constructor(
     label: string,
     collapsibleState: vscode.TreeItemCollapsibleState,
-    public directiveType: "Standard" | "In-Transition",
+    public directiveType: "Standard" | "In-Transaction",
     public parentSysRowId: string,
+    public type = "table",
   ) {
     super(label, collapsibleState);
     this.iconPath = new vscode.ThemeIcon("file-directory");

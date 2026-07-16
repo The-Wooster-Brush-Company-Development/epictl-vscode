@@ -9,7 +9,7 @@ interface StateManagerInterface {
   entity_type: string;
   entity_id: string;
   entity_name: string;
-  entity_parent_id: string;
+  parent_id: string;
 }
 
 export class StateManager {
@@ -48,19 +48,24 @@ export class StateManager {
     );
   }
 
+  public readState(): Partial<StateManagerInterface> {
+    return this.loadState();
+  }
+
   public updateFromTree(element: EpicorNode) {
     if (element instanceof DirectiveNode) {
       this.writeState({
         entity_type: element.type,
         entity_id: element.sysRowId,
         entity_name: element.label as string,
+        parent_id: "",
       });
     } else if (element instanceof BpmNode) {
       this.writeState({
         entity_type: element.parentType,
         entity_id: element.directiveId,
         entity_name: element.label as string,
-        entity_parent_id: element.parentSysRowId,
+        parent_id: element.parentSysRowId,
       });
     } else {
       this.writeState({});

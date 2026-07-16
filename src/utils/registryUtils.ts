@@ -1,7 +1,11 @@
 import path from "path";
 import { ManifestManager } from "../managers/manifestManager";
 import * as fs from "fs";
+import * as vscode from "vscode";
 
+export interface ConfigQuickPickItem extends vscode.QuickPickItem {
+  id: string;
+}
 export const updateFileName = (
   manifestManager: ManifestManager,
   newName: string,
@@ -59,17 +63,15 @@ export const formatMessage = (results: string) => {
 };
 
 export const formatCliConfigResult = (result: any) => {
-  const parsedResult = JSON.parse(result)[0];
-
-  //format password
-  parsedResult.password = "********";
-
-  //format api key
-  const apiKeyLength = parsedResult.api_key?.length;
-  parsedResult.api_key =
-    parsedResult.api_key?.slice(0, 6) + "*".repeat(apiKeyLength - 6);
-
-  return parsedResult;
+  result = JSON.parse(result);
+  const formattedResult = [];
+  for (const config of result) {
+    formattedResult.push(config);
+    config.password = "********";
+    const apiKeyLength = config.api_key?.length;
+    config.api_key = config.api_key?.slice(0, 6) + "*".repeat(apiKeyLength - 6);
+  }
+  return formattedResult;
 };
 
 export const initCodeFile = (
@@ -83,5 +85,6 @@ export const initCodeFile = (
   }
 
   // link code file to manifest if it exists
-  manifestManager.writeManifestCodeFilePath(manifestInput, codeFilePath);
+  const manifestName = path.basename(manifestInput);
+  manifestManager.writeManifestCodeFilePath(manifestName, codeFilePath);
 };
