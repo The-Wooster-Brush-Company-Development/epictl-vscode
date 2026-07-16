@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import fs from "fs";
+import path from "path";
 
 // Main class for reading and writing from vs code config file in global storage
 // vs code config file has path to executable, path to manifest directory etc.
@@ -109,12 +110,12 @@ export class VsCodeConfigManager {
   }
 
   public createCodeFilePath(fileName: string): string {
-    if (!fileName.endsWith(".cs")) {
-      fileName += ".cs";
-    }
+    const codeFileName =
+      path.basename(fileName, path.extname(fileName)) + ".cs";
+
     return vscode.Uri.joinPath(
       vscode.Uri.parse(this.readManifestCodeDirPath()!),
-      fileName,
+      codeFileName,
     ).fsPath;
   }
 }

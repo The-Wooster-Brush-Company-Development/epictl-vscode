@@ -29,25 +29,6 @@ export const updateFileName = (
   }
 };
 
-export const createCodeFile = (
-  codeData: string,
-  codeFilePath: string,
-  fileName: string,
-) => {
-  const stats = fs.statSync(codeFilePath);
-
-  fileName = fileName.endsWith(".cs") ? fileName : `${fileName}.cs`;
-
-  if (stats.isDirectory()) {
-    codeFilePath = path.join(codeFilePath, fileName);
-  } else {
-    codeFilePath = path.join(path.dirname(codeFilePath), fileName);
-  }
-
-  fs.writeFileSync(codeFilePath, codeData);
-  return codeFilePath;
-};
-
 export const updateManifestMetadataWithCodeFile = (
   manifestManager: ManifestManager,
   codeFilePath: string,

@@ -84,8 +84,24 @@ export class ManifestManager {
     return JSON.parse(manifestData);
   }
 
+  public readManifests(): string[] {
+    const manifests = fs
+      .readdirSync(this._manifestDirPath)
+      .filter(
+        (file) =>
+          file.endsWith(".json") && path.basename(file) !== "config.json",
+      );
+
+    if (!manifests) {
+      return [];
+    }
+
+    console.log("manifests: ", manifests);
+    return manifests;
+  }
+
   public readManifestByCodeFilePath(codeFilePath: string): string | undefined {
-    const manifestFiles = this.getManifests();
+    const manifestFiles = this.readManifests();
     return manifestFiles.find((manifest) => {
       const manifestData = this.readManifest(manifest);
       if (manifestData.epictl.code_file.includes(codeFilePath)) return manifest;
@@ -99,7 +115,7 @@ export class ManifestManager {
     if (!codeFilePath) {
       return undefined;
     }
-    const manifests = this.getManifests();
+    const manifests = this.readManifests();
     for (const manifest of manifests) {
       const manifestData = this.readManifest(manifest);
       if (manifestData.epictl.code_file.includes(codeFilePath)) return manifest;
@@ -116,23 +132,6 @@ export class ManifestManager {
       manifestName = `${manifestName}.json`;
     }
     return path.join(manifestDirPath, manifestName);
-  }
-
-  //TODO: rename to readManifests
-  public getManifests(): string[] {
-    const manifests = fs
-      .readdirSync(this._manifestDirPath)
-      .filter(
-        (file) =>
-          file.endsWith(".json") && path.basename(file) !== "config.json",
-      );
-
-    if (!manifests) {
-      return [];
-    }
-
-    console.log("manifests: ", manifests);
-    return manifests;
   }
 
   public deleteManifestDirPath() {
