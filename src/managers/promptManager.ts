@@ -1,13 +1,14 @@
 import * as vscode from "vscode";
+import { ConfigQuickPickItem } from "../utils/registryUtils";
 
-interface InitManifestInput {
+interface InitManifestInterface {
   entity_type: string;
-  entity_parent_id: string;
+  entity_id: string;
   manifest_name: string;
 }
 
 export class PromptManager {
-  private prompts: Record<string, () => Promise<string | undefined>>;
+  private prompts: Record<string, (...args: any[]) => Promise<any>>;
   constructor() {
     this.prompts = {
       entity_type: async () => {
@@ -20,7 +21,7 @@ export class PromptManager {
           prompt: "Enter the entity id",
         });
       },
-      entity_parent_id: async () => {
+      parent_id: async () => {
         return await vscode.window.showInputBox({
           prompt: "Enter the entity parent id",
         });
@@ -40,7 +41,7 @@ export class PromptManager {
           prompt: "Enter the exec path",
         });
       },
-      config_id: async () => {
+      extension_config_id: async () => {
         return await vscode.window.showInputBox({
           prompt: "Enter the config id",
         });
@@ -55,6 +56,12 @@ export class PromptManager {
           prompt: "Enter the manifest dir path",
         });
       },
+      manifest_selection: async (manifestFiles: string[]) => {
+        return await vscode.window.showQuickPick(manifestFiles, {
+          placeHolder: "Select the manifest file to delete",
+          canPickMany: true,
+        });
+      },
       code_file_path: async () => {
         return await vscode.window.showInputBox({
           prompt: "Enter the code file path",
@@ -63,6 +70,46 @@ export class PromptManager {
       manifest_file_path: async () => {
         return await vscode.window.showInputBox({
           prompt: "Enter the manifest file path",
+        });
+      },
+      confirm: async () => {
+        return await vscode.window.showQuickPick(["Yes", "No"], {
+          placeHolder: "Confirm",
+        });
+      },
+      config_base_url_path: async () => {
+        return await vscode.window.showInputBox({
+          prompt: "Enter the config base url path",
+        });
+      },
+      config_username: async () => {
+        return await vscode.window.showInputBox({
+          prompt: "Enter the config username",
+        });
+      },
+      config_password: async () => {
+        return await vscode.window.showInputBox({
+          prompt: "Enter the config password",
+        });
+      },
+      cli_config_id: async () => {
+        return await vscode.window.showInputBox({
+          prompt: "Enter the config id",
+        });
+      },
+      config_api_key: async () => {
+        return await vscode.window.showInputBox({
+          prompt: "Enter the config api key",
+        });
+      },
+      output_type: async () => {
+        return await vscode.window.showQuickPick(["table", "json"], {
+          placeHolder: "Select the output type",
+        });
+      },
+      config_selection: async (configOptions: ConfigQuickPickItem[]) => {
+        return await vscode.window.showQuickPick(configOptions, {
+          placeHolder: "Select the config to set",
         });
       },
     };
@@ -75,15 +122,41 @@ export class PromptManager {
     return requiredFields.filter((field) => obj[field] === undefined);
   }
 
-  public resolveInitManifest(input: Partial<InitManifestInput>) {
-    const missingFields = this.getMissingFields(input, [
+  private async promptForMissingFields<T extends object>(
+    obj: Partial<T>,
+    requiredFields: (keyof T)[],
+  ): Promise<Partial<T>> {
+    const missingFields = this.getMissingFields(obj, requiredFields);
+    for (const field of missingFields) {
+      obj[field] = await this.prompts[field as keyof typeof this.prompts]();
+    }
+    return obj;
+  }
+
+  public async resolveInitManifest(
+    inputState: Partial<InitManifestInterface>,
+  ): Promise<InitManifestInterface> {
+    const fullState = await this.promptForMissingFields(inputState, [
       "entity_type",
-      "entity_parent_id",
+      "entity_id",
       "manifest_name",
     ]);
+
+    // check one more time for null values
+    for (const field of Object.keys(fullState)) {
+      if (fullState[field as keyof typeof fullState] === null) {
+        throw new Error(`${field} is required`);
+      }
+    }
+
+    return fullState as InitManifestInterface;
   }
 
   // Prompt methods, mainly for command palette
+
+  public async promptConfirm(): Promise<string | undefined> {
+    return await this.prompts.confirm();
+  }
 
   public async promptEntityType(): Promise<string | undefined> {
     return await this.prompts.entity_type();
@@ -93,8 +166,8 @@ export class PromptManager {
     return await this.prompts.entity_id();
   }
 
-  public async promptEntityParentId(): Promise<string | undefined> {
-    return await this.prompts.entity_parent_id();
+  public async promptParentId(): Promise<string | undefined> {
+    return await this.prompts.parent_id();
   }
 
   public async promptManifestName(): Promise<string | undefined> {
@@ -110,7 +183,7 @@ export class PromptManager {
   }
 
   public async promptConfigId(): Promise<string | undefined> {
-    return await this.prompts.config_id();
+    return await this.prompts.extension_config_id();
   }
 
   public async promptCodeDirPath(): Promise<string | undefined> {
@@ -121,7 +194,43 @@ export class PromptManager {
     return await this.prompts.manifest_dir_path();
   }
 
+  public async promptManifestSelection(
+    manifestFiles: string[],
+  ): Promise<string[] | undefined> {
+    return await this.prompts.manifest_selection(manifestFiles);
+  }
+
   public async promptCodeFilePath(): Promise<string | undefined> {
     return await this.prompts.code_file_path();
+  }
+
+  public async promptConfigBaseUrlPath(): Promise<string | undefined> {
+    return await this.prompts.config_base_url_path();
+  }
+
+  public async promptConfigUsername(): Promise<string | undefined> {
+    return await this.prompts.config_username();
+  }
+
+  public async promptConfigPassword(): Promise<string | undefined> {
+    return await this.prompts.config_password();
+  }
+
+  public async promptCliConfigId(): Promise<string | undefined> {
+    return await this.prompts.cli_config_id();
+  }
+
+  public async promptConfigApiKey(): Promise<string | undefined> {
+    return await this.prompts.config_api_key();
+  }
+
+  public async promptOutputType(): Promise<string | undefined> {
+    return await this.prompts.output_type();
+  }
+
+  public async promptConfigSelection(
+    configOptions: ConfigQuickPickItem[],
+  ): Promise<ConfigQuickPickItem | undefined> {
+    return await this.prompts.config_selection(configOptions);
   }
 }
