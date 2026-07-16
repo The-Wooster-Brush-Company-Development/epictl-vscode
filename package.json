@@ -109,6 +109,21 @@
         "category": "Epictl"
       },
       {
+        "command": "epictl.setCodeDirPath",
+        "title": "Set Code Directory Path",
+        "category": "Epictl"
+      },
+      {
+        "command": "epictl.getCodeDirPath",
+        "title": "Get Code Directory Path",
+        "category": "Epictl"
+      },
+      {
+        "command": "epictl.deleteCodeDirPath",
+        "title": "Delete Code Directory Path",
+        "category": "Epictl"
+      },
+      {
         "command": "epictl.setManifestDirPath",
         "title": "Set Manifest Directory",
         "category": "Epictl"
