@@ -130,6 +130,8 @@ export class ManifestManager {
     if (!manifests) {
       return [];
     }
+
+    console.log("manifests: ", manifests);
     return manifests;
   }
 

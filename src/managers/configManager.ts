@@ -54,7 +54,6 @@ export class VsCodeConfigManager {
     return data;
   }
 
-  // reads the exec path from the config file
   public readExecPath(): string | undefined {
     const data = this.loadConfig();
     if (!data) {
@@ -107,5 +106,15 @@ export class VsCodeConfigManager {
     }
     data.manifest_code_dir_path = "";
     fs.writeFileSync(this.configPath, JSON.stringify(data, null, 2));
+  }
+
+  public createCodeFilePath(fileName: string): string {
+    if (!fileName.endsWith(".cs")) {
+      fileName += ".cs";
+    }
+    return vscode.Uri.joinPath(
+      vscode.Uri.parse(this.readManifestCodeDirPath()!),
+      fileName,
+    ).fsPath;
   }
 }

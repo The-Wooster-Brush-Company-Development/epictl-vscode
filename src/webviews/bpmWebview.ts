@@ -1,14 +1,15 @@
 import * as vscode from "vscode";
-import { ManifestManager } from "../managers/manifestManager";
 import * as fs from "fs";
 import * as path from "path";
-import { initManifest } from "../commandHandlers";
+
 import { VsCodeConfigManager } from "../managers/configManager";
+import { ManifestManager } from "../managers/manifestManager";
 import { NotificationManager } from "../managers/notificationManager";
-import { formatMessage, initCodeFile } from "../utils/registryUtils";
+import { initCodeFile } from "../utils/registryUtils";
 import { StateManager } from "../managers/stateManager";
 import { PromptManager } from "../managers/promptManager";
-import { json } from "stream/consumers";
+
+import { initManifestHandler } from "./webviewHandlers/bpmWebviewHandlers";
 
 export class BpmWebview implements vscode.WebviewViewProvider {
   private _webviewView: vscode.WebviewView | undefined;
@@ -50,55 +51,27 @@ export class BpmWebview implements vscode.WebviewViewProvider {
       switch (message.command) {
         case "initManifest":
           try {
-            if (!this.vsCodeConfigManager.readManifestCodeDirPath()) {
-              this.notificationManager.error("No code directory path set");
-              return;
-            }
-            const state = this.stateManager.readState();
-
-            const execPath = this.vsCodeConfigManager.readExecPath();
-            if (!execPath) {
-              this.notificationManager.error("No exec path set");
-              return;
-            }
-
-            const promptResult =
-              await this.promptManager.resolveInitManifest(state);
-
-            const codeFilePath = vscode.Uri.joinPath(
-              vscode.Uri.parse(
-                this.vsCodeConfigManager.readManifestCodeDirPath()!,
-              ),
-              promptResult.manifest_name + ".cs",
-            );
-
-            const manifestPath = this.manifestManager.createManifestFilePath(
-              promptResult.manifest_name,
-            );
-
-            const result = JSON.parse(
-              await initManifest(
-                execPath,
-                promptResult.entity_type,
-                promptResult.entity_id,
-                manifestPath,
-              ),
+            const result = await initManifestHandler(
+              this.vsCodeConfigManager,
+              this.stateManager,
+              this.promptManager,
+              this.manifestManager,
             );
 
             if (result.success) {
               initCodeFile(
-                codeFilePath.fsPath,
-                manifestPath,
+                result.codeFilePath,
+                result.manifestPath,
                 this.manifestManager,
               );
               this.notificationManager.success(
                 "Manifest initialized successfully at " +
-                  path.basename(manifestPath) +
+                  path.basename(result.manifestPath) +
                   "\nCode file created at " +
-                  codeFilePath.fsPath,
+                  result.codeFilePath,
               );
             } else {
-              this.notificationManager.error(result.message);
+              this.notificationManager.error(result.result.message);
             }
           } catch (error: any) {
             this.notificationManager.error(error.message);
