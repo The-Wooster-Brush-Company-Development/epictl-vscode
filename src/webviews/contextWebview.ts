@@ -79,7 +79,10 @@ export class ContextWebview implements vscode.WebviewViewProvider {
       execPath = "No exec path";
     }
     try {
-      execPath = getExecPath(this._configManager);
+      execPath = this._configManager.readExecPath();
+      if (!execPath) {
+        throw new Error("No exec path set");
+      }
       const activeConfigResponse = JSON.parse(await activeConfig(execPath));
       activeConfigResult = activeConfigResponse.active_config;
     } catch (error) {

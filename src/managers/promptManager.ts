@@ -7,6 +7,13 @@ interface InitManifestInterface {
   manifest_name: string;
 }
 
+interface CloneManifestInterface {
+  entity_type: string;
+  entity_id: string;
+  parent_id: string;
+  manifest_dir_path: string;
+}
+
 export class PromptManager {
   private prompts: Record<string, (...args: any[]) => Promise<any>>;
   constructor() {
@@ -170,6 +177,28 @@ export class PromptManager {
     }
 
     return fullState as InitManifestInterface;
+  }
+
+  public async resolveCloneManifest(
+    inputState: Partial<CloneManifestInterface>,
+    manifestDirPath: string,
+  ): Promise<CloneManifestInterface> {
+    const fullState = await this.promptForMissingFields(inputState, [
+      "entity_type",
+      "entity_id",
+      "parent_id",
+    ]);
+
+    fullState.manifest_dir_path = manifestDirPath;
+
+    // check one more time for null values
+    for (const field of Object.keys(fullState)) {
+      if (fullState[field as keyof typeof fullState] === null) {
+        throw new Error(`${field} is required`);
+      }
+    }
+
+    return fullState as CloneManifestInterface;
   }
 
   // Prompt methods, mainly for command palette

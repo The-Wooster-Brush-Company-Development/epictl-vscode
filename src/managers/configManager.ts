@@ -90,6 +90,12 @@ export class VsCodeConfigManager {
     fs.writeFileSync(this.configPath, JSON.stringify(data, null, 2));
   }
 
+  public writeToCodeFile(codeFilePath: string, codeLines: string): void {
+    console.log("code file path: ", codeFilePath);
+    console.log("code lines: ", codeLines);
+    fs.writeFileSync(codeFilePath, codeLines);
+  }
+
   // deletes the exec path from the config file
   public deleteExecPath() {
     const data = this.loadConfig();

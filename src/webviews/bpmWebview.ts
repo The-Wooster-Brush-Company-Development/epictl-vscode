@@ -12,8 +12,8 @@ import { PromptManager } from "../managers/promptManager";
 import {
   initManifestHandler,
   cloneManifestHandler,
+  updateFieldHandler,
 } from "./webviewHandlers/bpmWebviewHandlers";
-import { writeFileSync } from "fs";
 
 export class BpmWebview implements vscode.WebviewViewProvider {
   private _webviewView: vscode.WebviewView | undefined;
@@ -95,6 +95,10 @@ export class BpmWebview implements vscode.WebviewViewProvider {
               const codeFilePath = this.vsCodeConfigManager.createCodeFilePath(
                 result.result,
               );
+              this.manifestManager.writeManifestCodeFilePath(
+                path.basename(result.result),
+                codeFilePath,
+              );
               this.vsCodeConfigManager.writeToCodeFile(
                 codeFilePath,
                 result.codeLines,
@@ -104,7 +108,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
                 "Manifest cloned successfully at " +
                   path.basename(result.result) +
                   "\nCode file created at " +
-                  path.basename(codeFilePath),
+                  codeFilePath,
               );
             } else {
               this.notificationManager.error(result.result.message);
@@ -114,6 +118,8 @@ export class BpmWebview implements vscode.WebviewViewProvider {
             return;
           }
           break;
+        case "fieldClicked":
+          updateFieldHandler(message);
       }
     });
   }
@@ -380,6 +386,9 @@ export class BpmWebview implements vscode.WebviewViewProvider {
         background: var(--vscode-button-secondaryBackground);
       }
 
+      .editable { cursor: pointer; }
+      .editable:hover { background: var(--vscode-editor-hoverHighlightBackground, rgba(255,255,255,0.08)); outline: 1px dashed var(--vscode-focusBorder, #888); }
+
       #status {
         margin-top: 20px;
         font-size: 11px;
@@ -419,6 +428,9 @@ export class BpmWebview implements vscode.WebviewViewProvider {
          const cloneManifestButton = document.getElementById('clone-manifest-button');
          initManifestButton.disabled = true;
          cloneManifestButton.disabled = true;
+
+         let currentDirectiveData = null; // <-- add this
+
 
         window.addEventListener('message', (event) => {
           const message = event.data;
@@ -478,17 +490,34 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           cloneManifestButton.setAttribute("data-manifestName", data.Name);
         }
 
+        const makeClickable = (element, fieldKey) => {
+          element.classList.add("editable");
+          element.setAttribute("data-field", fieldKey);
+          element.addEventListener("click", () => {
+            vscode.postMessage({
+              command: "fieldClicked",
+              field: fieldKey,
+              value: currentDirectiveData ? currentDirectiveData[fieldKey] : element.textContent,
+              directiveId: currentDirectiveData ? currentDirectiveData.DirectiveID : undefined,
+              sysRowId: currentDirectiveData ? currentDirectiveData.SysRowID : undefined
+            });
+          });
+        };
+
         const displayHeaderSection = (data) => {
           headerSection.replaceChildren();
 
           const title = document.createElement("h1");
           title.textContent = data.Name;
+          makeClickable(title, "Name"); // <-- add
 
           const subtitle = document.createElement("p");
           subtitle.textContent = data.DirectiveID;
+          makeClickable(subtitle, "DirectiveID"); // <-- add
 
           const bpMethodCode = document.createElement("p");
           bpMethodCode.textContent = data.BpMethodCode;
+          makeClickable(bpMethodCode, "BpMethodCode"); // <-- add
 
           const accentBar = document.createElement("div");
           accentBar.className = "accent-bar";
@@ -496,14 +525,16 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           headerSection.append(title, subtitle, bpMethodCode, accentBar);
         };
 
-        const displayBodySection = (data) =>{
+        const displayBodySection = (data) => {
           bodySection.replaceChildren();
 
           const enabled = document.createElement("h4");
           enabled.textContent = "Enabled: " + (data.IsEnabled ? "✅" : "❌");
-          
+          makeClickable(enabled, "IsEnabled"); // <-- add
+
           const group = document.createElement("h4");
           group.textContent = "Group: " + data.DirectiveGroup;
+          makeClickable(group, "DirectiveGroup"); // <-- add
 
           const descriptionRow = document.createElement("div");
           descriptionRow.className = "description-row";
@@ -513,6 +544,8 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           const description = document.createElement("span");
           description.textContent = data.Description ?? "None";
           descriptionRow.append(descriptionLabel, description);
+
+          makeClickable(descriptionRow, "Description");
 
           bodySection.append(enabled, group, descriptionRow);
         };

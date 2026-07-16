@@ -179,8 +179,8 @@ export const getCodeDirPath = (vsCodeConfigManager: VsCodeConfigManager) => {
   return codeDirPath;
 };
 
-export const deleteCodeDirPath = (vsCodeConfigManager: VsCodeConfigManager) => {
-  vsCodeConfigManager.deleteManifestCodeDirPath();
+export const deleteCodeDirPath = (configManager: VsCodeConfigManager) => {
+  configManager.deleteManifestCodeDirPath();
 };
 
 /**********************************************************

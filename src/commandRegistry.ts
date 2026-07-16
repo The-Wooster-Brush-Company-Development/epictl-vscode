@@ -784,7 +784,6 @@ export const manifestCommands = [
           manifestDirPath,
         );
         const parsedResult = JSON.parse(result);
-        console.log("parsedResult: ", parsedResult);
         if (parsedResult.success) {
           notificationManager.success("Manifest cloned successfully");
           const filePath = formatMessage(parsedResult.results);
@@ -792,8 +791,12 @@ export const manifestCommands = [
             parsedResult.name,
           );
           if (parsedResult.codeLines) {
-            fs.writeFileSync(codeFilePath, parsedResult.codeLines);
-            updateManifestMetadataWithCodeFile(manifestManager, codeFilePath);
+            vsCodeConfigManager.writeToCodeFile(codeFilePath, codeFilePath);
+            //updateManifestMetadataWithCodeFile(manifestManager, codeFilePath);
+            manifestManager.writeManifestCodeFilePath(
+              parsedResult.name,
+              codeFilePath,
+            );
           }
           notificationManager.success(
             "Manifest cloned successfully at " +
@@ -806,9 +809,8 @@ export const manifestCommands = [
           notificationManager.error("Failed to clone manifest");
           notificationManager.error(parsedResult.message);
         }
-      } catch (err: any) {
-        notificationManager.error("Error cloning manifest");
-        notificationManager.error(`${err.message}`);
+      } catch (err) {
+        notificationManager.error(`${err}`);
       }
     },
   },

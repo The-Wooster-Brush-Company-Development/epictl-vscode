@@ -89,3 +89,5 @@ export const cloneManifestHandler = async (
     codeLines: cloneManifestResult.codeLines,
   };
 };
+
+export const updateFieldHandler = (message: any) => {};
