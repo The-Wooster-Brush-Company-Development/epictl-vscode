@@ -3,9 +3,8 @@ import path from "path";
 import {
   createConfig,
   getConfig,
-  setConfig,
   activeConfig,
-  deleteConfig,
+  deleteConfigCli,
   setConfigCli,
   setExecPath,
   getExecPath,
@@ -60,7 +59,11 @@ export const vsCodeConfigCommands = [
       promptManager: PromptManager,
     ) => {
       try {
-        await setExecPath(vsCodeConfigManager, promptManager);
+        const execPath = await promptManager.promptExecPath();
+        if (!execPath) {
+          throw new Error("No exec path provided");
+        }
+        setExecPath(vsCodeConfigManager, execPath);
         notificationManager.success("Exec path set successfully");
       } catch (err) {
         notificationManager.error(`Error setting exec path: ${err}`);
@@ -73,10 +76,10 @@ export const vsCodeConfigCommands = [
     callback: (
       vsCodeConfigManager: VsCodeConfigManager,
       notificationManager: NotificationManager,
-      promptManager: PromptManager,
+      _promptManager: PromptManager,
     ) => {
       try {
-        const execPath = getExecPath(vsCodeConfigManager, promptManager);
+        const execPath = getExecPath(vsCodeConfigManager);
         notificationManager.success(`Exec path: ${execPath}`);
       } catch (err: any) {
         vscode.window.showErrorMessage("Error getting exec path");
@@ -87,12 +90,19 @@ export const vsCodeConfigCommands = [
 
   {
     name: "epictl.deleteExecPath",
-    callback: (
+    callback: async (
       vsCodeConfigManager: VsCodeConfigManager,
       notificationManager: NotificationManager,
       promptManager: PromptManager,
     ) => {
       try {
+        const confirm = await promptManager.promptConfirm();
+        if (!confirm) {
+          throw new Error("Aborting delete exec path");
+        }
+        if (confirm === "No") {
+          throw new Error("Aborting delete exec path");
+        }
         deleteExecPath(vsCodeConfigManager);
         notificationManager.success("Exec path deleted successfully");
       } catch (err: any) {
@@ -109,10 +119,7 @@ export const vsCodeConfigCommands = [
       promptManager: PromptManager,
     ) => {
       try {
-        const codeDirPath = await vscode.window.showInputBox({
-          prompt: "Enter the path to the code directory",
-          ignoreFocusOut: true,
-        });
+        const codeDirPath = await promptManager.promptCodeDirPath();
         if (!codeDirPath) {
           throw new Error("No code directory path provided");
         }
@@ -129,7 +136,7 @@ export const vsCodeConfigCommands = [
     callback: (
       vsCodeConfigManager: VsCodeConfigManager,
       notificationManager: NotificationManager,
-      promptManager: PromptManager,
+      _promptManager: PromptManager,
     ) => {
       try {
         const codeDirPath = getCodeDirPath(vsCodeConfigManager);
@@ -143,12 +150,19 @@ export const vsCodeConfigCommands = [
 
   {
     name: "epictl.deleteCodeDirPath",
-    callback: (
+    callback: async (
       vsCodeConfigManager: VsCodeConfigManager,
       notificationManager: NotificationManager,
       promptManager: PromptManager,
     ) => {
       try {
+        const confirm = await promptManager.promptConfirm();
+        if (!confirm) {
+          throw new Error("Aborting delete code directory path");
+        }
+        if (confirm === "No") {
+          throw new Error("Aborting delete code directory path");
+        }
         deleteCodeDirPath(vsCodeConfigManager);
         notificationManager.success("Code directory path deleted successfully");
       } catch (err: any) {
@@ -167,15 +181,38 @@ export const cliConfigCommands = [
       promptManager: PromptManager,
     ) => {
       try {
-        const result = JSON.parse(await createConfig(vsCodeConfigManager));
+        const baseUrlPath = await promptManager.promptConfigBaseUrlPath();
+        if (!baseUrlPath) {
+          throw new Error("No base url path provided");
+        }
+
+        const username = await promptManager.promptConfigUsername();
+        if (!username) {
+          throw new Error("No username provided");
+        }
+
+        const password = await promptManager.promptConfigPassword();
+        if (!password) {
+          throw new Error("No password provided");
+        }
+
+        const apiKey = await promptManager.promptConfigApiKey();
+        if (!apiKey) {
+          throw new Error("No api key provided");
+        }
+
+        const execPath = vsCodeConfigManager.readExecPath();
+        if (!execPath) {
+          throw new Error("No exec path set");
+        }
+        const result = JSON.parse(
+          await createConfig(execPath, baseUrlPath, username, password, apiKey),
+        );
         if (result.success) {
           notificationManager.success(result.message);
           if (result.config_id) {
             try {
-              const message = await setConfig(
-                result.config_id,
-                vsCodeConfigManager,
-              );
+              const message = await setConfigCli(result.config_id, execPath);
               notificationManager.success(message);
             } catch (err: any) {
               notificationManager.error(`${err.message}`);
@@ -199,15 +236,20 @@ export const cliConfigCommands = [
       promptManager: PromptManager,
     ) => {
       try {
-        const [result, outputType] = await getConfig(
-          vsCodeConfigManager,
-          "json",
-        );
-        const formattedResult = formatCliConfigResult(result);
+        const outputType = await promptManager.promptOutputType();
+        if (!outputType) {
+          throw new Error("No output type selected");
+        }
+        const execPath = vsCodeConfigManager.readExecPath();
+        if (!execPath) {
+          throw new Error("No exec path set");
+        }
+        const result = await getConfig(execPath, outputType);
         if (outputType === "json") {
+          const formattedResult = formatCliConfigResult(result);
           notificationManager.success(JSON.stringify(formattedResult, null, 2));
         } else {
-          notificationManager.success(JSON.stringify(formattedResult, null, 2));
+          notificationManager.success(result);
         }
       } catch (err) {
         notificationManager.error(`Error getting config: ${err}`);
@@ -216,17 +258,18 @@ export const cliConfigCommands = [
   },
 
   {
-    name: "epictl.setConfig",
+    name: "epictl.setConfig", // setting the cli config
     callback: async (
       vsCodeConfigManager: VsCodeConfigManager,
       notificationManager: NotificationManager,
       promptManager: PromptManager,
     ) => {
       try {
-        const [configs, _outputType] = await getConfig(
-          vsCodeConfigManager,
-          "json",
-        );
+        const execPath = vsCodeConfigManager.readExecPath();
+        if (!execPath) {
+          throw new Error("No exec path set");
+        }
+        const configs = await getConfig(execPath, "json");
 
         const configsParsed = JSON.parse(configs);
 
@@ -236,16 +279,11 @@ export const cliConfigCommands = [
             id: config.id,
           }),
         );
-        const selection = await vscode.window.showQuickPick(configOptions, {
-          placeHolder: "Select the config to set",
-        });
+        const selection =
+          await promptManager.promptConfigSelection(configOptions);
 
         if (!selection) {
           throw new Error("No config selected");
-        }
-        const execPath = vsCodeConfigManager.readExecPath();
-        if (!execPath) {
-          throw new Error("No exec path set");
         }
         const result = await setConfigCli(execPath, selection.id);
         notificationManager.success(result);
@@ -263,7 +301,11 @@ export const cliConfigCommands = [
       promptManager: PromptManager,
     ) => {
       try {
-        const response = await activeConfig(vsCodeConfigManager);
+        const execPath = vsCodeConfigManager.readExecPath();
+        if (!execPath) {
+          throw new Error("No exec path set");
+        }
+        const response = await activeConfig(execPath);
         const result = JSON.parse(response);
         if (result.success) {
           notificationManager.success(`Active config: ${result.active_config}`);
@@ -285,10 +327,37 @@ export const cliConfigCommands = [
       promptManager: PromptManager,
     ) => {
       try {
-        const result = await deleteConfig(vsCodeConfigManager);
+        const execPath = vsCodeConfigManager.readExecPath();
+        if (!execPath) {
+          throw new Error("No exec path set");
+        }
+        const activeConfigResult = JSON.parse(await activeConfig(execPath));
+        const activeConfigId = activeConfigResult.active_config;
+
+        const configs = await getConfig(execPath, "json");
+        const configsParsed = JSON.parse(configs);
+
+        const configOptions: ConfigQuickPickItem[] = configsParsed
+          .filter((config: any) => config.id !== activeConfigId)
+          .map((config: any) => config.id);
+
+        const selection =
+          await promptManager.promptConfigSelection(configOptions);
+        if (!selection) {
+          throw new Error("No config id provided");
+        }
+
+        const confirm = await promptManager.promptConfirm();
+        if (!confirm) {
+          throw new Error("Aborting delete config");
+        }
+        if (confirm !== "Yes") {
+          throw new Error("Aborting delete config");
+        }
+        const result = await deleteConfigCli(execPath, selection.id);
         notificationManager.success(result);
-      } catch (err) {
-        notificationManager.error(`Error deleting config: ${err}`);
+      } catch (err: any) {
+        notificationManager.error(`${err.message}`);
       }
     },
   },
@@ -303,12 +372,7 @@ export const commands = [
       promptManager: PromptManager,
     ) => {
       try {
-        const outputType = await vscode.window.showQuickPick(
-          ["table", "json"],
-          {
-            placeHolder: "Select the output type",
-          },
-        );
+        const outputType = await promptManager.promptOutputType();
         if (!outputType) {
           throw new Error("No output type selected");
         }
@@ -345,16 +409,10 @@ export const commands = [
       promptManager: PromptManager,
     ): Promise<any> => {
       try {
-        const outputType = await vscode.window.showQuickPick(
-          ["table", "json"],
-          {
-            placeHolder: "Select the output type",
-          },
-        );
+        const outputType = await promptManager.promptOutputType();
         if (!outputType) {
           throw new Error("No output type selected");
         }
-
         const execPath = vsCodeConfigManager.readExecPath();
         if (!execPath) {
           throw new Error("No exec path set");
@@ -385,23 +443,17 @@ export const commands = [
       notificationManager: NotificationManager,
       promptManager: PromptManager,
     ) => {
-      const bomId = await vscode.window.showInputBox({
-        prompt: "Enter the bom id",
-        ignoreFocusOut: true,
-      });
+      const bomId = await promptManager.promptEntityId();
       if (!bomId) {
-        throw new Error("No bom id provided");
+        throw new Error("No entity id provided");
       }
 
-      const outputType = await vscode.window.showQuickPick(["table", "json"], {
-        placeHolder: "Select the output type",
-      });
-
+      const outputType = await promptManager.promptOutputType();
       if (!outputType) {
         throw new Error("No output type selected");
       }
 
-      const execPath = vsCodeConfigManager.readExecPath();
+      const execPath = getExecPath(vsCodeConfigManager);
       if (!execPath) {
         throw new Error("No exec path set");
       }
@@ -429,17 +481,12 @@ export const commands = [
       notificationManager: NotificationManager,
       promptManager: PromptManager,
     ) => {
-      const tableId = await vscode.window.showInputBox({
-        prompt: "Enter the table id",
-        ignoreFocusOut: true,
-      });
+      const tableId = await promptManager.promptEntityId();
       if (!tableId) {
         throw new Error("No table id provided");
       }
 
-      const outputType = await vscode.window.showQuickPick(["table", "json"], {
-        placeHolder: "Select the output type",
-      });
+      const outputType = await promptManager.promptOutputType();
 
       if (!outputType) {
         throw new Error("No output type selected");
@@ -473,19 +520,21 @@ export const commands = [
 export const manifestCommands = [
   {
     name: "epictl.setManifestDirPath",
-    callback: (
+    callback: async (
       _vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
       notificationManager: NotificationManager,
       promptManager: PromptManager,
     ) => {
       try {
-        setManifestDirPath(manifestManager);
+        const userInput = await promptManager.promptManifestDirPath();
+        if (!userInput) {
+          throw new Error("No manifest directory path provided");
+        }
+        setManifestDirPath(manifestManager, userInput);
         notificationManager.success("Manifest directory path set successfully");
-      } catch (err) {
-        notificationManager.error(
-          `Error setting manifest directory path: ${err}`,
-        );
+      } catch (err: any) {
+        notificationManager.error(`${err.message}`);
       }
     },
   },
@@ -496,7 +545,7 @@ export const manifestCommands = [
       _vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
       notificationManager: NotificationManager,
-      promptManager: PromptManager,
+      _promptManager: PromptManager,
     ) => {
       try {
         const manifestDirPath = getManifestDirPath(manifestManager);
@@ -504,9 +553,7 @@ export const manifestCommands = [
           `Manifest directory path: ${manifestDirPath}`,
         );
       } catch (err: any) {
-        notificationManager.error(
-          `Error getting manifest directory path: ${err.message}`,
-        );
+        notificationManager.error(`${err.message}`);
       }
     },
   },
@@ -520,12 +567,31 @@ export const manifestCommands = [
       promptManager: PromptManager,
     ) => {
       try {
-        const manifestName = await deleteLocalManifest(manifestManager);
+        const manifestFIles = manifestManager.getManifests();
+
+        const manifestInput =
+          await promptManager.promptManifestSelection(manifestFIles);
+
+        if (!manifestInput) {
+          throw new Error("No manifest file selected");
+        }
+
+        const confirm = await promptManager.promptConfirm();
+        if (!confirm) {
+          throw new Error("Aborting delete local manifest");
+        }
+        if (confirm !== "Yes") {
+          throw new Error("Aborting delete local manifest");
+        }
+        const manifestName = await deleteLocalManifest(
+          manifestManager,
+          manifestInput,
+        );
         notificationManager.success(
           `Local manifest ${manifestName} deleted successfully`,
         );
-      } catch (err) {
-        notificationManager.error(`Error deleting local manifest: ${err}`);
+      } catch (err: any) {
+        notificationManager.error(`${err.message}`);
       }
     },
   },
@@ -545,21 +611,13 @@ export const manifestCommands = [
         }
 
         if (!filePath) {
-          filePath = await vscode.window.showInputBox({
-            prompt: "Enter the path to the code file",
-            ignoreFocusOut: true,
-          });
+          filePath = await promptManager.promptCodeFilePath();
+          if (!filePath) {
+            throw new Error("No file path provided");
+          }
         }
 
-        if (!filePath) {
-          throw new Error("No file path provided");
-        }
-
-        const manifestName = await vscode.window.showInputBox({
-          prompt: "Enter the name of the manifest",
-          ignoreFocusOut: true,
-        });
-
+        const manifestName = await promptManager.promptManifestName();
         if (!manifestName) {
           throw new Error("No manifest name provided");
         }
@@ -593,25 +651,16 @@ export const manifestCommands = [
         }
 
         if (!filePath) {
-          filePath = await vscode.window.showInputBox({
-            prompt: "Enter the path to the code file",
-            ignoreFocusOut: true,
-          });
+          filePath = await promptManager.promptCodeFilePath();
+          if (!filePath) {
+            throw new Error("No file path provided");
+          }
         }
 
-        if (!filePath) {
-          throw new Error("No file path provided");
-        }
-
-        const manifestName = await vscode.window.showInputBox({
-          prompt: "Enter the name of the manifest",
-          ignoreFocusOut: true,
-        });
-
+        const manifestName = await promptManager.promptManifestName();
         if (!manifestName) {
           throw new Error("No manifest name provided");
         }
-
         const result = deleteCodeFileFromManifest(
           manifestManager,
           manifestName,
@@ -633,32 +682,24 @@ export const manifestCommands = [
       notificationManager: NotificationManager,
       promptManager: PromptManager,
     ) => {
+      //TODO: Eventually, will want to change this so that only have to provide one name (manifest/code file)
+      // and use it in both places, manifest name and code file name
       try {
-        const entityType = await vscode.window.showQuickPick(["bom", "table"], {
-          placeHolder: "Select the entity type",
-        });
+        const entityType = await promptManager.promptEntityType();
 
         if (!entityType) {
           throw new Error("No entity type selected");
         }
 
         // get the parent id
-        const parentId = await vscode.window.showInputBox({
-          prompt: "Enter the parent id",
-          ignoreFocusOut: true,
-        });
-
+        const parentId = await promptManager.promptParentId();
         if (!parentId) {
           throw new Error("No parent id provided");
         }
 
-        let manifestInput = await vscode.window.showInputBox({
-          prompt: "enter the name of the manifest file",
-          ignoreFocusOut: true,
-        });
-
+        let manifestInput = await promptManager.promptManifestName();
         if (!manifestInput) {
-          throw new Error("No manifest file name provided");
+          throw new Error("No manifest name provided");
         }
 
         if (!manifestInput.endsWith(".json")) {
@@ -669,41 +710,35 @@ export const manifestCommands = [
           manifestInput ? manifestInput : "",
         );
 
-        let codeFilePath = await vscode.window.showInputBox({
-          prompt: "Enter the path and name of the code file",
-          ignoreFocusOut: true,
-        });
-        if (!codeFilePath) {
-          throw new Error("No code file path and name provided");
+        if (!vsCodeConfigManager.readManifestCodeDirPath()) {
+          throw new Error("No code directory path set");
         }
-        if (
-          fs.existsSync(codeFilePath) &&
-          fs.statSync(codeFilePath).isDirectory()
-        ) {
-          throw new Error("Code file path is a directory");
-        }
+
+        const codeFilePath = vscode.Uri.joinPath(
+          vscode.Uri.parse(vsCodeConfigManager.readManifestCodeDirPath()!),
+          manifestInput.split(".")[0] + ".cs",
+        );
+
+        console.log("codeFilePath: ", codeFilePath.fsPath);
+        console.log("codefilePath: ", codeFilePath);
 
         const execPath = vsCodeConfigManager.readExecPath();
         if (!execPath) {
           throw new Error("No exec path set");
         }
 
-        const result = await initManifest(
-          execPath,
-          entityType,
-          parentId,
-          manifestPath,
+        const result = JSON.parse(
+          await initManifest(execPath, entityType, parentId, manifestPath),
         );
-        const parsedResult = JSON.parse(result);
-        if (parsedResult.success) {
+        if (result.success) {
           notificationManager.success("Manifest initialized successfully");
-          initCodeFile(codeFilePath, manifestInput, manifestManager);
-          const filePath = formatMessage(parsedResult.results);
+          initCodeFile(codeFilePath.fsPath, manifestInput, manifestManager);
+          const filePath = formatMessage(result.results);
           notificationManager.success(
             "Manifest initialized successfully at " + filePath,
           );
-        } else if (parsedResult.duplicate) {
-          notificationManager.error(parsedResult.message);
+        } else if (result.duplicate) {
+          notificationManager.error(result.message);
           notificationManager.error("Manifest already initialized");
         }
       } catch (err) {
@@ -720,42 +755,29 @@ export const manifestCommands = [
       notificationManager: NotificationManager,
       promptManager: PromptManager,
     ) => {
-      const entityType = await vscode.window.showQuickPick(["bom", "table"], {
-        placeHolder: "Select the entity type",
-      });
+      const entityType = await promptManager.promptEntityType();
 
       if (!entityType) {
         throw new Error("No entity type selected");
       }
 
-      const bpmId = await vscode.window.showInputBox({
-        prompt: "Enter the bpm id",
-        ignoreFocusOut: true,
-      });
+      const bpmId = await promptManager.promptEntityId();
       if (!bpmId) {
-        throw new Error("No bpm id provided");
+        throw new Error("No entity id provided");
       }
 
-      const parentId = await vscode.window.showInputBox({
-        prompt: "Enter the parent id",
-        ignoreFocusOut: true,
-      });
+      const parentId = await promptManager.promptEntityId();
       if (!parentId) {
         throw new Error("No parent id provided");
       }
-
-      let manifestInput: string | undefined;
-      manifestInput = await vscode.window.showInputBox({
-        prompt: "(optional) enter the name of the new manifest file",
-        ignoreFocusOut: true,
-      });
+      let manifestInput = await promptManager.promptManifestName();
+      if (!manifestInput) {
+        throw new Error("No manifest name provided");
+      }
 
       const manifestPath = manifestManager.createManifestFilePath("");
 
-      let codeFilePath = await vscode.window.showInputBox({
-        prompt: "Enter the path and name of the code file",
-        ignoreFocusOut: true,
-      });
+      let codeFilePath = await promptManager.promptCodeFilePath();
       if (!codeFilePath) {
         throw new Error("No code file path provided");
       }
@@ -765,7 +787,6 @@ export const manifestCommands = [
         throw new Error("No exec path set");
       }
 
-      const outputChannel = vscode.window.createOutputChannel("Epictl");
       try {
         const [result, codeResultPath] = await cloneManifest(
           execPath,
@@ -838,65 +859,45 @@ export const manifestCommands = [
       promptManager: PromptManager,
     ) => {
       try {
-        let manifestInput = await vscode.window.showInputBox({
-          prompt: "(optional) enter the name of the manifest file",
-          ignoreFocusOut: true,
-        });
-
-        if (manifestInput) {
-          if (!manifestInput.endsWith(".json")) {
-            manifestInput = `${manifestInput}.json`;
-          }
-          manifestInput = manifestManager.createManifestFilePath(manifestInput);
+        let manifestInput = await promptManager.promptManifestName();
+        if (!manifestInput) {
+          throw new Error("No manifest name provided");
         }
+
+        if (!manifestInput.endsWith(".json")) {
+          manifestInput = `${manifestInput}.json`;
+        }
+        manifestInput = manifestManager.createManifestFilePath(manifestInput);
 
         let bpmId: string | undefined;
         let entityType: string | undefined;
         let parentId: string | undefined;
 
         if (!manifestInput) {
-          entityType = await vscode.window.showQuickPick(["bom", "table"], {
-            placeHolder: "Select the entity type",
-          });
+          entityType = await promptManager.promptEntityType();
 
           if (!entityType) {
             throw new Error("No entity type selected");
           }
-          bpmId = await vscode.window.showInputBox({
-            prompt: "Enter the bpm id",
-            ignoreFocusOut: true,
-          });
+          bpmId = await promptManager.promptEntityId();
 
           if (!bpmId) {
-            throw new Error("No bpm id provided");
+            throw new Error("No entity id provided");
           }
 
-          parentId = await vscode.window.showInputBox({
-            prompt: "Enter the parent id",
-            ignoreFocusOut: true,
-          });
-
+          parentId = await promptManager.promptParentId();
           if (!parentId) {
             throw new Error("No parent id provided");
           }
         }
-
-        const outputType = await vscode.window.showQuickPick(
-          ["table", "json"],
-          {
-            placeHolder: "Select the output type",
-          },
-        );
-
+        const outputType = await promptManager.promptOutputType();
         if (!outputType) {
           throw new Error("No output type selected");
         }
-
         const execPath = vsCodeConfigManager.readExecPath();
         if (!execPath) {
-          throw new Error("No exec path set");
+          throw new Error("No exec path provided");
         }
-
         const result = await describeBpm(
           execPath,
           manifestInput,
@@ -911,12 +912,12 @@ export const manifestCommands = [
         } else if (outputType === "table") {
           notificationManager.success("Bpm described successfully");
         }
-      } catch (err) {
-        notificationManager.error(`Error describing bpm: ${err}`);
+      } catch (err: any) {
+        notificationManager.error(`${err.message}`);
       }
     },
   },
-
+  // STOPPED UPDATING HERE ----------------------------------------------
   {
     name: "epictl.applyBpm",
     callback: async (
