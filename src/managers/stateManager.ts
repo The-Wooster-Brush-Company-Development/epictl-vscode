@@ -25,9 +25,6 @@ export class StateManager {
     if (!fs.existsSync(this._statePath)) {
       fs.writeFileSync(this._statePath, JSON.stringify({}));
     }
-
-    console.log("State manager initialized");
-    console.log("State path: ", this._statePath);
   }
 
   //helper methods ------------------------------------------------------------

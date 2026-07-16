@@ -9,7 +9,11 @@ import { initCodeFile } from "../utils/registryUtils";
 import { StateManager } from "../managers/stateManager";
 import { PromptManager } from "../managers/promptManager";
 
-import { initManifestHandler } from "./webviewHandlers/bpmWebviewHandlers";
+import {
+  initManifestHandler,
+  cloneManifestHandler,
+} from "./webviewHandlers/bpmWebviewHandlers";
+import { writeFileSync } from "fs";
 
 export class BpmWebview implements vscode.WebviewViewProvider {
   private _webviewView: vscode.WebviewView | undefined;
@@ -78,18 +82,50 @@ export class BpmWebview implements vscode.WebviewViewProvider {
             return;
           }
           break;
+        case "cloneManifest":
+          try {
+            const result = await cloneManifestHandler(
+              this.vsCodeConfigManager,
+              this.stateManager,
+              this.promptManager,
+              this.manifestManager,
+            );
+
+            if (result.success) {
+              const codeFilePath = this.vsCodeConfigManager.createCodeFilePath(
+                result.result,
+              );
+              this.vsCodeConfigManager.writeToCodeFile(
+                codeFilePath,
+                result.codeLines,
+              );
+
+              this.notificationManager.success(
+                "Manifest cloned successfully at " +
+                  path.basename(result.result) +
+                  "\nCode file created at " +
+                  path.basename(codeFilePath),
+              );
+            } else {
+              this.notificationManager.error(result.result.message);
+            }
+          } catch (error: any) {
+            this.notificationManager.error(error.message);
+            return;
+          }
+          break;
       }
     });
   }
 
   public postMessageHelper(message: any) {
+    console.log("message: ", message);
+    //sconsole.log("message", JSON.stringify(message, null, 2));
     switch (message.command) {
       case "describeDirectiveBpm":
         this.displayDirectiveBpm(message);
         break;
       case "canInitManifest":
-        console.log("canInitManifest called");
-        console.log("message: ", message);
         this.enableInitManifestButton(message);
         break;
     }
@@ -105,6 +141,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
       command: "displayCode",
       data: codeLines,
     });
+    this.enableCloneManifestButton(message.data);
   }
 
   private getCodeToDisplay(message: any): string {
@@ -119,7 +156,8 @@ export class BpmWebview implements vscode.WebviewViewProvider {
         }
 
         const manifest = this.manifestManager.readManifest(message.Name);
-        const codeFilePaths = manifest.epictl.code_file;
+        const codeFilePaths =
+          manifest.extension?.code_file ?? manifest.epictl?.code_file ?? [];
 
         let code = "";
 
@@ -151,11 +189,18 @@ export class BpmWebview implements vscode.WebviewViewProvider {
   }
 
   private enableInitManifestButton(message: any) {
-    console.log("enableInitManifestButton called");
-    console.log("message: ", message);
     this._webviewView!.webview.postMessage({
       command: "enableInitManifestButton",
       data: message.data,
+    });
+  }
+
+  private enableCloneManifestButton(message: any) {
+    console.log("enableCloneManifestButton called");
+    console.log("message: ", message);
+    this._webviewView!.webview.postMessage({
+      command: "enableCloneManifestButton",
+      data: message,
     });
   }
 
@@ -215,8 +260,18 @@ export class BpmWebview implements vscode.WebviewViewProvider {
         margin-bottom: 20px;
       }
 
+      .section-buttons {
+        margin-bottom: 10px;
+      }
+
       .section {
         margin-bottom: 18px;
+      }
+
+      #init-clone-manifest-section {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
       }
 
       .section-label {
@@ -231,6 +286,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
       .section-hidden {
         display: none;
       }
+      
 
       .description-row {
         display: flex;
@@ -333,9 +389,12 @@ export class BpmWebview implements vscode.WebviewViewProvider {
     </style>
     </head>
     <body>
-      <div id="init-manifest-section" class="section">
+      <div id="init-clone-manifest-section" class="section-buttons">
         <button id="init-manifest-button" class="wbc-btn disabled" data-command="initManifest" disabled>
           <span class="dot"></span> Init Manifest
+        </button>
+        <button id="clone-manifest-button" class="wbc-btn disabled" data-command="cloneManifest" disabled>
+          <span class="dot"></span> Clone Manifest
         </button>
       </div>
 
@@ -357,7 +416,9 @@ export class BpmWebview implements vscode.WebviewViewProvider {
          const tempSection = document.getElementById('temp-section');
 
          const initManifestButton = document.getElementById('init-manifest-button');
+         const cloneManifestButton = document.getElementById('clone-manifest-button');
          initManifestButton.disabled = true;
+         cloneManifestButton.disabled = true;
 
         window.addEventListener('message', (event) => {
           const message = event.data;
@@ -383,6 +444,9 @@ export class BpmWebview implements vscode.WebviewViewProvider {
             case "enableInitManifestButton":
               setInitManifestButton(message.data);
               break;
+            case "enableCloneManifestButton":
+              setCloneManifestButton(message.data);
+              break;
             default:
               tempSection.classList.remove("section-hidden");
               tempSection.classList.add("section");
@@ -399,6 +463,19 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           initManifestButton.setAttribute("data-type", data.type);
           initManifestButton.setAttribute("data-parentId", data.sysRowId);
           initManifestButton.setAttribute("data-manifestName", data.name);
+        }
+
+        const setCloneManifestButton = (data) => {
+          console.log("data: ", data);
+          cloneManifestButton.disabled = false;
+          cloneManifestButton.classList.remove("disabled");
+          cloneManifestButton.classList.add("wbc-btn");
+          cloneManifestButton.textContent = ""
+          cloneManifestButton.textContent = "Clone Manifest for " + data.Name;
+          cloneManifestButton.setAttribute("data-type", data.Type);
+          cloneManifestButton.setAttribute("data-directiveId", data.DirectiveID);
+          cloneManifestButton.setAttribute("data-parentId", data.SysRowID);
+          cloneManifestButton.setAttribute("data-manifestName", data.Name);
         }
 
         const displayHeaderSection = (data) => {
