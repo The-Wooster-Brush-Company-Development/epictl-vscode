@@ -64,29 +64,29 @@ export function activate(context: vscode.ExtensionContext) {
   // register all commands for the extension
   // ***********************************************************
   vsCodeConfigCommands.forEach(({ name, callback }) => {
-    let disposable = vscode.commands.registerCommand(name, () => {
-      callback(vsCodeConfigManager, notificationManager, promptManager);
+    let disposable = vscode.commands.registerCommand(name, async () => {
+      await callback(vsCodeConfigManager, notificationManager, promptManager);
     });
     context.subscriptions.push(disposable);
   });
 
   cliConfigCommands.forEach(({ name, callback }) => {
-    let disposable = vscode.commands.registerCommand(name, () => {
-      callback(vsCodeConfigManager, notificationManager, promptManager);
+    let disposable = vscode.commands.registerCommand(name, async () => {
+      await callback(vsCodeConfigManager, notificationManager, promptManager);
     });
     context.subscriptions.push(disposable);
   });
 
   commands.forEach(({ name, callback }) => {
-    let disposable = vscode.commands.registerCommand(name, () => {
-      callback(vsCodeConfigManager, notificationManager, promptManager);
+    let disposable = vscode.commands.registerCommand(name, async () => {
+      await callback(vsCodeConfigManager, notificationManager, promptManager);
     });
     context.subscriptions.push(disposable);
   });
 
   manifestCommands.forEach(({ name, callback }) => {
-    let disposable = vscode.commands.registerCommand(name, () => {
-      callback(
+    let disposable = vscode.commands.registerCommand(name, async () => {
+      await callback(
         vsCodeConfigManager,
         manifestManager,
         notificationManager,
