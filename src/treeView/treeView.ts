@@ -19,11 +19,8 @@ export const registerTreeEvents = (
   stateManager: StateManager,
 ) => {
   tree.onDidChangeSelection((event) => {
-    console.log("event: ", event);
     const element = event.selection[0];
     if (!element) return;
-
-    console.log("element: ", element);
 
     stateManager.updateFromTree(element);
 
@@ -33,6 +30,18 @@ export const registerTreeEvents = (
       } else {
         treeProvider.describeTableBpm(element);
       }
+    }
+
+    if (element instanceof DirectiveNode) {
+      console.log("element: ", element);
+      treeProvider.bpmWebview.postMessageHelper({
+        command: "canInitManifest",
+        data: {
+          sysRowId: element.sysRowId,
+          name: element.label,
+          type: element.type,
+        },
+      });
     }
   });
 };
@@ -44,7 +53,7 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
   constructor(
     vscodeConfigManager: VsCodeConfigManager,
     manifestManager: ManifestManager,
-    private readonly bpmWebview: BpmWebview,
+    public readonly bpmWebview: BpmWebview,
     stateManager: StateManager,
   ) {
     this.vscodeConfigManager = vscodeConfigManager;
@@ -95,28 +104,8 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
     // TODO: this is where we can update the state manager
     if (element instanceof DirectiveNode) {
       if (element.type === "bom") {
-        console.log("calling canInitManifest for bom");
-        const data = {
-          sysRowId: element.sysRowId,
-          name: element.label,
-          type: "bom",
-        };
-        this.bpmWebview.postMessageHelper({
-          command: "canInitManifest",
-          data: data,
-        });
-
         return this.getProcessingNodes("bom", element.sysRowId);
       } else {
-        const data = {
-          sysRowId: element.sysRowId,
-          name: element.label,
-          type: "table",
-        };
-        this.bpmWebview.postMessageHelper({
-          command: "canInitManifest",
-          data: data,
-        });
         return this.getProcessingNodes("table", element.sysRowId);
       }
     }
@@ -250,11 +239,6 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
     const bpmData = JSON.parse(
       await describeTable(this.execPath ?? "", parentSysRowId, "json"),
     );
-
-    this.bpmWebview.postMessageHelper({
-      command: "displayTable",
-      data: bpmData,
-    });
 
     return bpmData[1].returnObj.BpDirective.filter(
       (bpm: any) => bpm.DirectiveType === directiveType,
