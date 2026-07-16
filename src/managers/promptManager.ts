@@ -14,102 +14,122 @@ export class PromptManager {
       entity_type: async () => {
         return await vscode.window.showQuickPick(["bom", "table"], {
           placeHolder: "Select the entity type",
+          ignoreFocusOut: true,
         });
       },
       entity_id: async () => {
         return await vscode.window.showInputBox({
           prompt: "Enter the entity id",
+          ignoreFocusOut: true,
         });
       },
       parent_id: async () => {
         return await vscode.window.showInputBox({
           prompt: "Enter the entity parent id",
+          ignoreFocusOut: true,
         });
       },
       manifest_name: async () => {
         return await vscode.window.showInputBox({
           prompt: "Enter the manifest name",
+          ignoreFocusOut: true,
         });
       },
       manifest_path: async () => {
         return await vscode.window.showInputBox({
           prompt: "Enter the manifest path",
+          ignoreFocusOut: true,
         });
       },
       exec_path: async () => {
         return await vscode.window.showInputBox({
           prompt: "Enter the exec path",
+          ignoreFocusOut: true,
         });
       },
       extension_config_id: async () => {
         return await vscode.window.showInputBox({
           prompt: "Enter the config id",
+          ignoreFocusOut: true,
         });
       },
       code_dir_path: async () => {
         return await vscode.window.showInputBox({
           prompt: "Enter the code dir path",
+          ignoreFocusOut: true,
         });
       },
       manifest_dir_path: async () => {
         return await vscode.window.showInputBox({
           prompt: "Enter the manifest dir path",
+          ignoreFocusOut: true,
         });
       },
       manifest_selection: async (manifestFiles: string[]) => {
         return await vscode.window.showQuickPick(manifestFiles, {
           placeHolder: "Select the manifest file to delete",
           canPickMany: true,
+          ignoreFocusOut: true,
         });
       },
       code_file_path: async () => {
         return await vscode.window.showInputBox({
           prompt: "Enter the code file path",
+          ignoreFocusOut: true,
         });
       },
       manifest_file_path: async () => {
         return await vscode.window.showInputBox({
           prompt: "Enter the manifest file path",
+          ignoreFocusOut: true,
         });
       },
       confirm: async () => {
         return await vscode.window.showQuickPick(["Yes", "No"], {
           placeHolder: "Confirm",
+          ignoreFocusOut: true,
         });
       },
       config_base_url_path: async () => {
         return await vscode.window.showInputBox({
           prompt: "Enter the config base url path",
+          ignoreFocusOut: true,
         });
       },
       config_username: async () => {
         return await vscode.window.showInputBox({
           prompt: "Enter the config username",
+          ignoreFocusOut: true,
         });
       },
       config_password: async () => {
         return await vscode.window.showInputBox({
           prompt: "Enter the config password",
+          ignoreFocusOut: true,
         });
       },
       cli_config_id: async () => {
         return await vscode.window.showInputBox({
           prompt: "Enter the config id",
+          ignoreFocusOut: true,
         });
       },
       config_api_key: async () => {
         return await vscode.window.showInputBox({
           prompt: "Enter the config api key",
+          ignoreFocusOut: true,
         });
       },
       output_type: async () => {
         return await vscode.window.showQuickPick(["table", "json"], {
           placeHolder: "Select the output type",
+          ignoreFocusOut: true,
         });
       },
       config_selection: async (configOptions: ConfigQuickPickItem[]) => {
         return await vscode.window.showQuickPick(configOptions, {
           placeHolder: "Select the config to set",
+          ignoreFocusOut: true,
         });
       },
     };

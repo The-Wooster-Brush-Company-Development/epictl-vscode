@@ -267,7 +267,6 @@ export const cloneManifest = async (
   bpmId: string,
   parentId: string,
   manifestPath: string,
-  codeFilePath: string,
 ): Promise<any> => {
   const command = `${execPath} clone-manifest ${entityType} ${bpmId} ${parentId} --manifest-file ${manifestPath} --for-extension --output json`;
   return new Promise((resolve, reject) => {
@@ -280,7 +279,7 @@ export const cloneManifest = async (
         reject(`Error executing ${command}: ${error}`);
         return;
       }
-      resolve([stdout, codeFilePath]);
+      resolve(stdout);
     });
   });
 };

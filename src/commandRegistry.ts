@@ -41,7 +41,6 @@ import fs from "fs";
 
 import {
   updateFileName,
-  createCodeFile,
   updateManifestMetadataWithCodeFile,
   formatMessage,
   formatCliConfigResult,
@@ -567,7 +566,7 @@ export const manifestCommands = [
       promptManager: PromptManager,
     ) => {
       try {
-        const manifestFIles = manifestManager.getManifests();
+        const manifestFIles = manifestManager.readManifests();
 
         const manifestInput =
           await promptManager.promptManifestSelection(manifestFIles);
@@ -714,13 +713,8 @@ export const manifestCommands = [
           throw new Error("No code directory path set");
         }
 
-        const codeFilePath = vscode.Uri.joinPath(
-          vscode.Uri.parse(vsCodeConfigManager.readManifestCodeDirPath()!),
-          manifestInput.split(".")[0] + ".cs",
-        );
-
-        console.log("codeFilePath: ", codeFilePath.fsPath);
-        console.log("codefilePath: ", codeFilePath);
+        const codeFilePath =
+          vsCodeConfigManager.createCodeFilePath(manifestInput);
 
         const execPath = vsCodeConfigManager.readExecPath();
         if (!execPath) {
@@ -732,7 +726,7 @@ export const manifestCommands = [
         );
         if (result.success) {
           notificationManager.success("Manifest initialized successfully");
-          initCodeFile(codeFilePath.fsPath, manifestInput, manifestManager);
+          initCodeFile(codeFilePath, manifestInput, manifestManager);
           const filePath = formatMessage(result.results);
           notificationManager.success(
             "Manifest initialized successfully at " + filePath,
@@ -766,20 +760,14 @@ export const manifestCommands = [
         throw new Error("No entity id provided");
       }
 
-      const parentId = await promptManager.promptEntityId();
+      const parentId = await promptManager.promptParentId();
       if (!parentId) {
         throw new Error("No parent id provided");
       }
-      let manifestInput = await promptManager.promptManifestName();
-      if (!manifestInput) {
-        throw new Error("No manifest name provided");
-      }
 
-      const manifestPath = manifestManager.createManifestFilePath("");
-
-      let codeFilePath = await promptManager.promptCodeFilePath();
-      if (!codeFilePath) {
-        throw new Error("No code file path provided");
+      const manifestDirPath = manifestManager.readManifestDirPath();
+      if (!manifestDirPath) {
+        throw new Error("No manifest directory path set");
       }
 
       const execPath = vsCodeConfigManager.readExecPath();
@@ -788,32 +776,31 @@ export const manifestCommands = [
       }
 
       try {
-        const [result, codeResultPath] = await cloneManifest(
+        const result = await cloneManifest(
           execPath,
           entityType,
           bpmId,
           parentId,
-          manifestPath,
-          codeFilePath,
+          manifestDirPath,
         );
         const parsedResult = JSON.parse(result);
+        console.log("parsedResult: ", parsedResult);
         if (parsedResult.success) {
           notificationManager.success("Manifest cloned successfully");
           const filePath = formatMessage(parsedResult.results);
-          notificationManager.success(
-            "Manifest cloned successfully at " + filePath,
+          const codeFilePath = vsCodeConfigManager.createCodeFilePath(
+            parsedResult.name,
           );
-
           if (parsedResult.codeLines) {
-            const bpmCodePath = createCodeFile(
-              parsedResult.codeLines,
-              codeResultPath,
-              parsedResult.name,
-            );
-            updateManifestMetadataWithCodeFile(manifestManager, bpmCodePath);
+            fs.writeFileSync(codeFilePath, parsedResult.codeLines);
+            updateManifestMetadataWithCodeFile(manifestManager, codeFilePath);
           }
           notificationManager.success(
-            `Code file initialized successfully at ${codeResultPath}`,
+            "Manifest cloned successfully at " +
+              filePath +
+              "\n" +
+              "Code file initialized successfully at " +
+              codeFilePath,
           );
         } else {
           notificationManager.error("Failed to clone manifest");
@@ -835,7 +822,7 @@ export const manifestCommands = [
       promptManager: PromptManager,
     ) => {
       try {
-        const manifests = manifestManager.getManifests();
+        const manifests = manifestManager.readManifests();
 
         const output: string[] = [];
         if (manifests.length < 1) {
