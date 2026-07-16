@@ -837,12 +837,14 @@ export const manifestCommands = [
       try {
         const manifests = manifestManager.getManifests();
 
-        if (manifests.length === 0) {
+        const output: string[] = [];
+        if (manifests.length < 1) {
           notificationManager.error("No manifests found");
         } else {
           for (const manifest of manifests) {
-            notificationManager.success(`- ${manifest}`);
+            output.push(`- ${manifest}`);
           }
+          notificationManager.success(output.join("\n"));
         }
       } catch (err) {
         notificationManager.error(`Error listing manifests: ${err}`);
