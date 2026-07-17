@@ -272,9 +272,6 @@ export const cloneManifest = async (
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
-        console.log("stdout: ", stdout);
-        console.log("stderr: ", stderr);
-        console.log("error: ", error);
         reject(`Error cloning manifest: ${stderr}`);
         return;
       }

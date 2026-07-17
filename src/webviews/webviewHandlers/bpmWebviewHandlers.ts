@@ -40,11 +40,6 @@ export const initManifestHandler = async (
     promptResult.manifest_name,
   );
 
-  console.log("manifestPath: ", manifestPath);
-  console.log("codeFilePath: ", codeFilePath);
-  console.log("execPath: ", execPath);
-  console.log("promptResult: ", promptResult);
-
   const initManifestResult = JSON.parse(
     await initManifest(
       execPath,
@@ -79,8 +74,6 @@ export const cloneManifestHandler = async (
     throw new Error("No exec path set");
   }
 
-  console.log("data: ", data);
-
   const promptResult = await promptManager.resolveCloneManifest(
     {
       entity_type: data.parentType,
@@ -90,8 +83,6 @@ export const cloneManifestHandler = async (
     },
     manifestDirPath,
   );
-
-  console.log("promptResult: ", promptResult);
 
   const cloneManifestResult = JSON.parse(
     await cloneManifest(
@@ -110,12 +101,22 @@ export const cloneManifestHandler = async (
   };
 };
 
-export const updateFieldHandler = (message: any) => {
+export const updateFieldHandler = (
+  message: any,
+  manifestManager: ManifestManager,
+) => {
+  // First check if we have a manifest file for the bpm the user wants to update
+  let manifest: any | undefined;
+  try {
+    manifest = manifestManager.readManifest(message.name);
+  } catch (error: any) {
+    throw new Error("Manifest must exist before updating a field");
+  }
+
   switch (message.field) {
     case "Name":
       const command = formatCommand["name"](message.value);
       break;
-
     case "DirectiveID":
       break;
     case "BpMethodCode":

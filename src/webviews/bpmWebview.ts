@@ -51,7 +51,6 @@ export class BpmWebview implements vscode.WebviewViewProvider {
     webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
     webviewView.webview.onDidReceiveMessage(async (message) => {
-      console.log("message: ", message);
       switch (message.command) {
         case "initManifest":
           try {
@@ -119,7 +118,16 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           }
           break;
         case "fieldClicked":
-          updateFieldHandler(message);
+          try {
+            console.log("message: ", message);
+            const result = await updateFieldHandler(
+              message,
+              this.manifestManager,
+            );
+          } catch (error: any) {
+            this.notificationManager.error(error.message);
+            return;
+          }
       }
     });
   }
@@ -160,7 +168,6 @@ export class BpmWebview implements vscode.WebviewViewProvider {
       command: "displayCode",
       data: codeLines,
     });
-    console.log("data: ", data);
     this.enableCloneManifestButton(data);
   }
 
@@ -183,16 +190,17 @@ export class BpmWebview implements vscode.WebviewViewProvider {
       );
     }
     try {
-      // if (codeLines === "") {
-      //   return "No code found";
-      // }
-
       if (codeLines === "") {
-        if (!data.Name.endsWith(".json")) {
-          data.Name += ".json";
+        let manifestName = data.Name;
+        if (!manifestName.endsWith(".json")) {
+          manifestName += ".json";
         }
 
-        const manifest = this.manifestManager.readManifest(data.Name);
+        const manifest = this.manifestManager.readManifest(manifestName);
+        if (!manifest) {
+          return "No code found";
+        }
+
         const codeFilePaths =
           manifest.extension?.code_file ?? manifest.epictl?.code_file ?? [];
 
@@ -561,15 +569,12 @@ export class BpmWebview implements vscode.WebviewViewProvider {
          cloneManifestButton.disabled = true;
 
          let currentDirectiveData = null;
-         console.log("currentDirectiveData: ", currentDirectiveData);
-
-
-        window.addEventListener('message', (event) => {
+         
+         
+         window.addEventListener('message', (event) => {
           const message = event.data;
           tempSection.classList.remove("section");
           tempSection.classList.add("section-hidden");
-
-          //console.log("message: ", message);
           
           switch (message.command) {
             case "displayDirectiveBpm": 
@@ -579,6 +584,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
               headerSection.classList.add("section");
               bodySection.classList.remove("section-hidden");
               bodySection.classList.add("section");
+              currentDirectiveData = message.data;
               break;
             case "displayCode": 
               displayCode(message.data);
@@ -604,12 +610,11 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           initManifestButton.classList.remove("disabled");
           initManifestButton.classList.add("wbc-btn");
           initManifestButton.textContent = ""
-          initManifestButton.textContent = "Init Manifest for " + data.Name;
+          initManifestButton.textContent = "Init Manifest for " +  (data.Type === "bom" ? data.Name : data.BusinessObject);;
           initManifestButton.setAttribute("data-type", data.Type);
           initManifestButton.setAttribute("data-parentType", data.ParentType);
           initManifestButton.setAttribute("data-SysRowID", data.SysRowID);
           initManifestButton.setAttribute("data-Name", data.Name);
-          console.log("Init manifest button: ", initManifestButton);
         }
 
         const setCloneManifestButton = (data) => {
@@ -724,6 +729,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
             command: "fieldClicked",
             field: activeFieldKey,
             value: newValue,
+            name: currentDirectiveData.Name,
             directiveId: currentDirectiveData ? currentDirectiveData.DirectiveID : undefined,
             sysRowId: currentDirectiveData ? currentDirectiveData.SysRowID : undefined
           });
@@ -764,7 +770,6 @@ export class BpmWebview implements vscode.WebviewViewProvider {
                 directiveId: directiveId,
                 parentId: parentId,
               }
-              console.log("data: ", data);
               vscode.postMessage({ command, data });
             });
           } else {
