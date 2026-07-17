@@ -1,15 +1,93 @@
 import * as vscode from "vscode";
 import fs from "fs";
-import { BpmNode, DirectiveNode, EpicorNode } from "../treeView/treeView";
+import {
+  BpmNode,
+  DirectiveNode,
+  BomProcessingNode,
+  TableProcessingNode,
+} from "../treeView/treeView";
 
 // State manager is used to store the state of the extension
 // Primarly used to store the state of the entity the user is exploring
 
-interface StateManagerInterface {
-  entity_type: string;
-  entity_id: string;
-  entity_name: string;
-  parent_id: string;
+export interface MethodDirectiveStateManagerInterface {
+  Type: "bom" | "table";
+  Source: string;
+  BpMethodCode: string;
+  SystemCode: string;
+  ObjectNS: string;
+  BusinessObject: string;
+  Name: string;
+  Description: string | null;
+  Version: string | null;
+  HasRootTransaction: boolean;
+  SignatureStatus: number;
+  Disabled: boolean;
+  SystemFlag: boolean;
+  SysRevID: number;
+  SysRowID: string;
+  DebugMode: boolean;
+  DumpSources: boolean;
+  AdvTracing: boolean;
+  HasOutdatedDirectives: boolean;
+  HasPreProcessing: boolean;
+  HasBaseProcessing: boolean;
+  HasPostProcessing: boolean;
+  IsMDRSEnabled: boolean;
+  BitFlag: number;
+  RowMod: string;
+}
+
+export interface DataDirectiveStateManagerInterface {
+  Type: "bom" | "table";
+  Source: string;
+  BpMethodCode: string;
+  SystemCode: string;
+  ObjectNS: string;
+  BusinessObject: string;
+  Name: string;
+  Description: string | null;
+  Version: string | null;
+  HasRootTransaction: boolean;
+  SignatureStatus: number;
+  Disabled: boolean;
+  SysRevID: number;
+  SysRowID: string;
+  HasOutdatedDirectives: boolean;
+  HasPreProcessing: boolean;
+  HasBaseProcessing: boolean;
+  HasPostProcessing: boolean;
+  RowMod: string;
+}
+
+export interface BpmStateManagerInterface {
+  Type: "bpm";
+  ParentType: "bom" | "table";
+  ParentSysRowId: string;
+  DirectiveID: string;
+  Source: string;
+  BpMethodCode: string;
+  DirectiveType: number;
+  Name: string;
+  Order: number;
+  IsEnabled: boolean;
+  ReenterMax: number;
+  PreventDeadloops: boolean;
+  VisibilityScope: number;
+  Company: string;
+  DirectiveGroup: string;
+  IsUpToDate: boolean;
+  CGCCode: string | null;
+  Body: string;
+  Thumbnail: string | null;
+  SysRevID: number;
+  SysRowID: string;
+  Description: string | null;
+  IsProtected: boolean;
+  DisplayOrder: number;
+  CompilerDiagnostics: string;
+  BitFlag: number;
+  RowMod: string;
 }
 
 export class StateManager {
@@ -29,43 +107,77 @@ export class StateManager {
 
   //helper methods ------------------------------------------------------------
 
-  private loadState(): Partial<StateManagerInterface> {
-    return JSON.parse(
-      fs.readFileSync(this._statePath, "utf8"),
-    ) as Partial<StateManagerInterface>;
+  private loadState(): Partial<
+    | MethodDirectiveStateManagerInterface
+    | DataDirectiveStateManagerInterface
+    | BpmStateManagerInterface
+  > {
+    return JSON.parse(fs.readFileSync(this._statePath, "utf8")) as Partial<
+      | MethodDirectiveStateManagerInterface
+      | DataDirectiveStateManagerInterface
+      | BpmStateManagerInterface
+    >;
   }
 
   //executable methods ------------------------------------------------------------
 
-  public writeState(newState: Partial<StateManagerInterface>) {
-    const currentState = this.loadState();
-    fs.writeFileSync(
-      this._statePath,
-      JSON.stringify({ ...currentState, ...newState }, null, 2),
-    );
+  public writeState(
+    newState: Partial<
+      | MethodDirectiveStateManagerInterface
+      | DataDirectiveStateManagerInterface
+      | BpmStateManagerInterface
+    >,
+  ) {
+    //const currentState = this.loadState();
+    fs.writeFileSync(this._statePath, JSON.stringify(newState, null, 2));
   }
 
-  public readState(): Partial<StateManagerInterface> {
+  public readState(): Partial<
+    | MethodDirectiveStateManagerInterface
+    | DataDirectiveStateManagerInterface
+    | BpmStateManagerInterface
+  > {
     return this.loadState();
   }
 
-  public updateFromTree(element: EpicorNode) {
-    if (element instanceof DirectiveNode) {
-      this.writeState({
-        entity_type: element.type,
-        entity_id: element.sysRowId,
-        entity_name: element.label as string,
-        parent_id: "",
-      });
-    } else if (element instanceof BpmNode) {
-      this.writeState({
-        entity_type: element.parentType,
-        entity_id: element.directiveId,
-        entity_name: element.label as string,
-        parent_id: element.parentSysRowId,
-      });
-    } else {
-      this.writeState({});
+  public updateFromTree(
+    element: DirectiveNode | BpmNode,
+    type: "bom" | "table" | "bpm",
+    parentSysRowId: string | undefined,
+    parentType: "bom" | "table" | undefined,
+  ) {
+    if (!(element instanceof DirectiveNode || element instanceof BpmNode)) {
+      return;
     }
+    let hasUpdated = false;
+    switch (element.type) {
+      case "bom":
+        element.data.Type = "bom";
+        this.writeState({
+          ...element.data,
+        });
+        hasUpdated = true;
+        break;
+      case "table":
+        element.data.Type = "table";
+        this.writeState({
+          ...element.data,
+        });
+        hasUpdated = true;
+        break;
+      case "bpm":
+        element.data.Type = "bpm";
+        element.data.ParentType = parentType!;
+        element.data.ParentSysRowId = parentSysRowId!;
+        this.writeState({
+          ...element.data,
+        });
+        hasUpdated = true;
+        break;
+      default:
+        hasUpdated = false;
+        break;
+    }
+    return hasUpdated;
   }
 }

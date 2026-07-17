@@ -11,7 +11,12 @@ import {
 import { VsCodeConfigManager } from "../managers/configManager";
 import { ManifestManager } from "../managers/manifestManager";
 import { BpmWebview } from "../webviews/bpmWebview";
-import { StateManager } from "../managers/stateManager";
+import {
+  StateManager,
+  MethodDirectiveStateManagerInterface,
+  DataDirectiveStateManagerInterface,
+  BpmStateManagerInterface,
+} from "../managers/stateManager";
 
 export const registerTreeEvents = (
   tree: vscode.TreeView<any>,
@@ -22,26 +27,39 @@ export const registerTreeEvents = (
     const element = event.selection[0];
     if (!element) return;
 
-    stateManager.updateFromTree(element);
-
-    if (element instanceof BpmNode) {
-      if (element.parentType === "bom") {
-        treeProvider.describeBomBpm(element);
-      } else {
-        treeProvider.describeTableBpm(element);
-      }
-    }
+    //TODO: the bpmWebview should not be getting data from treeView. It should be getting data from the stateManager.
+    // Treeview passes messages to bpmWebview, which then reads the stateManager based on the message received.
+    let hasUpdated: boolean | undefined = false;
 
     if (element instanceof DirectiveNode) {
-      console.log("element: ", element);
-      treeProvider.bpmWebview.postMessageHelper({
-        command: "canInitManifest",
-        data: {
-          sysRowId: element.sysRowId,
-          name: element.label,
-          type: element.type,
-        },
-      });
+      hasUpdated =
+        stateManager.updateFromTree(
+          element,
+          element.type,
+          undefined,
+          undefined,
+        ) ?? false;
+    } else if (element instanceof BpmNode) {
+      hasUpdated =
+        stateManager.updateFromTree(
+          element,
+          element.type,
+          element.parentSysRowId,
+          element.parentType,
+        ) ?? false;
+    }
+
+    console.log("tree view element: ", element);
+    if (hasUpdated) {
+      if (element instanceof DirectiveNode) {
+        treeProvider.bpmWebview.postMessageHelper({
+          command: "canInitManifest",
+        });
+      } else if (element instanceof BpmNode) {
+        treeProvider.bpmWebview.postMessageHelper({
+          command: "describeDirectiveBpm",
+        });
+      }
     }
   });
 };
@@ -101,12 +119,11 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
     }
 
     // 3rd level
-    // TODO: this is where we can update the state manager
     if (element instanceof DirectiveNode) {
       if (element.type === "bom") {
-        return this.getProcessingNodes("bom", element.sysRowId);
+        return this.getProcessingNodes("bom", element.data.SysRowID);
       } else {
-        return this.getProcessingNodes("table", element.sysRowId);
+        return this.getProcessingNodes("table", element.data.SysRowID);
       }
     }
 
@@ -149,8 +166,8 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
         new DirectiveNode(
           this.formatBpMethodCode(bom.BpMethodCode),
           vscode.TreeItemCollapsibleState.Collapsed,
-          bom.SysRowID,
           "bom",
+          bom,
         ),
     );
   }
@@ -163,8 +180,8 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
         new DirectiveNode(
           table.BusinessObject,
           vscode.TreeItemCollapsibleState.Collapsed,
-          table.SysRowID,
           "table",
+          table,
         ),
     );
   }
@@ -227,7 +244,7 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
       .sort((a: any, b: any) => a.Order - b.Order)
       .map(
         (bpm: any) =>
-          new BpmNode(bpm.Name, bpm.DirectiveID, parentType, parentSysRowId),
+          new BpmNode(bpm.Name, parentType, parentSysRowId, "bpm", bpm),
       );
   }
 
@@ -246,47 +263,8 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
       .sort((a: any, b: any) => a.Order - b.Order)
       .map(
         (bpm: any) =>
-          new BpmNode(bpm.Name, bpm.DirectiveID, parentType, parentSysRowId),
+          new BpmNode(bpm.Name, parentType, parentSysRowId, "bpm", bpm),
       );
-  }
-
-  public async describeBomBpm(element: BpmNode): Promise<void> {
-    const bpmData = JSON.parse(
-      await describeBpm(
-        this.execPath ?? "",
-        undefined,
-        `${element.directiveId}`,
-        "bom",
-        element.parentSysRowId,
-        "json",
-      ),
-    );
-
-    const message = {
-      command: "describeDirectiveBpm",
-      data: bpmData,
-    };
-
-    this.bpmWebview.postMessageHelper(message);
-  }
-  public async describeTableBpm(element: BpmNode): Promise<void> {
-    const bpmData = JSON.parse(
-      await describeBpm(
-        this.execPath ?? "",
-        undefined,
-        `${element.directiveId}`,
-        "table",
-        element.parentSysRowId,
-        "json",
-      ),
-    );
-
-    const message = {
-      command: "describeDirectiveBpm",
-      data: bpmData,
-    };
-
-    this.bpmWebview.postMessageHelper(message);
   }
 
   private formatBpMethodCode(bpMethodCode: string): string {
@@ -340,8 +318,11 @@ export class DirectiveNode extends EpicorNode {
   constructor(
     label: string,
     collapsibleState: vscode.TreeItemCollapsibleState,
-    public sysRowId: string,
+    //public sysRowId: string,
     public type: "bom" | "table",
+    public data:
+      | MethodDirectiveStateManagerInterface
+      | DataDirectiveStateManagerInterface,
   ) {
     super(label, collapsibleState);
     this.iconPath = new vscode.ThemeIcon("layers");
@@ -351,9 +332,10 @@ export class DirectiveNode extends EpicorNode {
 export class BpmNode extends EpicorNode {
   constructor(
     label: string,
-    public directiveId: string,
     public parentType: "bom" | "table",
     public parentSysRowId: string,
+    public type: "bpm",
+    public data: BpmStateManagerInterface,
   ) {
     super(label, vscode.TreeItemCollapsibleState.None);
     this.iconPath = new vscode.ThemeIcon("gear");
