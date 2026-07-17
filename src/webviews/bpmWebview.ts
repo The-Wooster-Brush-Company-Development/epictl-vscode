@@ -8,7 +8,7 @@ import { NotificationManager } from "../managers/notificationManager";
 import { initCodeFile } from "../utils/registryUtils";
 import { StateManager } from "../managers/stateManager";
 import { PromptManager } from "../managers/promptManager";
-
+import { describeBpm } from "../commandHandlers";
 import {
   initManifestHandler,
   cloneManifestHandler,
@@ -57,9 +57,9 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           try {
             const result = await initManifestHandler(
               this.vsCodeConfigManager,
-              this.stateManager,
               this.promptManager,
               this.manifestManager,
+              message.data,
             );
 
             if (result.success) {
@@ -86,9 +86,9 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           try {
             const result = await cloneManifestHandler(
               this.vsCodeConfigManager,
-              this.stateManager,
               this.promptManager,
               this.manifestManager,
+              message.data,
             );
 
             if (result.success) {
@@ -125,43 +125,74 @@ export class BpmWebview implements vscode.WebviewViewProvider {
   }
 
   public postMessageHelper(message: any) {
-    console.log("message: ", message);
-    //sconsole.log("message", JSON.stringify(message, null, 2));
     switch (message.command) {
       case "describeDirectiveBpm":
-        this.displayDirectiveBpm(message);
+        this.displayDirectiveBpm();
         break;
       case "canInitManifest":
-        this.enableInitManifestButton(message);
+        this.enableInitManifestButton();
         break;
     }
   }
 
-  public displayDirectiveBpm(message: any) {
+  public async displayDirectiveBpm() {
+    let data: any;
+    try {
+      data = this.stateManager.readState();
+    } catch (error: any) {
+      this.notificationManager.error("Error reading state: " + error.message);
+      return;
+    }
+    let codeLines: string;
+    try {
+      codeLines = await this.getCodeToDisplay(data);
+    } catch (error: any) {
+      this.notificationManager.error(
+        "Error getting code to display: " + error.message,
+      );
+      return;
+    }
     this._webviewView!.webview.postMessage({
       command: "displayDirectiveBpm",
-      data: message.data,
+      data: data,
     });
-    const codeLines = this.getCodeToDisplay(message.data);
     this._webviewView!.webview.postMessage({
       command: "displayCode",
       data: codeLines,
     });
-    this.enableCloneManifestButton(message.data);
+    console.log("data: ", data);
+    this.enableCloneManifestButton(data);
   }
 
-  private getCodeToDisplay(message: any): string {
+  private async getCodeToDisplay(data: any): Promise<string> {
+    let codeLines: string = "";
     try {
-      if (message.code === "") {
-        return "No code found";
-      }
+      codeLines = JSON.parse(
+        await describeBpm(
+          this.vsCodeConfigManager.readExecPath() ?? "",
+          "",
+          data.DirectiveID,
+          data.ParentType,
+          data.ParentSysRowId,
+          "json",
+        ),
+      ).code;
+    } catch (error: any) {
+      this.notificationManager.error(
+        "Error fetching code lines: " + error.message,
+      );
+    }
+    try {
+      // if (codeLines === "") {
+      //   return "No code found";
+      // }
 
-      if (!message.code) {
-        if (!message.Name.endsWith(".json")) {
-          message.Name += ".json";
+      if (codeLines === "") {
+        if (!data.Name.endsWith(".json")) {
+          data.Name += ".json";
         }
 
-        const manifest = this.manifestManager.readManifest(message.Name);
+        const manifest = this.manifestManager.readManifest(data.Name);
         const codeFilePaths =
           manifest.extension?.code_file ?? manifest.epictl?.code_file ?? [];
 
@@ -181,12 +212,14 @@ export class BpmWebview implements vscode.WebviewViewProvider {
 
         return code;
       } else {
-        let code = message.code.split("\n").slice(0, 15).join("\n");
-        code += "\n\n";
-        code += "                       .\n";
-        code += "                       .\n";
-        code += "                       .\n";
-        code += `${message.code.split("\n").length - 15} more lines\n`;
+        let code = codeLines.split("\n").slice(0, 15).join("\n");
+        if (15 <= codeLines.split("\n").length) {
+          code += "\n\n";
+          code += "                       .\n";
+          code += "                       .\n";
+          code += "                       .\n";
+          code += `${codeLines.split("\n").length - 15} more lines\n`;
+        }
         return code;
       }
     } catch {
@@ -194,16 +227,21 @@ export class BpmWebview implements vscode.WebviewViewProvider {
     }
   }
 
-  private enableInitManifestButton(message: any) {
+  private enableInitManifestButton() {
+    let data: any;
+    try {
+      data = this.stateManager.readState();
+    } catch (error: any) {
+      console.error("Error reading state: ", error);
+      return;
+    }
     this._webviewView!.webview.postMessage({
       command: "enableInitManifestButton",
-      data: message.data,
+      data: data,
     });
   }
 
   private enableCloneManifestButton(message: any) {
-    console.log("enableCloneManifestButton called");
-    console.log("message: ", message);
     this._webviewView!.webview.postMessage({
       command: "enableCloneManifestButton",
       data: message,
@@ -389,6 +427,88 @@ export class BpmWebview implements vscode.WebviewViewProvider {
       .editable { cursor: pointer; }
       .editable:hover { background: var(--vscode-editor-hoverHighlightBackground, rgba(255,255,255,0.08)); outline: 1px dashed var(--vscode-focusBorder, #888); }
 
+      .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+
+      .modal-overlay.visible {
+        display: flex;
+      }
+
+      .modal-box {
+        background: var(--vscode-editor-background);
+        border: 1px solid var(--vscode-widget-border, var(--vscode-contrastBorder, #444));
+        border-radius: 8px;
+        width: min(320px, 90%);
+        padding: 16px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      }
+
+      .modal-title {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--vscode-descriptionForeground);
+        margin: 0 0 10px 0;
+      }
+
+      .modal-input {
+        width: 100%;
+        font: inherit;
+        font-size: 13px;
+        padding: 8px;
+        background: var(--vscode-input-background);
+        color: var(--vscode-input-foreground);
+        border: 1px solid var(--vscode-input-border, #555);
+        border-radius: 4px;
+        resize: vertical;
+        min-height: 34px;
+      }
+
+      .modal-input:focus {
+        outline: none;
+        border-color: var(--wbc-red);
+      }
+
+      .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .modal-btn {
+        padding: 6px 14px;
+        font-size: 12px;
+        font-weight: 500;
+        border-radius: 5px;
+        cursor: pointer;
+        border: 1px solid var(--vscode-widget-border, transparent);
+        background: var(--vscode-button-secondaryBackground, var(--vscode-input-background));
+        color: var(--vscode-editor-foreground);
+      }
+
+      .modal-btn:hover {
+        border-color: var(--wbc-red);
+      }
+
+      .modal-btn.primary {
+        background: var(--wbc-red);
+        border-color: var(--wbc-red);
+        color: #ffffff;
+      }
+
+      .modal-btn.primary:hover {
+        background: var(--wbc-red-dark);
+        border-color: var(--wbc-red-dark);
+      }
       #status {
         margin-top: 20px;
         font-size: 11px;
@@ -411,6 +531,17 @@ export class BpmWebview implements vscode.WebviewViewProvider {
 
       <div id="header-section" class="section-hidden"></div>
 
+      <div id="edit-modal-overlay" class="modal-overlay">
+        <div class="modal-box">
+          <p class="modal-title" id="edit-modal-label">Edit Field</p>
+          <textarea id="edit-modal-input" class="modal-input" rows="1"></textarea>
+          <div class="modal-actions">
+            <button id="edit-modal-cancel" class="modal-btn">Cancel</button>
+            <button id="edit-modal-save" class="modal-btn primary">Save</button>
+          </div>
+        </div>
+      </div>
+
       <div id="body-section" class="section-hidden"></div>
 
       <div id="code-section" class="section-hidden"></div>
@@ -429,7 +560,8 @@ export class BpmWebview implements vscode.WebviewViewProvider {
          initManifestButton.disabled = true;
          cloneManifestButton.disabled = true;
 
-         let currentDirectiveData = null; // <-- add this
+         let currentDirectiveData = null;
+         console.log("currentDirectiveData: ", currentDirectiveData);
 
 
         window.addEventListener('message', (event) => {
@@ -437,7 +569,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           tempSection.classList.remove("section");
           tempSection.classList.add("section-hidden");
 
-          console.log("message: ", message);
+          //console.log("message: ", message);
           
           switch (message.command) {
             case "displayDirectiveBpm": 
@@ -467,40 +599,36 @@ export class BpmWebview implements vscode.WebviewViewProvider {
         });
 
         const setInitManifestButton = (data) => {
+          console.log("Init data: ", data);
           initManifestButton.disabled = false;
           initManifestButton.classList.remove("disabled");
           initManifestButton.classList.add("wbc-btn");
           initManifestButton.textContent = ""
-          initManifestButton.textContent = "Init Manifest for " + data.name;
-          initManifestButton.setAttribute("data-type", data.type);
-          initManifestButton.setAttribute("data-parentId", data.sysRowId);
-          initManifestButton.setAttribute("data-manifestName", data.name);
+          initManifestButton.textContent = "Init Manifest for " + data.Name;
+          initManifestButton.setAttribute("data-type", data.Type);
+          initManifestButton.setAttribute("data-parentType", data.ParentType);
+          initManifestButton.setAttribute("data-SysRowID", data.SysRowID);
+          initManifestButton.setAttribute("data-Name", data.Name);
+          console.log("Init manifest button: ", initManifestButton);
         }
 
         const setCloneManifestButton = (data) => {
-          console.log("data: ", data);
           cloneManifestButton.disabled = false;
           cloneManifestButton.classList.remove("disabled");
           cloneManifestButton.classList.add("wbc-btn");
           cloneManifestButton.textContent = ""
           cloneManifestButton.textContent = "Clone Manifest for " + data.Name;
           cloneManifestButton.setAttribute("data-type", data.Type);
-          cloneManifestButton.setAttribute("data-directiveId", data.DirectiveID);
-          cloneManifestButton.setAttribute("data-parentId", data.SysRowID);
-          cloneManifestButton.setAttribute("data-manifestName", data.Name);
+          cloneManifestButton.setAttribute("data-directiveID", data.DirectiveID);
+          cloneManifestButton.setAttribute("data-parentId", data.ParentSysRowId);
+          cloneManifestButton.setAttribute("data-parentType", data.ParentType);
         }
 
         const makeClickable = (element, fieldKey) => {
           element.classList.add("editable");
           element.setAttribute("data-field", fieldKey);
           element.addEventListener("click", () => {
-            vscode.postMessage({
-              command: "fieldClicked",
-              field: fieldKey,
-              value: currentDirectiveData ? currentDirectiveData[fieldKey] : element.textContent,
-              directiveId: currentDirectiveData ? currentDirectiveData.DirectiveID : undefined,
-              sysRowId: currentDirectiveData ? currentDirectiveData.SysRowID : undefined
-            });
+            openEditModal(fieldKey);
           });
         };
 
@@ -509,15 +637,13 @@ export class BpmWebview implements vscode.WebviewViewProvider {
 
           const title = document.createElement("h1");
           title.textContent = data.Name;
-          makeClickable(title, "Name"); // <-- add
+          makeClickable(title, "Name");
 
           const subtitle = document.createElement("p");
           subtitle.textContent = data.DirectiveID;
-          makeClickable(subtitle, "DirectiveID"); // <-- add
 
           const bpMethodCode = document.createElement("p");
           bpMethodCode.textContent = data.BpMethodCode;
-          makeClickable(bpMethodCode, "BpMethodCode"); // <-- add
 
           const accentBar = document.createElement("div");
           accentBar.className = "accent-bar";
@@ -530,11 +656,11 @@ export class BpmWebview implements vscode.WebviewViewProvider {
 
           const enabled = document.createElement("h4");
           enabled.textContent = "Enabled: " + (data.IsEnabled ? "✅" : "❌");
-          makeClickable(enabled, "IsEnabled"); // <-- add
+          makeClickable(enabled, "IsEnabled");
 
           const group = document.createElement("h4");
           group.textContent = "Group: " + data.DirectiveGroup;
-          makeClickable(group, "DirectiveGroup"); // <-- add
+          makeClickable(group, "DirectiveGroup");
 
           const descriptionRow = document.createElement("div");
           descriptionRow.className = "description-row";
@@ -560,15 +686,86 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           codeSection.append(codeHeader, codePre);
         }
 
+        /* Edit Window */
+
+        const editModalOverlay = document.getElementById('edit-modal-overlay');
+        const editModalLabel = document.getElementById('edit-modal-label');
+        const editModalInput = document.getElementById('edit-modal-input');
+        const editModalCancel = document.getElementById('edit-modal-cancel');
+        const editModalSave = document.getElementById('edit-modal-save');
+
+        let activeFieldKey = null;
+
+        const openEditModal = (fieldKey) => {
+          activeFieldKey = fieldKey;
+          editModalLabel.textContent = "Edit " + fieldKey;
+          editModalInput.value = currentDirectiveData ? (currentDirectiveData[fieldKey] ?? "") : "";
+          editModalOverlay.classList.add("visible");
+          editModalInput.focus();
+          editModalInput.select();
+        };
+
+        const closeEditModal = () => {
+          editModalOverlay.classList.remove("visible");
+          activeFieldKey = null;
+        };
+
+        editModalCancel.addEventListener("click", closeEditModal);
+
+        editModalOverlay.addEventListener("click", (e) => {
+          if (e.target === editModalOverlay) closeEditModal(); // click outside box = cancel
+        });
+
+        editModalSave.addEventListener("click", () => {
+          if (!activeFieldKey) return;
+          const newValue = editModalInput.value;
+
+          vscode.postMessage({
+            command: "fieldClicked",
+            field: activeFieldKey,
+            value: newValue,
+            directiveId: currentDirectiveData ? currentDirectiveData.DirectiveID : undefined,
+            sysRowId: currentDirectiveData ? currentDirectiveData.SysRowID : undefined
+          });
+
+          closeEditModal();
+        });
+
+        editModalInput.addEventListener("keydown", (e) => {
+          if (e.key === "Escape") {
+            closeEditModal();
+          } else if (e.key === "Enter" && !e.shiftKey && editModalInput.rows === 1) {
+            e.preventDefault();
+            editModalSave.click();
+          }
+        });
+
         document.querySelectorAll('.wbc-btn').forEach(btn => {
           if (btn.id === 'init-manifest-button') {
             btn.addEventListener('click', () => { 
               const command = btn.getAttribute('data-command');
               const type = btn.getAttribute('data-type');
+              const parentId = btn.getAttribute('data-SysRowID');
+              data = {
+                type: type, 
+                SysRowID: parentId,
+              }
+              vscode.postMessage({ command, data });
+            });
+          }
+          else if (btn.id === 'clone-manifest-button') {
+            btn.addEventListener('click', () => {
+              const command = btn.getAttribute('data-command');
+              const parentType = btn.getAttribute('data-parentType');
+              const directiveId = btn.getAttribute('data-directiveID');
               const parentId = btn.getAttribute('data-parentId');
-              const manifestName = btn.getAttribute('data-manifestName');
-              console.log("manifestName: ", manifestName);
-              vscode.postMessage({ command, type, parentId, manifestName });
+              data = {
+                parentType: parentType, 
+                directiveId: directiveId,
+                parentId: parentId,
+              }
+              console.log("data: ", data);
+              vscode.postMessage({ command, data });
             });
           } else {
             btn.addEventListener('click', () => {

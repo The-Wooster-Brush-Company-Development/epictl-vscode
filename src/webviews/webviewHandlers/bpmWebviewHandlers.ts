@@ -2,29 +2,35 @@ import * as vscode from "vscode";
 
 import { VsCodeConfigManager } from "../../managers/configManager";
 import { ManifestManager } from "../../managers/manifestManager";
-import { NotificationManager } from "../../managers/notificationManager";
 import { PromptManager } from "../../managers/promptManager";
-import { StateManager } from "../../managers/stateManager";
+import {
+  BpmStateManagerInterface,
+  StateManager,
+} from "../../managers/stateManager";
 
-import { cloneManifest, initManifest } from "../../commandHandlers";
+import { cloneManifest, initManifest, updateBpm } from "../../commandHandlers";
+
+import { formatCommand } from "../../utils/handlerUtils";
 
 export const initManifestHandler = async (
   vsCodeConfigManager: VsCodeConfigManager,
-  stateManager: StateManager,
   promptManager: PromptManager,
   manifestManager: ManifestManager,
+  data: any,
 ) => {
   if (!vsCodeConfigManager.readManifestCodeDirPath()) {
     throw new Error("No code directory path set");
   }
-  const state = stateManager.readState();
 
   const execPath = vsCodeConfigManager.readExecPath();
   if (!execPath) {
     throw new Error("No exec path set");
   }
 
-  const promptResult = await promptManager.resolveInitManifest(state);
+  const promptResult = await promptManager.resolveInitManifest({
+    entity_type: data.type,
+    entity_id: data.SysRowID,
+  });
 
   const codeFilePath = vsCodeConfigManager.createCodeFilePath(
     promptResult.manifest_name,
@@ -34,6 +40,11 @@ export const initManifestHandler = async (
     promptResult.manifest_name,
   );
 
+  console.log("manifestPath: ", manifestPath);
+  console.log("codeFilePath: ", codeFilePath);
+  console.log("execPath: ", execPath);
+  console.log("promptResult: ", promptResult);
+
   const initManifestResult = JSON.parse(
     await initManifest(
       execPath,
@@ -42,6 +53,7 @@ export const initManifestHandler = async (
       manifestPath,
     ),
   );
+  console.log("initManifestResult: ", initManifestResult);
 
   return {
     success: initManifestResult.success,
@@ -53,11 +65,10 @@ export const initManifestHandler = async (
 
 export const cloneManifestHandler = async (
   vsCodeConfigManager: VsCodeConfigManager,
-  stateManager: StateManager,
   promptManager: PromptManager,
   manifestManager: ManifestManager,
+  data: any,
 ) => {
-  const state = stateManager.readState();
   const manifestDirPath = manifestManager.readManifestDirPath();
   if (!manifestDirPath) {
     throw new Error("No manifest directory path set");
@@ -68,10 +79,19 @@ export const cloneManifestHandler = async (
     throw new Error("No exec path set");
   }
 
+  console.log("data: ", data);
+
   const promptResult = await promptManager.resolveCloneManifest(
-    state,
+    {
+      entity_type: data.parentType,
+      entity_id: data.directiveId,
+      parent_id: data.parentId,
+      manifest_dir_path: manifestDirPath,
+    },
     manifestDirPath,
   );
+
+  console.log("promptResult: ", promptResult);
 
   const cloneManifestResult = JSON.parse(
     await cloneManifest(
@@ -90,4 +110,17 @@ export const cloneManifestHandler = async (
   };
 };
 
-export const updateFieldHandler = (message: any) => {};
+export const updateFieldHandler = (message: any) => {
+  switch (message.field) {
+    case "Name":
+      const command = formatCommand["name"](message.value);
+      break;
+
+    case "DirectiveID":
+      break;
+    case "BpMethodCode":
+      break;
+    case "IsEnabled":
+      break;
+  }
+};
