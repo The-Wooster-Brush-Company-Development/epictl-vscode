@@ -3,14 +3,16 @@ import * as vscode from "vscode";
 import { VsCodeConfigManager } from "../../managers/configManager";
 import { ManifestManager } from "../../managers/manifestManager";
 import { PromptManager } from "../../managers/promptManager";
-import {
-  BpmStateManagerInterface,
-  StateManager,
-} from "../../managers/stateManager";
 
-import { cloneManifest, initManifest, updateBpm } from "../../commandHandlers";
+import {
+  applyBpm,
+  cloneManifest,
+  initManifest,
+  updateBpm,
+} from "../../commandHandlers";
 
 import { formatCommand } from "../../utils/handlerUtils";
+import { updateFileName } from "../../utils/registryUtils";
 
 export const initManifestHandler = async (
   vsCodeConfigManager: VsCodeConfigManager,
@@ -48,7 +50,6 @@ export const initManifestHandler = async (
       manifestPath,
     ),
   );
-  console.log("initManifestResult: ", initManifestResult);
 
   return {
     success: initManifestResult.success,
@@ -101,7 +102,8 @@ export const cloneManifestHandler = async (
   };
 };
 
-export const updateFieldHandler = (
+export const updateFieldHandler = async (
+  execPath: string,
   message: any,
   manifestManager: ManifestManager,
 ) => {
@@ -112,16 +114,48 @@ export const updateFieldHandler = (
   } catch (error: any) {
     throw new Error("Manifest must exist before updating a field");
   }
-
-  switch (message.field) {
-    case "Name":
-      const command = formatCommand["name"](message.value);
-      break;
-    case "DirectiveID":
-      break;
-    case "BpMethodCode":
-      break;
-    case "IsEnabled":
-      break;
+  if (!manifest) {
+    throw new Error("Manifest not found");
   }
+  const manifestFilePath = manifestManager.createManifestFilePath(message.name);
+
+  const flag = formatCommand[
+    message.field.toLowerCase() as keyof typeof formatCommand
+  ](message.value);
+
+  const updateResult = JSON.parse(
+    await updateBpm(execPath, manifestFilePath, [flag]),
+  );
+
+  let currentName = message.name;
+  if (
+    updateResult.success &&
+    message.field.toLowerCase() === "name" &&
+    message.value !== message.name
+  ) {
+    updateFileName(manifestManager, message.value, message.name);
+    currentName = message.value;
+  }
+
+  return {
+    success: updateResult.success,
+    name: currentName,
+    successMessage: `Updated ${currentName}`,
+    errorMessage: updateResult.message,
+  };
+};
+
+export const applyBpmHandler = async (
+  execPath: string,
+  message: any,
+  manifestManager: ManifestManager,
+) => {
+  const manifest = manifestManager.readManifest(message.name);
+  if (!manifest) {
+    throw new Error("Manifest not found");
+  }
+  const manifestFilePath = manifestManager.createManifestFilePath(message.name);
+  const applyResult = await applyBpm(execPath, manifestFilePath);
+  console.log("applyResult: ", applyResult);
+  return applyResult;
 };

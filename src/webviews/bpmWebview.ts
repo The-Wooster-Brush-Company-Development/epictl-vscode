@@ -13,6 +13,7 @@ import {
   initManifestHandler,
   cloneManifestHandler,
   updateFieldHandler,
+  applyBpmHandler,
 } from "./webviewHandlers/bpmWebviewHandlers";
 
 export class BpmWebview implements vscode.WebviewViewProvider {
@@ -121,13 +122,56 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           try {
             console.log("message: ", message);
             const result = await updateFieldHandler(
+              this.vsCodeConfigManager.readExecPath() ?? "",
               message,
               this.manifestManager,
             );
+            console.log("result: ", result);
+            if (result.success) {
+              this.notificationManager.notifySuccess("Success");
+              this.notificationManager.success(result.successMessage);
+              this._webviewView!.webview.postMessage({
+                command: "enableApplyBpmButton",
+                data: {
+                  directiveId: message.directiveId,
+                  sysRowId: message.sysRowId,
+                  name: result.name,
+                },
+              });
+              this.updateBpmData(result.name);
+            } else {
+              this.notificationManager.error(result.errorMessage);
+            }
           } catch (error: any) {
             this.notificationManager.error(error.message);
             return;
           }
+          break;
+        case "applyBpm":
+          console.log("message: ", message);
+          try {
+            const execPath = this.vsCodeConfigManager.readExecPath() ?? "";
+            if (!execPath) {
+              throw new Error("Exec path not found");
+            }
+            const result = JSON.parse(
+              await applyBpmHandler(
+                execPath,
+                message.data,
+                this.manifestManager,
+              ),
+            );
+            if (result.success) {
+              this.notificationManager.notifySuccess("Success");
+              this.notificationManager.success(result.message);
+            } else {
+              this.notificationManager.error(result.message);
+            }
+          } catch (error: any) {
+            this.notificationManager.error(error.message);
+            return;
+          }
+          break;
       }
     });
   }
@@ -141,6 +185,16 @@ export class BpmWebview implements vscode.WebviewViewProvider {
         this.enableInitManifestButton();
         break;
     }
+  }
+  public updateBpmData(name: string) {
+    try {
+      const manifestData = this.manifestManager.readManifest(name);
+      this.stateManager.updateWithManifestData(manifestData.bpmConfig);
+    } catch (error: any) {
+      this.notificationManager.error("Error updating state: " + error.message);
+      return;
+    }
+    this.displayDirectiveBpm();
   }
 
   public async displayDirectiveBpm() {
@@ -320,7 +374,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
         margin-bottom: 18px;
       }
 
-      #init-clone-manifest-section {
+      #btn-section {
         display: flex;
         flex-direction: column;
         gap: 8px;
@@ -526,12 +580,15 @@ export class BpmWebview implements vscode.WebviewViewProvider {
     </style>
     </head>
     <body>
-      <div id="init-clone-manifest-section" class="section-buttons">
+      <div id="btn-section" class="section-buttons">
         <button id="init-manifest-button" class="wbc-btn disabled" data-command="initManifest" disabled>
           <span class="dot"></span> Init Manifest
         </button>
         <button id="clone-manifest-button" class="wbc-btn disabled" data-command="cloneManifest" disabled>
           <span class="dot"></span> Clone Manifest
+        </button>
+        <button id="apply-bpm-button" class="wbc-btn disabled" data-command="applyBpm" disabled>
+          <span class="dot"></span> Apply BPM
         </button>
       </div>
 
@@ -565,11 +622,12 @@ export class BpmWebview implements vscode.WebviewViewProvider {
 
          const initManifestButton = document.getElementById('init-manifest-button');
          const cloneManifestButton = document.getElementById('clone-manifest-button');
+         const applyBpmButton = document.getElementById('apply-bpm-button');
          initManifestButton.disabled = true;
          cloneManifestButton.disabled = true;
+         applyBpmButton.disabled = true;
 
          let currentDirectiveData = null;
-         
          
          window.addEventListener('message', (event) => {
           const message = event.data;
@@ -597,6 +655,10 @@ export class BpmWebview implements vscode.WebviewViewProvider {
             case "enableCloneManifestButton":
               setCloneManifestButton(message.data);
               break;
+            case "enableApplyBpmButton":
+              console.log("Enable apply bpm button: ", message);
+              enableApplyBpmButton(message.data);
+              break;
             default:
               tempSection.classList.remove("section-hidden");
               tempSection.classList.add("section");
@@ -605,7 +667,6 @@ export class BpmWebview implements vscode.WebviewViewProvider {
         });
 
         const setInitManifestButton = (data) => {
-          console.log("Init data: ", data);
           initManifestButton.disabled = false;
           initManifestButton.classList.remove("disabled");
           initManifestButton.classList.add("wbc-btn");
@@ -632,9 +693,25 @@ export class BpmWebview implements vscode.WebviewViewProvider {
         const makeClickable = (element, fieldKey) => {
           element.classList.add("editable");
           element.setAttribute("data-field", fieldKey);
-          element.addEventListener("click", () => {
-            openEditModal(fieldKey);
-          });
+          if (fieldKey === "IsEnabled") {
+            element.addEventListener("click", () => {
+              const currentlyEnabled = currentDirectiveData?.IsEnabled;
+              const newEnabled = !currentlyEnabled;
+              element.textContent = "Enabled: " + (newEnabled ? "✅" : "❌");
+              vscode.postMessage({
+                command: "fieldClicked",
+                field: fieldKey,
+                value: String(newEnabled),
+                name: currentDirectiveData.Name,
+                directiveId: currentDirectiveData.DirectiveID,
+                sysRowId: currentDirectiveData.SysRowID,
+              });
+            });
+          } else {
+            element.addEventListener("click", () => {
+              openEditModal(fieldKey);
+            });
+          }
         };
 
         const displayHeaderSection = (data) => {
@@ -718,7 +795,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
         editModalCancel.addEventListener("click", closeEditModal);
 
         editModalOverlay.addEventListener("click", (e) => {
-          if (e.target === editModalOverlay) closeEditModal(); // click outside box = cancel
+          if (e.target === editModalOverlay) closeEditModal();
         });
 
         editModalSave.addEventListener("click", () => {
@@ -746,6 +823,17 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           }
         });
 
+        const enableApplyBpmButton = (data) => {
+          applyBpmButton.disabled = false;
+          applyBpmButton.classList.remove("disabled");
+          applyBpmButton.classList.add("wbc-btn");
+          applyBpmButton.textContent = ""
+          applyBpmButton.textContent = "Apply BPM for " + data.name;
+          applyBpmButton.setAttribute("data-directiveId", data.directiveId);
+          applyBpmButton.setAttribute("data-sysRowId", data.sysRowId);
+          applyBpmButton.setAttribute("data-name", data.name);
+        }
+
         document.querySelectorAll('.wbc-btn').forEach(btn => {
           if (btn.id === 'init-manifest-button') {
             btn.addEventListener('click', () => { 
@@ -769,6 +857,15 @@ export class BpmWebview implements vscode.WebviewViewProvider {
                 parentType: parentType, 
                 directiveId: directiveId,
                 parentId: parentId,
+              }
+              vscode.postMessage({ command, data });
+            });
+          } else if (btn.id === 'apply-bpm-button') {
+            btn.addEventListener('click', () => {
+              const command = btn.getAttribute('data-command');
+              const name = btn.getAttribute('data-name');
+              data = {
+                name: name,
               }
               vscode.postMessage({ command, data });
             });

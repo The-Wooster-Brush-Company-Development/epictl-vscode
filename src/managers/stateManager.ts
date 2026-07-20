@@ -180,4 +180,17 @@ export class StateManager {
     }
     return hasUpdated;
   }
+
+  public updateWithManifestData(manifestData: any) {
+    console.log("manifestData: ", manifestData);
+    const currentState = this.loadState();
+    if (!currentState) {
+      throw new Error("Unable to load current state");
+    }
+    const newState = {
+      ...currentState,
+      ...(manifestData as BpmStateManagerInterface),
+    };
+    this.writeState(newState);
+  }
 }
