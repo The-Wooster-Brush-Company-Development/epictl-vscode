@@ -14,6 +14,7 @@ import {
   cloneManifestHandler,
   updateFieldHandler,
   applyBpmHandler,
+  openCodeFileHandler,
 } from "./webviewHandlers/bpmWebviewHandlers";
 
 export class BpmWebview implements vscode.WebviewViewProvider {
@@ -167,6 +168,22 @@ export class BpmWebview implements vscode.WebviewViewProvider {
             } else {
               this.notificationManager.error(result.message);
             }
+          } catch (error: any) {
+            this.notificationManager.error(error.message);
+            return;
+          }
+          break;
+        case "openCodeFile":
+          try {
+            const codeFilePath = await openCodeFileHandler(
+              this.manifestManager,
+              message.data.name,
+            );
+            if (!codeFilePath) {
+              throw new Error("Code file not found");
+            }
+            const uri = vscode.Uri.file(codeFilePath);
+            await vscode.window.showTextDocument(uri);
           } catch (error: any) {
             this.notificationManager.error(error.message);
             return;
@@ -486,6 +503,14 @@ export class BpmWebview implements vscode.WebviewViewProvider {
         background: var(--vscode-button-secondaryBackground);
       }
 
+      button.wbc-btn.small {
+        font-size: 10px;
+        padding: 6px 8px;
+        max-width: 100px;
+        max-height: 20px;
+
+      }
+
       .editable { cursor: pointer; }
       .editable:hover { background: var(--vscode-editor-hoverHighlightBackground, rgba(255,255,255,0.08)); outline: 1px dashed var(--vscode-focusBorder, #888); }
 
@@ -762,10 +787,25 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           codeSection.replaceChildren();
           const codeHeader = document.createElement("h4");
           codeHeader.textContent = "Code (15 lines):";
+
+          const openCodeFileButton = document.createElement("button");
+          openCodeFileButton.className = "wbc-btn small";
+          openCodeFileButton.classList.add("wbc-btn");
+          openCodeFileButton.textContent = "Open Code File";
+          openCodeFileButton.addEventListener("click", () => {
+            vscode.postMessage({
+              command: "openCodeFile",
+              data: {
+                name: currentDirectiveData.Name,
+                directiveId: currentDirectiveData.DirectiveID,
+                sysRowId: currentDirectiveData.SysRowID ?? "",
+              },
+            });
+          });
           
           const codePre = document.createElement("pre");
           codePre.textContent = data
-          codeSection.append(codeHeader, codePre);
+          codeSection.append(codeHeader, openCodeFileButton, codePre);
         }
 
         /* Edit Window */

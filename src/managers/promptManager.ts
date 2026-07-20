@@ -139,6 +139,22 @@ export class PromptManager {
           ignoreFocusOut: true,
         });
       },
+      // Init Manifest Prompts
+      directive_type__bom: async () => {
+        return await vscode.window.showQuickPick(["Pre", "Base", "Post"], {
+          placeHolder: "Select the directive type",
+          ignoreFocusOut: true,
+        });
+      },
+      directive_type__table: async () => {
+        return await vscode.window.showQuickPick(
+          ["Standard", "In-Transaction"],
+          {
+            placeHolder: "Select the directive type",
+            ignoreFocusOut: true,
+          },
+        );
+      },
     };
   }
 

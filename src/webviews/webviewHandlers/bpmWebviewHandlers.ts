@@ -13,6 +13,7 @@ import {
 
 import { formatCommand } from "../../utils/handlerUtils";
 import { updateFileName } from "../../utils/registryUtils";
+import * as fs from "fs";
 
 export const initManifestHandler = async (
   vsCodeConfigManager: VsCodeConfigManager,
@@ -158,4 +159,22 @@ export const applyBpmHandler = async (
   const applyResult = await applyBpm(execPath, manifestFilePath);
   console.log("applyResult: ", applyResult);
   return applyResult;
+};
+
+export const openCodeFileHandler = async (
+  manifestManager: ManifestManager,
+  manifestName: string,
+) => {
+  const manifest = manifestManager.readManifest(manifestName);
+  if (!manifest) {
+    throw new Error("Manifest not found");
+  }
+  const codeFilePaths =
+    manifest.extension?.code_file ?? manifest.epictl?.code_file ?? [];
+  for (const filePath of codeFilePaths) {
+    if (filePath.includes(manifestName)) {
+      return filePath;
+    }
+  }
+  throw new Error("Code file not found");
 };
