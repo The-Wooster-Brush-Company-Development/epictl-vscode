@@ -5,6 +5,11 @@ interface InitManifestInterface {
   entity_type: string;
   entity_id: string;
   manifest_name: string;
+  directivetype: string | undefined;
+  description: string;
+  group: string;
+  order: string;
+  scope: string;
 }
 
 interface CloneManifestInterface {
@@ -13,6 +18,8 @@ interface CloneManifestInterface {
   parent_id: string;
   manifest_dir_path: string;
 }
+
+const ALLOWED_NULL_VALUES = ["description", "group", "order", "scope"];
 
 export class PromptManager {
   private prompts: Record<string, (...args: any[]) => Promise<any>>;
@@ -38,7 +45,7 @@ export class PromptManager {
       },
       manifest_name: async () => {
         return await vscode.window.showInputBox({
-          prompt: "Enter the manifest name",
+          prompt: "Enter the manifest name (bpm name)",
           ignoreFocusOut: true,
         });
       },
@@ -139,21 +146,54 @@ export class PromptManager {
           ignoreFocusOut: true,
         });
       },
-      // Init Manifest Prompts
+      // Init Manifest Prompts--------------------------------------------------
       directive_type__bom: async () => {
-        return await vscode.window.showQuickPick(["Pre", "Base", "Post"], {
-          placeHolder: "Select the directive type",
-          ignoreFocusOut: true,
-        });
+        const result = await vscode.window.showQuickPick(
+          ["Pre", "Base", "Post"],
+          {
+            placeHolder: "Select the directive type",
+            ignoreFocusOut: true,
+          },
+        );
+        return result === "Pre" ? 0 : result === "Base" ? 1 : 2;
       },
       directive_type__table: async () => {
-        return await vscode.window.showQuickPick(
+        const result = await vscode.window.showQuickPick(
           ["Standard", "In-Transaction"],
           {
             placeHolder: "Select the directive type",
             ignoreFocusOut: true,
           },
         );
+        return result === "Standard" ? 1 : 0;
+      },
+      description: async () => {
+        return await vscode.window.showInputBox({
+          prompt: "Enter the description",
+          ignoreFocusOut: true,
+        });
+      },
+      group: async () => {
+        return await vscode.window.showInputBox({
+          prompt: "Enter the group name",
+          ignoreFocusOut: true,
+        });
+      },
+      order: async () => {
+        return await vscode.window.showInputBox({
+          prompt: "Enter the order",
+          ignoreFocusOut: true,
+        });
+      },
+      scope: async () => {
+        const result = await vscode.window.showQuickPick(
+          ["Company Specific (0)", "Company Independent (1)"],
+          {
+            placeHolder: "Select the scope",
+            ignoreFocusOut: true,
+          },
+        );
+        return result === "Company Specific (0)" ? 0 : 1;
       },
     };
   }
@@ -179,16 +219,33 @@ export class PromptManager {
   public async resolveInitManifest(
     inputState: Partial<InitManifestInterface>,
   ): Promise<InitManifestInterface> {
-    const fullState = await this.promptForMissingFields(inputState, [
+    console.log("inputState: ", inputState);
+    console.log(
+      "inputState.entity_type: ",
+      `prompts[directive_type__${inputState.entity_type}]`,
+    );
+    let fullState: Partial<InitManifestInterface>;
+    if (!inputState.directivetype) {
+      inputState.directivetype =
+        await this.prompts[`directive_type__${inputState.entity_type}`]();
+    }
+    fullState = await this.promptForMissingFields(inputState, [
       "entity_type",
       "entity_id",
       "manifest_name",
+      "directivetype",
+      "description",
+      "group",
+      "order",
+      "scope",
     ]);
 
     // check one more time for null values
     for (const field of Object.keys(fullState)) {
       if (fullState[field as keyof typeof fullState] === null) {
-        throw new Error(`${field} is required`);
+        if (!ALLOWED_NULL_VALUES.includes(field)) {
+          throw new Error(`${field} is required`);
+        }
       }
     }
 
@@ -297,5 +354,25 @@ export class PromptManager {
     configOptions: ConfigQuickPickItem[],
   ): Promise<ConfigQuickPickItem | undefined> {
     return await this.prompts.config_selection(configOptions);
+  }
+
+  public async promptDirectiveType(type: string): Promise<string | undefined> {
+    return await this.prompts[`directive_type__${type}`]();
+  }
+
+  public async promptDescription(): Promise<string | undefined> {
+    return await this.prompts.description();
+  }
+
+  public async promptGroupName(): Promise<string | undefined> {
+    return await this.prompts.group();
+  }
+
+  public async promptOrder(): Promise<string | undefined> {
+    return await this.prompts.order();
+  }
+
+  public async promptScope(): Promise<string | undefined> {
+    return await this.prompts.scope();
   }
 }

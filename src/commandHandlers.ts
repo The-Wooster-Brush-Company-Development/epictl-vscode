@@ -22,10 +22,10 @@ export const createConfig = async (
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
-        reject(`Error creating config: ${stderr}`);
+        reject(new Error(`Error creating config: ${stderr}`));
       }
       if (error) {
-        reject(`Error executing ${command}: ${error}`);
+        reject(new Error(`Error executing ${command}: ${error}`));
         return;
       }
       resolve(stdout);
@@ -43,11 +43,11 @@ export const getConfig = async (
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
-        reject(`Error getting config: ${stderr}`);
+        reject(new Error(`Error getting config: ${stderr}`));
         return;
       }
       if (error) {
-        reject(`Error executing ${command}: ${error}`);
+        reject(new Error(`Error executing ${command}: ${error}`));
         return;
       }
       resolve(stdout);
@@ -64,11 +64,11 @@ export const createConfigCli = async (
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
-        reject(`Error setting config: ${stderr}`);
+        reject(new Error(`Error setting config: ${stderr}`));
         return;
       }
       if (error) {
-        reject(`Error executing ${command}: ${error}`);
+        reject(new Error(`Error executing ${command}: ${error}`));
         return;
       }
       resolve(stdout);
@@ -86,11 +86,11 @@ export const setConfigCli = async (
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
-        reject(`Error executing ${command}: ${stderr}`);
+        reject(new Error(`Error executing ${command}: ${stderr}`));
         return;
       }
       if (error) {
-        reject(`Error executing ${command}: ${error}`);
+        reject(new Error(`Error executing ${command}: ${error}`));
         return;
       }
       resolve(stdout);
@@ -103,11 +103,11 @@ export const activeConfig = async (execPath: string): Promise<any> => {
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
-        reject(`Error active config: ${stderr}`);
+        reject(new Error(`Error active config: ${stderr}`));
         return;
       }
       if (error) {
-        reject(`Error executing ${command}: ${error}`);
+        reject(new Error(`Error executing ${command}: ${error}`));
         return;
       }
       resolve(stdout);
@@ -123,11 +123,11 @@ export const deleteConfigCli = async (
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
-        reject(`Error deleting config: ${stderr}`);
+        reject(new Error(`Error deleting config: ${stderr}`));
         return;
       }
       if (error) {
-        reject(`Error executing ${command}: ${error}`);
+        reject(new Error(`Error executing ${command}: ${error}`));
         return;
       }
       resolve(stdout);
@@ -249,11 +249,11 @@ export const initManifest = async (
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
-        reject(`Error initializing manifest: ${stderr}`);
+        reject(new Error(`Error initializing manifest: ${stderr}`));
         return;
       }
       if (error) {
-        reject(`Error executing ${command}: ${error}`);
+        reject(new Error(`Error executing ${command}: ${error}`));
         return;
       }
       resolve(stdout);
@@ -272,11 +272,11 @@ export const cloneManifest = async (
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
-        reject(`Error cloning manifest: ${stderr}`);
+        reject(new Error(`Error cloning manifest: ${stderr}`));
         return;
       }
       if (error) {
-        reject(`Error executing ${command}: ${error}`);
+        reject(new Error(`Error executing ${command}: ${error}`));
         return;
       }
       resolve(stdout);
@@ -298,11 +298,11 @@ export const getBoms = async (
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
-        reject(`${stderr}`);
+        reject(new Error(`${stderr}`));
         return;
       }
       if (error) {
-        reject(`Error executing ${command}: ${error}`);
+        reject(new Error(`Error executing ${command}: ${error}`));
         return;
       }
       resolve(stdout);
@@ -318,11 +318,11 @@ export const getTables = async (
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
-        reject(`Error getting tables: ${stderr}`);
+        reject(new Error(`Error getting tables: ${stderr}`));
         return;
       }
       if (error) {
-        reject(`Error executing ${command}: ${error}`);
+        reject(new Error(`Error executing ${command}: ${error}`));
         return;
       }
       resolve(stdout);
@@ -344,11 +344,11 @@ export const describeBom = async (
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
-        reject(`Error describing bom: ${stderr}`);
+        reject(new Error(`Error describing bom: ${stderr}`));
         return;
       }
       if (error) {
-        reject(`Error executing ${command}: ${error}`);
+        reject(new Error(`Error executing ${command}: ${error}`));
         return;
       }
       resolve(stdout);
@@ -365,11 +365,11 @@ export const describeTable = async (
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
-        reject(`Error describing table: ${stderr}`);
+        reject(new Error(`Error describing table: ${stderr}`));
         return;
       }
       if (error) {
-        reject(`Error executing ${command}: ${error}`);
+        reject(new Error(`Error executing ${command}: ${error}`));
         return;
       }
       resolve(stdout);
@@ -400,11 +400,11 @@ export const describeBpm = async (
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
-        reject(`Error describing bpm: ${stderr}`);
+        reject(new Error(`Error describing bpm: ${stderr}`));
         return;
       }
       if (error) {
-        reject(`Error executing ${command}: ${error}`);
+        reject(new Error(`Error executing ${command}: ${error}`));
         return;
       }
       resolve(stdout);
@@ -425,11 +425,11 @@ export const applyBpm = async (
     const command = `${execPath} apply bpm --file ${manifestPath} --output json`;
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
-        reject(`Error applying manifest: ${stderr}`);
+        reject(new Error(`Error applying manifest: ${stderr}`));
         return;
       }
       if (error) {
-        reject(`Error executing ${command}: ${error}`);
+        reject(new Error(`Error executing ${command}: ${error}`));
         return;
       }
       resolve(stdout);
@@ -450,11 +450,11 @@ export const updateBpm = async (
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
-        reject(`Error updating bpm: ${stderr}`);
+        reject(new Error(`Error updating bpm: ${stderr}`));
         return;
       }
       if (error) {
-        reject(`Error executing ${command}: ${error}`);
+        reject(new Error(`Error executing ${command}: ${error}`));
         return;
       }
       resolve(stdout);
@@ -489,11 +489,11 @@ export const deleteBpm = async (
     const command = `${execPath} delete bpm --file ${manifestPath} --output json`;
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
-        reject(`Error deleting bpm: ${stderr}`);
+        reject(new Error(`Error deleting bpm: ${stderr}`));
         return;
       }
       if (error) {
-        reject(`Error executing ${command}: ${error}`);
+        reject(new Error(`Error executing ${command}: ${error}`));
         return;
       }
       resolve(stdout);
@@ -517,11 +517,11 @@ export const validateCode = async (
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
-        reject(`Error validating code: ${stderr}`);
+        reject(new Error(`Error validating code: ${stderr}`));
         return;
       }
       if (error) {
-        reject(`Error executing ${command}: ${error}`);
+        reject(new Error(`Error executing ${command}: ${error}`));
         return;
       }
       resolve(stdout);

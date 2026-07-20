@@ -15,6 +15,15 @@ import { formatCommand } from "../../utils/handlerUtils";
 import { updateFileName } from "../../utils/registryUtils";
 import * as fs from "fs";
 
+interface UpdateDataInterface {
+  manifest_name: string;
+  directivetype: string;
+  description: string;
+  group: string;
+  order: string;
+  scope: string;
+}
+
 export const initManifestHandler = async (
   vsCodeConfigManager: VsCodeConfigManager,
   promptManager: PromptManager,
@@ -35,6 +44,8 @@ export const initManifestHandler = async (
     entity_id: data.SysRowID,
   });
 
+  console.log("promptResult: ", promptResult);
+
   const codeFilePath = vsCodeConfigManager.createCodeFilePath(
     promptResult.manifest_name,
   );
@@ -52,11 +63,46 @@ export const initManifestHandler = async (
     ),
   );
 
+  console.log("initManifestResult: ", initManifestResult);
+
+  // TODO: Update the manifest file with the user's input
+  const updateFields: string[] = [];
+  const formatKeyByField: Partial<
+    Record<keyof UpdateDataInterface, keyof typeof formatCommand>
+  > = {
+    manifest_name: "name",
+    directivetype: "directivetype",
+    description: "description",
+    group: "group",
+    order: "order",
+    scope: "visibilityscope",
+  };
+
+  for (const field of Object.keys(
+    formatKeyByField,
+  ) as (keyof UpdateDataInterface)[]) {
+    const value = promptResult[field as keyof typeof promptResult];
+    const formatKey = formatKeyByField[field];
+    if (value && formatKey) {
+      updateFields.push(formatCommand[formatKey](String(value)));
+    }
+  }
+
+  const updateResult = JSON.parse(
+    await updateBpm(execPath, manifestPath, updateFields),
+  );
+
+  const applyResult = JSON.parse(await applyBpm(execPath, manifestPath));
+  if (!applyResult.success) {
+    throw new Error(applyResult.message);
+  }
+
   return {
     success: initManifestResult.success,
     result: initManifestResult.result,
     codeFilePath: codeFilePath,
     manifestPath: manifestPath,
+    updateResult: updateResult,
   };
 };
 

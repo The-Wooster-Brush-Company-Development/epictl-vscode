@@ -63,12 +63,15 @@ export class BpmWebview implements vscode.WebviewViewProvider {
               message.data,
             );
 
-            if (result.success) {
+            console.log("result: ", result);
+
+            if (result.success && result.updateResult.success) {
               initCodeFile(
                 result.codeFilePath,
                 result.manifestPath,
                 this.manifestManager,
               );
+
               this.notificationManager.success(
                 "Manifest initialized successfully at " +
                   path.basename(result.manifestPath) +
