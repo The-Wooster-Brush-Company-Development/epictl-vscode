@@ -193,4 +193,8 @@ export class StateManager {
     };
     this.writeState(newState);
   }
+
+  public clearState() {
+    this.writeState({});
+  }
 }

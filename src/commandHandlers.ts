@@ -463,28 +463,9 @@ export const updateBpm = async (
 };
 
 export const deleteBpm = async (
-  vsCodeConfigManager: VsCodeConfigManager,
-  manifestManager: ManifestManager,
+  execPath: string,
+  manifestPath: string,
 ): Promise<any> => {
-  let manifestInput = await vscode.window.showInputBox({
-    prompt: "Enter the name of the manifest file",
-    ignoreFocusOut: true,
-  });
-  if (!manifestInput) {
-    throw new Error("No manifest file name provided");
-  }
-
-  if (!manifestInput.endsWith(".json")) {
-    manifestInput = `${manifestInput}.json`;
-  }
-
-  const manifestPath = manifestManager.createManifestFilePath(manifestInput);
-
-  const execPath = vsCodeConfigManager.readExecPath();
-  if (!execPath) {
-    throw new Error("No exec path set");
-  }
-
   return new Promise((resolve, reject) => {
     const command = `${execPath} delete bpm --file ${manifestPath} --output json`;
     exec(command, (error, stdout, stderr) => {

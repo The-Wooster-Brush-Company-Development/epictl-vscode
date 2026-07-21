@@ -57,7 +57,7 @@
       "view/title": [
         {
           "command": "epictl.refreshTreeView",
-          "when": "view == bpmMenu",
+          "when": "view == bpmMenu || view == epictlExplorer || view == contextMenu",
           "title": "Refresh Tree View"
         }
       ]

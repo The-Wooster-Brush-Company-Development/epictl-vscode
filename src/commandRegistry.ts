@@ -1079,9 +1079,26 @@ export const manifestCommands = [
       promptManager: PromptManager,
     ) => {
       try {
-        const result = JSON.parse(
-          await deleteBpm(vsCodeConfigManager, manifestManager),
-        );
+        let manifestInput = await vscode.window.showInputBox({
+          prompt: "Enter the name of the manifest file",
+          ignoreFocusOut: true,
+        });
+        if (!manifestInput) {
+          throw new Error("No manifest file name provided");
+        }
+
+        if (!manifestInput.endsWith(".json")) {
+          manifestInput = `${manifestInput}.json`;
+        }
+
+        const manifestPath =
+          manifestManager.createManifestFilePath(manifestInput);
+
+        const execPath = vsCodeConfigManager.readExecPath();
+        if (!execPath) {
+          throw new Error("No exec path set");
+        }
+        const result = JSON.parse(await deleteBpm(execPath, manifestPath));
         if (result.success) {
           notificationManager.success("Bpm deleted successfully");
         } else {

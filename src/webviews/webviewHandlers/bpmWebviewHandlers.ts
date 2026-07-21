@@ -7,13 +7,13 @@ import { PromptManager } from "../../managers/promptManager";
 import {
   applyBpm,
   cloneManifest,
+  deleteBpm,
   initManifest,
   updateBpm,
 } from "../../commandHandlers";
 
 import { formatCommand } from "../../utils/handlerUtils";
 import { updateFileName } from "../../utils/registryUtils";
-import * as fs from "fs";
 
 interface UpdateDataInterface {
   manifest_name: string;
@@ -44,8 +44,6 @@ export const initManifestHandler = async (
     entity_id: data.SysRowID,
   });
 
-  console.log("promptResult: ", promptResult);
-
   const codeFilePath = vsCodeConfigManager.createCodeFilePath(
     promptResult.manifest_name,
   );
@@ -63,9 +61,17 @@ export const initManifestHandler = async (
     ),
   );
 
-  console.log("initManifestResult: ", initManifestResult);
+  if (!initManifestResult.success) {
+    return {
+      success: false,
+      duplicate: initManifestResult.duplicate,
+      message: initManifestResult.message,
+      result: initManifestResult.results ?? initManifestResult.result,
+      codeFilePath,
+      manifestPath,
+    };
+  }
 
-  // TODO: Update the manifest file with the user's input
   const updateFields: string[] = [];
   const formatKeyByField: Partial<
     Record<keyof UpdateDataInterface, keyof typeof formatCommand>
@@ -100,6 +106,8 @@ export const initManifestHandler = async (
   return {
     success: initManifestResult.success,
     result: initManifestResult.result,
+    duplicate: initManifestResult.duplicate,
+    message: initManifestResult.messasge,
     codeFilePath: codeFilePath,
     manifestPath: manifestPath,
     updateResult: updateResult,
@@ -223,4 +231,24 @@ export const openCodeFileHandler = async (
     }
   }
   throw new Error("Code file not found");
+};
+
+export const deleteBpmHandler = async (
+  execPath: string,
+  manifestPath: string,
+  promptManager: PromptManager,
+) => {
+  const confirm = await promptManager.promptConfirm();
+  if (!confirm) {
+    throw new Error("User did not confirm");
+  }
+  if (confirm.toLowerCase() !== "yes") {
+    throw new Error("User did not confirm");
+  }
+
+  const result = JSON.parse(await deleteBpm(execPath, manifestPath));
+  if (!result.success) {
+    throw new Error(result.message);
+  }
+  return result;
 };

@@ -15,6 +15,7 @@ import {
   updateFieldHandler,
   applyBpmHandler,
   openCodeFileHandler,
+  deleteBpmHandler,
 } from "./webviewHandlers/bpmWebviewHandlers";
 
 export class BpmWebview implements vscode.WebviewViewProvider {
@@ -63,8 +64,6 @@ export class BpmWebview implements vscode.WebviewViewProvider {
               message.data,
             );
 
-            console.log("result: ", result);
-
             if (result.success && result.updateResult.success) {
               initCodeFile(
                 result.codeFilePath,
@@ -78,8 +77,12 @@ export class BpmWebview implements vscode.WebviewViewProvider {
                   "\nCode file created at " +
                   result.codeFilePath,
               );
+            } else if (result.duplicate) {
+              this.notificationManager.error(
+                `Manifest ${path.basename(result.manifestPath)} already exists`,
+              );
             } else {
-              this.notificationManager.error(result.result.message);
+              this.notificationManager.error(result.message);
             }
           } catch (error: any) {
             this.notificationManager.error(error.message);
@@ -124,13 +127,11 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           break;
         case "fieldClicked":
           try {
-            console.log("message: ", message);
             const result = await updateFieldHandler(
               this.vsCodeConfigManager.readExecPath() ?? "",
               message,
               this.manifestManager,
             );
-            console.log("result: ", result);
             if (result.success) {
               this.notificationManager.notifySuccess("Success");
               this.notificationManager.success(result.successMessage);
@@ -152,7 +153,6 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           }
           break;
         case "applyBpm":
-          console.log("message: ", message);
           try {
             const execPath = this.vsCodeConfigManager.readExecPath() ?? "";
             if (!execPath) {
@@ -192,7 +192,40 @@ export class BpmWebview implements vscode.WebviewViewProvider {
             return;
           }
           break;
+        case "deleteBpm":
+          try {
+            const execPath = this.vsCodeConfigManager.readExecPath() ?? "";
+            if (!execPath) {
+              throw new Error("Exec path not found");
+            }
+
+            const manifestPath = this.manifestManager.createManifestFilePath(
+              this.stateManager.readState().Name ?? "",
+            );
+            const result = await deleteBpmHandler(
+              execPath,
+              manifestPath,
+              this.promptManager,
+            );
+            if (result.success) {
+              this.notificationManager.success(result.message);
+            } else {
+              this.notificationManager.error(result.message);
+            }
+            this.stateManager.clearState();
+            this.clearBpmWebview();
+          } catch (error: any) {
+            this.notificationManager.error(error.message);
+            return;
+          }
+          break;
       }
+    });
+  }
+
+  private clearBpmWebview() {
+    this._webviewView!.webview.postMessage({
+      command: "clearBpmWebview",
     });
   }
 
@@ -234,18 +267,20 @@ export class BpmWebview implements vscode.WebviewViewProvider {
       );
       return;
     }
-    this._webviewView!.webview.postMessage({
+    await this._webviewView!.webview.postMessage({
       command: "displayDirectiveBpm",
       data: data,
     });
-    this._webviewView!.webview.postMessage({
+    await this._webviewView!.webview.postMessage({
       command: "displayCode",
       data: codeLines,
     });
-    this.enableCloneManifestButton(data);
+    await this.enableCloneManifestButton(data);
+    await this.enableDeleteBpmButton(data);
   }
 
   private async getCodeToDisplay(data: any): Promise<string> {
+    console.log("data: ", data);
     let codeLines: string = "";
     try {
       codeLines = JSON.parse(
@@ -262,6 +297,8 @@ export class BpmWebview implements vscode.WebviewViewProvider {
       this.notificationManager.error(
         "Error fetching code lines: " + error.message,
       );
+
+      console.log("codeLines1: ", codeLines);
     }
     try {
       if (codeLines === "") {
@@ -280,6 +317,12 @@ export class BpmWebview implements vscode.WebviewViewProvider {
 
         let code = "";
 
+        if (codeLines.length < 1 || !codeLines) {
+          return "No code found";
+        }
+
+        console.log("codeLines2: ", codeLines);
+
         for (const filePath of codeFilePaths) {
           code += `${path.basename(filePath)}:\n`;
           const csCode = fs.readFileSync(filePath, "utf8");
@@ -292,6 +335,8 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           code += `${lines.length - 15} more lines\n`;
         }
 
+        console.log("code3: ", code);
+
         return code;
       } else {
         let code = codeLines.split("\n").slice(0, 15).join("\n");
@@ -302,6 +347,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           code += "                       .\n";
           code += `${codeLines.split("\n").length - 15} more lines\n`;
         }
+        console.log("code4: ", code);
         return code;
       }
     } catch {
@@ -309,7 +355,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
     }
   }
 
-  private enableInitManifestButton() {
+  private async enableInitManifestButton() {
     let data: any;
     try {
       data = this.stateManager.readState();
@@ -317,15 +363,22 @@ export class BpmWebview implements vscode.WebviewViewProvider {
       console.error("Error reading state: ", error);
       return;
     }
-    this._webviewView!.webview.postMessage({
+    await this._webviewView!.webview.postMessage({
       command: "enableInitManifestButton",
       data: data,
     });
   }
 
-  private enableCloneManifestButton(message: any) {
-    this._webviewView!.webview.postMessage({
+  private async enableCloneManifestButton(message: any) {
+    await this._webviewView!.webview.postMessage({
       command: "enableCloneManifestButton",
+      data: message,
+    });
+  }
+
+  private async enableDeleteBpmButton(message: any) {
+    this._webviewView!.webview.postMessage({
+      command: "enableDeleteBpmButton",
       data: message,
     });
   }
@@ -514,6 +567,16 @@ export class BpmWebview implements vscode.WebviewViewProvider {
 
       }
 
+      button.wbc-btn.delete {
+        font-size: 10px;
+        padding: 6px 8px;
+        max-height: 20px;
+      }
+
+      button.wbc-btn.hidden {
+        display: none;
+      }
+
       .editable { cursor: pointer; }
       .editable:hover { background: var(--vscode-editor-hoverHighlightBackground, rgba(255,255,255,0.08)); outline: 1px dashed var(--vscode-focusBorder, #888); }
 
@@ -618,6 +681,9 @@ export class BpmWebview implements vscode.WebviewViewProvider {
         <button id="apply-bpm-button" class="wbc-btn disabled" data-command="applyBpm" disabled>
           <span class="dot"></span> Apply BPM
         </button>
+        <button id="delete-bpm-button" class="wbc-btn hidden" data-command="deleteBpm" disabled>
+          <span class="dot"></span> Delete BPM
+        </button>
       </div>
 
       <div id="temp-section" class="section">No BPM selected</div>
@@ -651,6 +717,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
          const initManifestButton = document.getElementById('init-manifest-button');
          const cloneManifestButton = document.getElementById('clone-manifest-button');
          const applyBpmButton = document.getElementById('apply-bpm-button');
+         const deleteBpmButton = document.getElementById('delete-bpm-button');
          initManifestButton.disabled = true;
          cloneManifestButton.disabled = true;
          applyBpmButton.disabled = true;
@@ -684,8 +751,13 @@ export class BpmWebview implements vscode.WebviewViewProvider {
               setCloneManifestButton(message.data);
               break;
             case "enableApplyBpmButton":
-              console.log("Enable apply bpm button: ", message);
               enableApplyBpmButton(message.data);
+              break;
+            case "enableDeleteBpmButton":
+              enableDeleteBpmButton(message.data);
+              break;
+            case "clearBpmWebview":
+              clearBpmWebview();
               break;
             default:
               tempSection.classList.remove("section-hidden");
@@ -693,6 +765,44 @@ export class BpmWebview implements vscode.WebviewViewProvider {
               break;
           }
         });
+
+        const clearBpmWebview = () => {
+          tempSection.classList.remove("section-hidden");
+          tempSection.classList.add("section");
+
+          headerSection.classList.remove("section");
+          headerSection.classList.add("section-hidden");
+
+          bodySection.classList.remove("section");
+          bodySection.classList.add("section-hidden");
+
+          codeSection.classList.remove("section");
+          codeSection.classList.add("section-hidden");
+            
+          initManifestButton.classList.remove("wbc-btn");
+          initManifestButton.classList.add("wbc-btn disabled");
+          cloneManifestButton.classList.remove("wbc-btn");
+          cloneManifestButton.classList.add("wbc-btn disabled");
+          applyBpmButton.classList.remove("wbc-btn");
+          applyBpmButton.classList.add("wbc-btn disabled");
+          deleteBpmButton.classList.remove("delete", "danger");
+          deleteBpmButton.classList.add("hidden");
+
+          initManifestButton.disabled = true;
+          cloneManifestButton.disabled = true;
+          applyBpmButton.disabled = true;
+          deleteBpmButton.disabled = true;
+        }
+
+        const enableDeleteBpmButton = (data) => {
+          deleteBpmButton.disabled = false;
+          deleteBpmButton.classList.remove("hidden");
+          deleteBpmButton.classList.add("delete", "danger");      
+          deleteBpmButton.textContent = ""
+          deleteBpmButton.textContent = "Delete BPM for " + data.Name;
+          deleteBpmButton.setAttribute("data-directiveId", data.DirectiveID);
+          deleteBpmButton.setAttribute("data-sysRowId", data.SysRowID);
+        }
 
         const setInitManifestButton = (data) => {
           initManifestButton.disabled = false;
