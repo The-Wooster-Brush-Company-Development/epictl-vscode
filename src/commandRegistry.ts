@@ -1118,7 +1118,7 @@ export const manifestCommands = [
       vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
       notificationManager: NotificationManager,
-      promptManager: PromptManager,
+      _promptManager: PromptManager,
     ) => {
       try {
         const editor = vscode.window.activeTextEditor;
@@ -1127,13 +1127,16 @@ export const manifestCommands = [
         }
 
         const bodyFilePath = editor.document.fileName;
+        console.log(bodyFilePath);
 
         const targetManifest =
-          manifestManager.readManifestByCodeFilePath(bodyFilePath);
+          manifestManager.isCodeFileInManifests(bodyFilePath);
 
         if (!targetManifest) {
           throw new Error("No manifest file found");
         }
+
+        console.log("targetManifest: ", targetManifest);
 
         const entityType =
           manifestManager.readManifest(targetManifest).epictl.parent_type;
@@ -1154,7 +1157,9 @@ export const manifestCommands = [
           bodyFilePath,
           displayType,
         );
-        notificationManager.success("Code validated successfully");
+        console.log(result);
+
+        notificationManager.write(result);
       } catch (err) {
         notificationManager.error("Error validating code");
         notificationManager.error(`${err}`);
@@ -1162,3 +1167,83 @@ export const manifestCommands = [
     },
   },
 ];
+
+export const applyCodeCommands = async (
+  manifestManager: ManifestManager,
+  notificationManager: NotificationManager,
+  vsCodeConfigManager: VsCodeConfigManager,
+) => {
+  console.log("applyCodeCommands");
+  // get code and its associated manifest file
+  const code = vscode.window.activeTextEditor?.document.getText();
+  if (!code) {
+    notificationManager.error("No code found");
+    return;
+  }
+
+  const codeFilePath = vscode.window.activeTextEditor?.document.fileName;
+  if (!codeFilePath) {
+    notificationManager.error("No code file path found");
+    return;
+  }
+
+  const codeFile = manifestManager.readManifestByCodeFilePath(codeFilePath);
+  if (!codeFile) {
+    notificationManager.error("No code file found");
+    return;
+  }
+
+  const targetManifest = manifestManager.isCodeFileInManifests(codeFilePath);
+  if (!targetManifest) {
+    notificationManager.error("No manifest file found");
+    return;
+  }
+
+  // validate code
+  const execPath = vsCodeConfigManager.readExecPath();
+  if (!execPath) {
+    notificationManager.error("No exec path set");
+    return;
+  }
+
+  const entityType =
+    manifestManager.readManifest(targetManifest).epictl.parent_type;
+  const manifestPath = manifestManager.createManifestFilePath(targetManifest);
+  const bodyFilePath = codeFilePath;
+
+  const validateResult = await validateCode(
+    execPath,
+    entityType,
+    manifestPath,
+    bodyFilePath,
+    "table",
+  );
+
+  console.log("validateResult: ", validateResult);
+
+  if (!validateResult.includes("No errors")) {
+    notificationManager.error(validateResult);
+    return;
+  }
+
+  // update bpm
+  const updateResult = JSON.parse(
+    await updateBpm(execPath, manifestPath, [
+      formatCommand["codefile"](codeFilePath),
+    ]),
+  );
+  if (!updateResult.success) {
+    notificationManager.error(updateResult.message);
+    return;
+  }
+
+  // apply update
+  const applyResult = JSON.parse(await applyBpm(execPath, manifestPath));
+  console.log("applyResult: ", applyResult);
+  if (applyResult.success) {
+    notificationManager.success("Code applied successfully");
+  } else {
+    notificationManager.error("Failed to apply code");
+    notificationManager.error(applyResult.message);
+  }
+};

@@ -447,6 +447,7 @@ export const updateBpm = async (
     command += ` ${field}`;
   }
   command += " --output json";
+  console.log(command);
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
       if (stderr) {

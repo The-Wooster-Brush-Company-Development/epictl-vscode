@@ -175,6 +175,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
             this.notificationManager.error(error.message);
             return;
           }
+          this.disableApplyBpmButton();
           break;
         case "openCodeFile":
           try {
@@ -188,7 +189,6 @@ export class BpmWebview implements vscode.WebviewViewProvider {
                 })
                 .filter((filePath) => filePath !== null),
             );
-            console.log("openFiles: ", openFiles);
 
             const codeFilePath = await openCodeFileHandler(
               this.manifestManager,
@@ -413,6 +413,12 @@ export class BpmWebview implements vscode.WebviewViewProvider {
     this._webviewView!.webview.postMessage({
       command: "enableDeleteBpmButton",
       data: message,
+    });
+  }
+
+  private async disableApplyBpmButton() {
+    this._webviewView!.webview.postMessage({
+      command: "disableApplyBpmButton",
     });
   }
 
@@ -794,6 +800,9 @@ export class BpmWebview implements vscode.WebviewViewProvider {
             case "clearBpmWebview":
               clearBpmWebview();
               break;
+            case "disableApplyBpmButton":
+              disableApplyBpmButton();
+              break;
             default:
               console.log("current directive data: ", currentDirectiveData);
               tempSection.classList.remove("section-hidden");
@@ -801,6 +810,13 @@ export class BpmWebview implements vscode.WebviewViewProvider {
               break;
           }
         });
+
+        const disableApplyBpmButton = () => {
+          applyBpmButton.disabled = true;
+          applyBpmButton.classList.add("disabled");
+          applyBpmButton.textContent = "";
+          applyBpmButton.textContent = "Apply BPM";
+        }
 
         const clearBpmWebview = () => {
           tempSection.classList.remove("section-hidden");

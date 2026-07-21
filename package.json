@@ -58,7 +58,14 @@
         {
           "command": "epictl.refreshTreeView",
           "when": "view == bpmMenu || view == epictlExplorer || view == contextMenu",
-          "title": "Refresh Tree View"
+          "title": "Refresh Tree View",
+          "group": "navigation@1"
+        },
+        {
+          "command": "epictl.applyCode",
+          "when": "view == bpmMenu",
+          "title": "Apply Code",
+          "group": "navigation@2"
         }
       ]
     },
@@ -206,6 +213,13 @@
       {
         "command": "epictl.refreshTreeView",
         "title": "Refresh Tree View",
+        "icon": "$(refresh)",
+        "category": "Epictl"
+      },
+      {
+        "command": "epictl.applyCode",
+        "title": "Apply Code",
+        "icon": "$(cloud-upload)",
         "category": "Epictl"
       }
     ]

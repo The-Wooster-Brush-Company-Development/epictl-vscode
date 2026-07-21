@@ -7,6 +7,7 @@ import {
   manifestCommands,
   cliConfigCommands,
   vsCodeConfigCommands,
+  applyCodeCommands,
 } from "./commandRegistry";
 import { VsCodeConfigManager } from "./managers/configManager";
 import { ManifestManager } from "./managers/manifestManager";
@@ -96,8 +97,16 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(disposable);
   });
 
+  // Additional commands for the Bpm Menu webview
   vscode.commands.registerCommand("epictl.refreshTreeView", () => {
     epictlTreeView.refresh();
+  });
+  vscode.commands.registerCommand("epictl.applyCode", async () => {
+    await applyCodeCommands(
+      manifestManager,
+      notificationManager,
+      vsCodeConfigManager,
+    );
   });
 }
 
