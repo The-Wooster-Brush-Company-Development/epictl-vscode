@@ -221,6 +221,24 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           break;
       }
     });
+    this.checkForCurrentDirective();
+
+    this._webviewView.onDidChangeVisibility(() => {
+      if (this._webviewView?.visible) {
+        this.checkForCurrentDirective();
+      }
+    });
+  }
+
+  private checkForCurrentDirective() {
+    console.log("checking for current directive");
+    const state = this.stateManager.readState();
+    if (state.Type === "bpm") {
+      this.displayDirectiveBpm();
+    } else {
+      this.stateManager.clearState();
+      this.clearBpmWebview();
+    }
   }
 
   private clearBpmWebview() {
@@ -280,7 +298,6 @@ export class BpmWebview implements vscode.WebviewViewProvider {
   }
 
   private async getCodeToDisplay(data: any): Promise<string> {
-    console.log("data: ", data);
     let codeLines: string = "";
     try {
       codeLines = JSON.parse(
@@ -297,8 +314,6 @@ export class BpmWebview implements vscode.WebviewViewProvider {
       this.notificationManager.error(
         "Error fetching code lines: " + error.message,
       );
-
-      console.log("codeLines1: ", codeLines);
     }
     try {
       if (codeLines === "") {
@@ -321,8 +336,6 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           return "No code found";
         }
 
-        console.log("codeLines2: ", codeLines);
-
         for (const filePath of codeFilePaths) {
           code += `${path.basename(filePath)}:\n`;
           const csCode = fs.readFileSync(filePath, "utf8");
@@ -335,8 +348,6 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           code += `${lines.length - 15} more lines\n`;
         }
 
-        console.log("code3: ", code);
-
         return code;
       } else {
         let code = codeLines.split("\n").slice(0, 15).join("\n");
@@ -347,7 +358,6 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           code += "                       .\n";
           code += `${codeLines.split("\n").length - 15} more lines\n`;
         }
-        console.log("code4: ", code);
         return code;
       }
     } catch {
@@ -728,6 +738,8 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           const message = event.data;
           tempSection.classList.remove("section");
           tempSection.classList.add("section-hidden");
+
+          console.log("message: ", message);
           
           switch (message.command) {
             case "displayDirectiveBpm": 
@@ -760,6 +772,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
               clearBpmWebview();
               break;
             default:
+              console.log("current directive data: ", currentDirectiveData);
               tempSection.classList.remove("section-hidden");
               tempSection.classList.add("section");
               break;
@@ -778,13 +791,10 @@ export class BpmWebview implements vscode.WebviewViewProvider {
 
           codeSection.classList.remove("section");
           codeSection.classList.add("section-hidden");
-            
-          initManifestButton.classList.remove("wbc-btn");
-          initManifestButton.classList.add("wbc-btn disabled");
-          cloneManifestButton.classList.remove("wbc-btn");
-          cloneManifestButton.classList.add("wbc-btn disabled");
-          applyBpmButton.classList.remove("wbc-btn");
-          applyBpmButton.classList.add("wbc-btn disabled");
+
+          initManifestButton.classList.add("disabled");
+          cloneManifestButton.classList.add("disabled");
+          applyBpmButton.classList.add("disabled");
           deleteBpmButton.classList.remove("delete", "danger");
           deleteBpmButton.classList.add("hidden");
 
