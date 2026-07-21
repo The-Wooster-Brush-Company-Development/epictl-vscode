@@ -219,10 +219,16 @@ export const openCodeFileHandler = async (
   manifestManager: ManifestManager,
   manifestName: string,
 ) => {
-  const manifest = manifestManager.readManifest(manifestName);
+  let manifest: any | undefined;
+  try {
+    manifest = manifestManager.readManifest(manifestName);
+  } catch (error: any) {
+    throw new Error("No code file found for manifest: " + manifestName);
+  }
   if (!manifest) {
     throw new Error("Manifest not found");
   }
+
   const codeFilePaths =
     manifest.extension?.code_file ?? manifest.epictl?.code_file ?? [];
   for (const filePath of codeFilePaths) {

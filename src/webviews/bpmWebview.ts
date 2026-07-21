@@ -178,6 +178,18 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           break;
         case "openCodeFile":
           try {
+            const openFiles = vscode.window.tabGroups.all.flatMap(({ tabs }) =>
+              tabs
+                .map((tab) => {
+                  if (tab.input instanceof vscode.TabInputText) {
+                    return tab.input.uri.fsPath;
+                  }
+                  return null;
+                })
+                .filter((filePath) => filePath !== null),
+            );
+            console.log("openFiles: ", openFiles);
+
             const codeFilePath = await openCodeFileHandler(
               this.manifestManager,
               message.data.name,
@@ -185,8 +197,19 @@ export class BpmWebview implements vscode.WebviewViewProvider {
             if (!codeFilePath) {
               throw new Error("Code file not found");
             }
+
             const uri = vscode.Uri.file(codeFilePath);
-            await vscode.window.showTextDocument(uri);
+
+            if (openFiles.includes(codeFilePath)) {
+              const doc = await vscode.workspace.openTextDocument(uri);
+              await vscode.window.showTextDocument(doc, {
+                preserveFocus: false,
+                preview: false,
+              });
+              return;
+            } else {
+              await vscode.window.showTextDocument(uri);
+            }
           } catch (error: any) {
             this.notificationManager.error(error.message);
             return;
