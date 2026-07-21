@@ -49,7 +49,6 @@ export const registerTreeEvents = (
         ) ?? false;
     }
 
-    console.log("tree view element: ", element);
     if (hasUpdated) {
       if (element instanceof DirectiveNode) {
         treeProvider.bpmWebview.postMessageHelper({
@@ -64,9 +63,15 @@ export const registerTreeEvents = (
   });
 };
 
-export class EpictlTreeView implements vscode.TreeDataProvider<any> {
+export class EpictlTreeView implements vscode.TreeDataProvider<EpicorNode> {
   private vscodeConfigManager: VsCodeConfigManager;
   private manifestManager: ManifestManager;
+  private _onDidChangeTreeData: vscode.EventEmitter<
+    EpicorNode | undefined | null | void
+  > = new vscode.EventEmitter<EpicorNode | undefined | null | void>();
+  readonly onDidChangeTreeData: vscode.Event<
+    EpicorNode | undefined | null | void
+  > = this._onDidChangeTreeData.event;
 
   constructor(
     vscodeConfigManager: VsCodeConfigManager,
@@ -76,6 +81,10 @@ export class EpictlTreeView implements vscode.TreeDataProvider<any> {
   ) {
     this.vscodeConfigManager = vscodeConfigManager;
     this.manifestManager = manifestManager;
+  }
+
+  refresh(): void {
+    this._onDidChangeTreeData.fire();
   }
 
   private get execPath(): string | undefined {

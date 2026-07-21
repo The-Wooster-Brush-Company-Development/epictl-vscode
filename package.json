@@ -56,14 +56,9 @@
     "menus": {
       "view/title": [
         {
-          "command": "epictl.initManifest",
+          "command": "epictl.refreshTreeView",
           "when": "view == bpmMenu",
-          "title": "Initialize Manifest"
-        },
-        {
-          "command": "epictl.cloneManifest",
-          "when": "view == bpmMenu",
-          "title": "Clone Manifest"
+          "title": "Refresh Tree View"
         }
       ]
     },
@@ -206,6 +201,11 @@
       {
         "command": "epictl.validateCode",
         "title": "Validate Code",
+        "category": "Epictl"
+      },
+      {
+        "command": "epictl.refreshTreeView",
+        "title": "Refresh Tree View",
         "category": "Epictl"
       }
     ]

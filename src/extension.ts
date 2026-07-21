@@ -95,6 +95,10 @@ export function activate(context: vscode.ExtensionContext) {
     });
     context.subscriptions.push(disposable);
   });
+
+  vscode.commands.registerCommand("epictl.refreshTreeView", () => {
+    epictlTreeView.refresh();
+  });
 }
 
 // This method is called when your extension is deactivated
