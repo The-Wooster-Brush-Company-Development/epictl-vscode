@@ -98,12 +98,14 @@ export class BpmWebview implements vscode.WebviewViewProvider {
               message.data,
             );
 
+            console.log("result type", typeof result);
+
             if (result.success) {
               const codeFilePath = this.vsCodeConfigManager.createCodeFilePath(
-                result.result,
+                result.results,
               );
               this.manifestManager.writeManifestCodeFilePath(
-                path.basename(result.result),
+                path.basename(result.results),
                 codeFilePath,
               );
               this.vsCodeConfigManager.writeToCodeFile(
@@ -113,12 +115,18 @@ export class BpmWebview implements vscode.WebviewViewProvider {
 
               this.notificationManager.success(
                 "Manifest cloned successfully at " +
-                  path.basename(result.result) +
+                  path.basename(result.results) +
                   "\nCode file created at " +
                   codeFilePath,
               );
+              this.disableCloneManifestButton();
+            } else if (result.duplicate) {
+              this.notificationManager.error(
+                `Manifest ${path.basename(result.results)} already exists`,
+              );
+              this.disableCloneManifestButton();
             } else {
-              this.notificationManager.error(result.result.message);
+              this.notificationManager.error(result.message);
             }
           } catch (error: any) {
             this.notificationManager.error(error.message);
@@ -388,6 +396,10 @@ export class BpmWebview implements vscode.WebviewViewProvider {
     }
   }
 
+  /**
+   * Enable Buttons
+   */
+
   private async enableInitManifestButton() {
     let data: any;
     try {
@@ -413,6 +425,16 @@ export class BpmWebview implements vscode.WebviewViewProvider {
     this._webviewView!.webview.postMessage({
       command: "enableDeleteBpmButton",
       data: message,
+    });
+  }
+
+  /*
+   * Disable Buttons
+   */
+
+  private async disableCloneManifestButton() {
+    this._webviewView!.webview.postMessage({
+      command: "disableCloneManifestButton",
     });
   }
 
@@ -803,6 +825,9 @@ export class BpmWebview implements vscode.WebviewViewProvider {
             case "disableApplyBpmButton":
               disableApplyBpmButton();
               break;
+            case "disableCloneManifestButton": 
+              disableCloneManifestButton();
+              break;
             default:
               console.log("current directive data: ", currentDirectiveData);
               tempSection.classList.remove("section-hidden");
@@ -810,6 +835,18 @@ export class BpmWebview implements vscode.WebviewViewProvider {
               break;
           }
         });
+
+
+        /*
+         * Disable Buttons
+         */
+     
+        const disableCloneManifestButton = () => {
+          cloneManifestButton.disabled = true;
+          cloneManifestButton.classList.add("disabled");
+          cloneManifestButton.textContent = "";
+          cloneManifestButton.textContent = "Clone Manifest";
+        }
 
         const disableApplyBpmButton = () => {
           applyBpmButton.disabled = true;
@@ -842,6 +879,10 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           applyBpmButton.disabled = true;
           deleteBpmButton.disabled = true;
         }
+
+        /*
+         * Enable Buttons
+         */
 
         const enableDeleteBpmButton = (data) => {
           deleteBpmButton.disabled = false;
@@ -970,7 +1011,9 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           codeSection.append(codeHeader, openCodeFileButton, codePre);
         }
 
-        /* Edit Window */
+        /* 
+         * Edit Window
+        */
 
         const editModalOverlay = document.getElementById('edit-modal-overlay');
         const editModalLabel = document.getElementById('edit-modal-label');
@@ -1035,6 +1078,10 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           applyBpmButton.setAttribute("data-sysRowId", data.sysRowId);
           applyBpmButton.setAttribute("data-name", data.name);
         }
+
+        /*
+         * Button Click Events
+         */
 
         document.querySelectorAll('.wbc-btn').forEach(btn => {
           if (btn.id === 'init-manifest-button') {

@@ -1,8 +1,10 @@
 import * as vscode from "vscode";
-import * as path from "path";
 
 const CONFIG_SECTION = "epictl";
 const CONFIG_KEY_MANIFEST_DIR_PATH = "manifest_dir_path";
+
+export const shellQuote = (value: string): string =>
+  `'${value.replace(/'/g, `'\\''`)}'`;
 
 export const manifestDirPath = () => {
   const manifestDirPath = vscode.workspace
@@ -39,7 +41,7 @@ export const fields = [
 export const formatCommand: Record<string, (v: string) => string> = {
   name: (v: string) => `--name "${v}"`,
   description: (v: string) => `--description "${v}"`,
-  codefile: (v: string) => `--bodyfile ${v}`,
+  codefile: (v: string) => `--bodyfile ${shellQuote(v)}`,
   isenabled: (v: string) => `${v === "true" ? "--enabled" : "--disabled"}`,
   group: (v: string) => `--group "${v}"`,
   order: (v: string) => `--order ${v}`,

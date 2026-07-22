@@ -1,9 +1,7 @@
-import * as vscode from "vscode";
 import { exec } from "child_process";
 import { VsCodeConfigManager } from "./managers/configManager";
 import { ManifestManager } from "./managers/manifestManager";
-import { PromptManager } from "./managers/promptManager";
-
+import { shellQuote } from "./utils/handlerUtils";
 /**********************************************************
  * Create/Get/Delete a config file for the epictl command
  * This is the Cli config file, different from the vs code config file
@@ -18,7 +16,7 @@ export const createConfig = async (
   password: string,
   apiKey: string,
 ): Promise<any> => {
-  const command = `${execPath} config-create --base-url ${baseUrlPath} --username ${username} --password ${password} --api-key ${apiKey} --output json`;
+  const command = `${execPath} config-create --base-url ${shellQuote(baseUrlPath)} --username ${username} --password ${password} --api-key ${apiKey} --output json`;
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
@@ -245,7 +243,7 @@ export const initManifest = async (
   parentId: string,
   manifestPath: string,
 ): Promise<any> => {
-  const command = `${execPath} init-manifest ${entityType} ${parentId} --file ${manifestPath} --output json`;
+  const command = `${execPath} init-manifest ${entityType} ${parentId} --file ${shellQuote(manifestPath)} --output json`;
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
@@ -268,7 +266,7 @@ export const cloneManifest = async (
   parentId: string,
   manifestPath: string,
 ): Promise<any> => {
-  const command = `${execPath} clone-manifest ${entityType} ${bpmId} ${parentId} --manifest-file ${manifestPath} --for-extension --output json`;
+  const command = `${execPath} clone-manifest ${entityType} ${bpmId} ${parentId} --manifest-file ${shellQuote(manifestPath)} --for-extension --output json`;
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
@@ -392,7 +390,7 @@ export const describeBpm = async (
 ): Promise<any> => {
   let command: string;
   if (manifestInput) {
-    command = `${execPath} describe bpm --file ${manifestInput} --with-code --output ${outputType}`;
+    command = `${execPath} describe bpm --file ${shellQuote(manifestInput)} --with-code --output ${outputType}`;
   } else {
     command = `${execPath} describe bpm --entity-id ${bpmId} --parent-type ${parentType} --parent-id ${parentId} --with-code --output ${outputType}`;
   }
@@ -422,7 +420,7 @@ export const applyBpm = async (
   manifestPath: string,
 ): Promise<any> => {
   return new Promise((resolve, reject) => {
-    const command = `${execPath} apply bpm --file ${manifestPath} --output json`;
+    const command = `${execPath} apply bpm --file ${shellQuote(manifestPath)} --output json`;
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
         reject(new Error(`Error applying manifest: ${stderr}`));
@@ -442,7 +440,7 @@ export const updateBpm = async (
   manifestPath: string,
   flagsWithCmds: string[],
 ): Promise<any> => {
-  let command = `${execPath} update bpm --file ${manifestPath}`;
+  let command = `${execPath} update bpm --file ${shellQuote(manifestPath)}`;
   for (const field of flagsWithCmds) {
     command += ` ${field}`;
   }
@@ -468,7 +466,7 @@ export const deleteBpm = async (
   manifestPath: string,
 ): Promise<any> => {
   return new Promise((resolve, reject) => {
-    const command = `${execPath} delete bpm --file ${manifestPath} --output json`;
+    const command = `${execPath} delete bpm --file ${shellQuote(manifestPath)} --output json`;
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
         reject(new Error(`Error deleting bpm: ${stderr}`));
@@ -495,7 +493,8 @@ export const validateCode = async (
   bodyFilePath: string,
   outputType: string,
 ): Promise<any> => {
-  const command = `${execPath} validate-code ${entityType} ${manifestPath} ${bodyFilePath} --output ${outputType}`;
+  const command = `${execPath} validate-code ${entityType} ${shellQuote(manifestPath)} ${shellQuote(bodyFilePath)} --output ${outputType}`;
+  console.log("validateCode command:", command);
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
       if (stderr) {

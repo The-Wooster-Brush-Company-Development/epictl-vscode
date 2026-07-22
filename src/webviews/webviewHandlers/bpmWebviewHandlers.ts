@@ -150,11 +150,9 @@ export const cloneManifestHandler = async (
     ),
   );
 
-  return {
-    success: cloneManifestResult.success,
-    result: cloneManifestResult.results,
-    codeLines: cloneManifestResult.codeLines,
-  };
+  console.log("cloneManifestResult", cloneManifestResult);
+
+  return cloneManifestResult;
 };
 
 export const updateFieldHandler = async (

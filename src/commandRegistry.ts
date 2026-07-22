@@ -1126,17 +1126,15 @@ export const manifestCommands = [
           throw new Error("No editor open");
         }
 
-        const bodyFilePath = editor.document.fileName;
-        console.log(bodyFilePath);
+        const codeFilePath = editor.document.fileName;
+        console.log("codeFilePath: ", codeFilePath);
 
         const targetManifest =
-          manifestManager.isCodeFileInManifests(bodyFilePath);
+          manifestManager.isCodeFileInManifests(codeFilePath);
 
         if (!targetManifest) {
           throw new Error("No manifest file found");
         }
-
-        console.log("targetManifest: ", targetManifest);
 
         const entityType =
           manifestManager.readManifest(targetManifest).epictl.parent_type;
@@ -1154,7 +1152,7 @@ export const manifestCommands = [
           execPath,
           entityType,
           manifestPath,
-          bodyFilePath,
+          codeFilePath,
           displayType,
         );
         console.log(result);

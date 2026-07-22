@@ -113,9 +113,14 @@ export class ManifestManager {
       return undefined;
     }
     const manifests = this.readManifests();
+    console.log("manifests: ", manifests);
     for (const manifest of manifests) {
       const manifestData = this.readManifest(manifest);
-      if (manifestData.epictl.code_file.includes(codeFilePath)) return manifest;
+      console.log("manifestData: ", manifestData);
+      if (manifestData.epictl.code_file) {
+        if (manifestData.epictl.code_file.includes(codeFilePath))
+          return manifest;
+      }
     }
     return undefined;
   }
