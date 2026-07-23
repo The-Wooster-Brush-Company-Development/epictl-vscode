@@ -8,12 +8,17 @@ import {
   applyBpm,
   cloneManifest,
   deleteBpm,
+  describeBpm,
   initManifest,
   updateBpm,
 } from "../../commandHandlers";
 
 import { formatCommand } from "../../utils/handlerUtils";
 import { updateFileName } from "../../utils/registryUtils";
+import {
+  StateManager,
+  BpmStateManagerInterface,
+} from "../../managers/stateManager";
 
 interface UpdateDataInterface {
   manifest_name: string;
@@ -255,4 +260,74 @@ export const deleteBpmHandler = async (
     throw new Error(result.message);
   }
   return result;
+};
+
+export const refreshBpm = async (
+  execPath: string,
+  vsCodeConfigManager: VsCodeConfigManager,
+  stateManager: StateManager,
+  manifestManager: ManifestManager,
+): Promise<any> => {
+  console.log("refreshing bpm");
+  const currentState = stateManager.readState();
+  if (!currentState) {
+    throw new Error("No state found");
+  }
+
+  if (currentState.Type !== "bpm") {
+    throw new Error("Current state is not a bpm");
+  }
+
+  // Not using manifest manager want to get most recent data from the server
+  const newState = JSON.parse(
+    await describeBpm(
+      execPath,
+      undefined,
+      currentState.DirectiveID,
+      currentState.ParentType,
+      currentState.ParentSysRowId,
+      "json",
+    ),
+  );
+
+  console.log("new state type: ", newState.Type);
+  console.log("newState: ", newState);
+
+  return newState;
+};
+
+export const refreshBpmHandler = async (
+  execPath: string,
+  stateManager: StateManager,
+): Promise<any> => {
+  console.log("refreshing bpm");
+  const currentState = stateManager.readState() as BpmStateManagerInterface;
+  if (!currentState) {
+    throw new Error("No state found");
+  }
+
+  if (currentState.Type !== "bpm") {
+    throw new Error("Current state is not a bpm");
+  }
+
+  // Not using manifest manager want to get most recent data from the server
+  const newState = JSON.parse(
+    await describeBpm(
+      execPath,
+      undefined,
+      currentState.DirectiveID,
+      currentState.ParentType,
+      currentState.ParentSysRowId,
+      "json",
+    ),
+  ) as BpmStateManagerInterface;
+
+  console.log("new state type: ", typeof newState);
+  console.log("newState: ", newState);
+
+  newState.Type = "bpm";
+  newState.ParentType = currentState.ParentType;
+  newState.ParentSysRowId = currentState.ParentSysRowId;
+
+  return newState;
 };
