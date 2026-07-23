@@ -27,8 +27,6 @@ export const registerTreeEvents = (
     const element = event.selection[0];
     if (!element) return;
 
-    //TODO: the bpmWebview should not be getting data from treeView. It should be getting data from the stateManager.
-    // Treeview passes messages to bpmWebview, which then reads the stateManager based on the message received.
     let hasUpdated: boolean | undefined = false;
 
     if (element instanceof DirectiveNode) {

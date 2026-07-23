@@ -99,21 +99,13 @@ export class ManifestManager {
       );
   }
 
-  public readManifestByCodeFilePath(codeFilePath: string): string | undefined {
-    const manifestFiles = this.readManifests();
-    return manifestFiles.find((manifest) => {
-      const manifestData = this.readManifest(manifest);
-      if (manifestData.epictl.code_file.includes(codeFilePath)) return manifest;
-      return undefined;
-    });
-  }
-
   public isCodeFileInManifests(
     codeFilePath: string | undefined,
   ): string | undefined {
     if (!codeFilePath) {
       return undefined;
     }
+    console.log("codeFilePath in isCodeFileInManifests: ", codeFilePath);
     const manifests = this.readManifests();
     for (const manifest of manifests) {
       const manifestData = this.readManifest(manifest);

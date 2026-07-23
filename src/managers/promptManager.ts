@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { ConfigQuickPickItem } from "../utils/registryUtils";
+import { fields } from "../utils/handlerUtils";
 
 interface InitManifestInterface {
   entity_type: string;
@@ -39,7 +40,7 @@ export class PromptManager {
       },
       parent_id: async () => {
         return await vscode.window.showInputBox({
-          prompt: "Enter the entity parent id",
+          prompt: "Enter the parent id",
           ignoreFocusOut: true,
         });
       },
@@ -143,6 +144,13 @@ export class PromptManager {
       config_selection: async (configOptions: ConfigQuickPickItem[]) => {
         return await vscode.window.showQuickPick(configOptions, {
           placeHolder: "Select the config to set",
+          ignoreFocusOut: true,
+        });
+      },
+      update_fields: async (fields) => {
+        return await vscode.window.showQuickPick(fields, {
+          placeHolder: "Select the fields you want to update",
+          canPickMany: true,
           ignoreFocusOut: true,
         });
       },
@@ -354,6 +362,10 @@ export class PromptManager {
     configOptions: ConfigQuickPickItem[],
   ): Promise<ConfigQuickPickItem | undefined> {
     return await this.prompts.config_selection(configOptions);
+  }
+
+  public async promptUpdateFields(fields: any[]) {
+    return await this.prompts.update_fields(fields);
   }
 
   public async promptDirectiveType(type: string): Promise<string | undefined> {
