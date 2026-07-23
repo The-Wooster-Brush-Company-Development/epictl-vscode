@@ -28,6 +28,7 @@ import {
   updateBpm,
   deleteBpm,
   validateCode,
+  applyCode,
 } from "./commandHandlers";
 
 import { fields, formatCommand } from "./utils/handlerUtils";
@@ -892,14 +893,17 @@ export const manifestCommands = [
     ) => {
       try {
         let manifestInput = await promptManager.promptManifestName();
-        if (!manifestInput) {
-          throw new Error("No manifest name provided");
+        if (manifestInput) {
+          if (!manifestInput.endsWith(".json")) {
+            manifestInput = `${manifestInput}.json`;
+          }
+          manifestInput = manifestManager.createManifestFilePath(manifestInput);
         }
 
-        if (!manifestInput.endsWith(".json")) {
-          manifestInput = `${manifestInput}.json`;
-        }
-        manifestInput = manifestManager.createManifestFilePath(manifestInput);
+        // if (!manifestInput.endsWith(".json")) {
+        //   manifestInput = `${manifestInput}.json`;
+        // }
+        // manifestInput = manifestManager.createManifestFilePath(manifestInput);
 
         let bpmId: string | undefined;
         let entityType: string | undefined;
@@ -940,9 +944,11 @@ export const manifestCommands = [
         );
 
         if (outputType === "json") {
-          notificationManager.success("Bpm described successfully");
+          notificationManager.notifySuccess("Bpm described successfully");
+          notificationManager.write(result);
         } else if (outputType === "table") {
-          notificationManager.success("Bpm described successfully");
+          notificationManager.notifySuccess("Bpm described successfully");
+          notificationManager.write(result);
         }
       } catch (err: any) {
         notificationManager.error(`${err.message}`);
@@ -959,15 +965,19 @@ export const manifestCommands = [
       promptManager: PromptManager,
     ) => {
       try {
-        const openFilename =
-          vscode.window.activeTextEditor?.document.uri.fsPath;
+        const openFilename = vscode.window.activeTextEditor?.document.fileName;
+
         if (!openFilename) {
           throw new Error("No open filename found");
         }
-        let manifestInput: string | undefined;
 
         const manifestFile =
           manifestManager.isCodeFileInManifests(openFilename);
+
+        let manifestInput: string | undefined;
+
+        console.log("openFilename: ", openFilename);
+        console.log("manifestFile: ", manifestFile);
 
         if (!manifestFile) {
           manifestInput = await vscode.window.showInputBox({
@@ -1044,13 +1054,12 @@ export const manifestCommands = [
         const manifestPath =
           manifestManager.createManifestFilePath(manifestInput);
 
+        console.log("manifest", manifestPath);
+        console.log("openFilename", openFilename);
+
         const flagsWithCmds: string[] = [];
 
-        const selectedFields = await vscode.window.showQuickPick(fields, {
-          canPickMany: true,
-          placeHolder: "Select the fields you want to update",
-        });
-
+        const selectedFields = await promptManager.promptUpdateFields(fields);
         if (!selectedFields) {
           throw new Error("No fields selected");
         }
@@ -1127,16 +1136,9 @@ export const manifestCommands = [
       promptManager: PromptManager,
     ) => {
       try {
-        let manifestInput = await vscode.window.showInputBox({
-          prompt: "Enter the name of the manifest file",
-          ignoreFocusOut: true,
-        });
+        let manifestInput = await promptManager.promptManifestName();
         if (!manifestInput) {
           throw new Error("No manifest file name provided");
-        }
-
-        if (!manifestInput.endsWith(".json")) {
-          manifestInput = `${manifestInput}.json`;
         }
 
         const manifestPath =
@@ -1146,6 +1148,7 @@ export const manifestCommands = [
         if (!execPath) {
           throw new Error("No exec path set");
         }
+
         const result = JSON.parse(await deleteBpm(execPath, manifestPath));
         if (result.success) {
           notificationManager.success("Bpm deleted successfully");
@@ -1210,87 +1213,36 @@ export const manifestCommands = [
       }
     },
   },
+  {
+    name: "epictl.applyCode",
+    callback: async (
+      vsCodeConfigManager: VsCodeConfigManager,
+      manifestManager: ManifestManager,
+      notificationManager: NotificationManager,
+      _promptManager: PromptManager,
+    ) => {
+      try {
+        await vscode.window.withProgress(
+          {
+            location: vscode.ProgressLocation.Notification,
+            title: "Applying code",
+            cancellable: false,
+          },
+          async () => {
+            const applyResult = await applyCode(
+              vsCodeConfigManager,
+              manifestManager,
+            );
+            if (applyResult) {
+              notificationManager.success("Code applied successfully");
+            } else {
+              throw new Error("Failed to apply code");
+            }
+          },
+        );
+      } catch (err: any) {
+        notificationManager.error(`${err.message}`);
+      }
+    },
+  },
 ];
-
-export const applyCodeCommands = async (
-  manifestManager: ManifestManager,
-  notificationManager: NotificationManager,
-  vsCodeConfigManager: VsCodeConfigManager,
-) => {
-  try {
-    const code = vscode.window.activeTextEditor?.document.getText();
-    if (!code) {
-      notificationManager.error("No code found");
-      return;
-    }
-
-    const codeFilePath = vscode.window.activeTextEditor?.document.fileName;
-    if (!codeFilePath) {
-      notificationManager.error("No code file path found");
-      return;
-    }
-
-    const codeFile = manifestManager.readManifestByCodeFilePath(codeFilePath);
-    if (!codeFile) {
-      notificationManager.error("No code file found");
-      return;
-    }
-
-    const targetManifest = manifestManager.isCodeFileInManifests(codeFilePath);
-    if (!targetManifest) {
-      notificationManager.error("No manifest file found");
-      return;
-    }
-
-    // validate code
-    const execPath = vsCodeConfigManager.readExecPath();
-    if (!execPath) {
-      notificationManager.error("No exec path set");
-      return;
-    }
-
-    const entityType =
-      manifestManager.readManifest(targetManifest).epictl.parent_type;
-    const manifestPath = manifestManager.createManifestFilePath(targetManifest);
-    const bodyFilePath = codeFilePath;
-
-    const validateResult = await validateCode(
-      execPath,
-      entityType,
-      manifestPath,
-      bodyFilePath,
-      "table",
-    );
-
-    console.log("validateResult: ", validateResult);
-
-    if (!validateResult.includes("No errors")) {
-      notificationManager.error(validateResult);
-      return;
-    }
-
-    // update bpm
-    const updateResult = JSON.parse(
-      await updateBpm(execPath, manifestPath, [
-        formatCommand["codefile"](codeFilePath),
-      ]),
-    );
-    console.log("updateResult: ", updateResult);
-    if (!updateResult.success) {
-      notificationManager.error(updateResult.message);
-      return;
-    }
-
-    // apply update
-    const applyResult = JSON.parse(await applyBpm(execPath, manifestPath));
-    console.log("applyResult: ", applyResult);
-    if (applyResult.success) {
-      notificationManager.success("Code applied successfully");
-    } else {
-      notificationManager.error("Failed to apply code");
-      notificationManager.error(applyResult.message);
-    }
-  } catch (err: any) {
-    notificationManager.error(`${err.message}`);
-  }
-};

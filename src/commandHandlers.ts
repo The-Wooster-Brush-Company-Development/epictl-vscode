@@ -1,7 +1,9 @@
+import * as vscode from "vscode";
 import { exec } from "child_process";
 import { VsCodeConfigManager } from "./managers/configManager";
 import { ManifestManager } from "./managers/manifestManager";
 import { shellQuote } from "./utils/handlerUtils";
+import { formatCommand } from "./utils/handlerUtils";
 /**********************************************************
  * Create/Get/Delete a config file for the epictl command
  * This is the Cli config file, different from the vs code config file
@@ -448,6 +450,7 @@ export const updateBpm = async (
     command += ` ${field}`;
   }
   command += " --output json";
+  console.log("command: ", command);
 
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
@@ -511,4 +514,70 @@ export const validateCode = async (
       resolve(stdout);
     });
   });
+};
+
+export const applyCode = async (
+  vsCodeConfigManager: VsCodeConfigManager,
+  manifestManager: ManifestManager,
+): Promise<any> => {
+  const code = vscode.window.activeTextEditor?.document.getText();
+  if (!code) {
+    throw new Error("No code found");
+  }
+
+  const editor = vscode.window.activeTextEditor;
+  editor?.document.save();
+
+  const codeFilePath = vscode.window.activeTextEditor?.document.fileName;
+  if (!codeFilePath) {
+    throw new Error("No code file path found");
+  }
+
+  const targetManifest = manifestManager.isCodeFileInManifests(codeFilePath);
+  if (!targetManifest) {
+    throw new Error("No manifest file found");
+  }
+
+  // validate code
+  const execPath = vsCodeConfigManager.readExecPath();
+  if (!execPath) {
+    throw new Error("No exec path set");
+  }
+
+  const entityType =
+    manifestManager.readManifest(targetManifest).epictl.parent_type;
+  const manifestPath = manifestManager.createManifestFilePath(targetManifest);
+  const bodyFilePath = codeFilePath;
+
+  const validateResult = await validateCode(
+    execPath,
+    entityType,
+    manifestPath,
+    bodyFilePath,
+    "table",
+  );
+
+  console.log("validateResult: ", validateResult);
+
+  if (!validateResult.includes("No errors")) {
+    throw new Error(validateResult);
+  }
+
+  // update bpm
+  const updateResult = JSON.parse(
+    await updateBpm(execPath, manifestPath, [
+      formatCommand["codefile"](codeFilePath),
+    ]),
+  );
+  console.log("updateResult: ", updateResult);
+  if (!updateResult.success) {
+    throw new Error(updateResult.message);
+  }
+  // apply update
+  const applyResult = JSON.parse(await applyBpm(execPath, manifestPath));
+  console.log("applyResult: ", applyResult);
+  if (applyResult.success) {
+    return true;
+  }
+  throw new Error(applyResult.message);
 };
