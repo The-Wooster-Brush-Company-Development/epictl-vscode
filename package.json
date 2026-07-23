@@ -57,7 +57,7 @@
       "view/title": [
         {
           "command": "epictl.refreshTreeView",
-          "when": "view == bpmMenu || view == epictlExplorer || view == contextMenu",
+          "when": "view == epictlExplorer",
           "title": "Refresh Tree View",
           "group": "navigation@1"
         },
@@ -220,6 +220,12 @@
         "command": "epictl.applyCode",
         "title": "Apply Code",
         "icon": "$(cloud-upload)",
+        "category": "Epictl"
+      },
+      {
+        "command": "epictl.refreshBpmView",
+        "title": "Refresh BPM View",
+        "icon": "$(sync)",
         "category": "Epictl"
       }
     ]
