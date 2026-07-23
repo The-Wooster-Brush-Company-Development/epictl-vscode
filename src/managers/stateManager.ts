@@ -1,11 +1,7 @@
 import * as vscode from "vscode";
 import fs from "fs";
-import {
-  BpmNode,
-  DirectiveNode,
-  BomProcessingNode,
-  TableProcessingNode,
-} from "../treeView/treeView";
+import path from "path";
+import { BpmNode, DirectiveNode } from "../treeView/treeView";
 
 // State manager is used to store the state of the extension
 // Primarly used to store the state of the entity the user is exploring
@@ -94,12 +90,16 @@ export class StateManager {
   private _statePath: string;
 
   constructor(context: vscode.ExtensionContext) {
-    this._statePath = vscode.Uri.joinPath(
-      context.globalStorageUri,
-      "state.json",
-    ).fsPath;
+    const storagePath = context.storageUri?.fsPath ?? "";
+    if (!storagePath) {
+      throw new Error(
+        "Error initializing state manager: No storage path found\n\nPlease open a workspace and try again",
+      );
+    }
+    this._statePath = path.join(storagePath, "state.json");
 
     //initialize state file if it doesn't exist
+    fs.mkdirSync(storagePath, { recursive: true });
     if (!fs.existsSync(this._statePath)) {
       fs.writeFileSync(this._statePath, JSON.stringify({}));
     }

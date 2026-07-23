@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import fs from "fs";
 import path from "path";
 
-// Main class for reading and writing from vs code config file in global storage
+// Main class for reading and writing from vs code config file in workspace storage
 // vs code config file has path to executable, path to manifest directory etc.
 
 interface VsCodeConfigInterface {
@@ -16,10 +16,13 @@ export class VsCodeConfigManager {
 
   public constructor(context: vscode.ExtensionContext) {
     this.context = context;
-    this.configPath = vscode.Uri.joinPath(
-      context.globalStorageUri,
-      "config.json",
-    ).fsPath;
+    const storagePath = context.storageUri?.fsPath ?? "";
+    if (!storagePath) {
+      throw new Error(
+        "Error initializing config manager: No storage path found\n\nPlease open a workspace and try again",
+      );
+    }
+    this.configPath = path.join(storagePath, "config.json");
 
     //initialize the config file if it doesn't exist
     if (!fs.existsSync(this.configPath)) {
@@ -28,7 +31,7 @@ export class VsCodeConfigManager {
         manifest_code_dir_path: "",
       };
       // create the config file directory if it doesn't exist
-      fs.mkdirSync(this.context.globalStorageUri.fsPath, {
+      fs.mkdirSync(storagePath, {
         recursive: true,
       });
 
@@ -91,8 +94,6 @@ export class VsCodeConfigManager {
   }
 
   public writeToCodeFile(codeFilePath: string, codeLines: string): void {
-    console.log("code file path: ", codeFilePath);
-    console.log("code lines: ", codeLines);
     fs.writeFileSync(codeFilePath, codeLines);
   }
 
@@ -120,7 +121,7 @@ export class VsCodeConfigManager {
       path.basename(fileName, path.extname(fileName)) + ".cs";
 
     return vscode.Uri.joinPath(
-      vscode.Uri.parse(this.readManifestCodeDirPath()!),
+      vscode.Uri.file(this.readManifestCodeDirPath()!),
       codeFileName,
     ).fsPath;
   }

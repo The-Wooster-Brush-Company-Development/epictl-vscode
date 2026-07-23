@@ -21,6 +21,13 @@ import { PromptManager } from "./managers/promptManager";
 export function activate(context: vscode.ExtensionContext) {
   console.log('Congratulations, your extension "epictl-vscode" is now active!');
 
+  if (!context.storageUri) {
+    vscode.window.showErrorMessage(
+      "Epictl requires an open workspace folder. Open a folder or workspace and reload the window.",
+    );
+    return;
+  }
+
   const vsCodeConfigManager = new VsCodeConfigManager(context);
   const manifestManager = new ManifestManager(context);
   const notificationManager = new NotificationManager();

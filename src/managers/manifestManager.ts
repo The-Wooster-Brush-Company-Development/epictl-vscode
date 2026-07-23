@@ -11,10 +11,13 @@ export class ManifestManager {
   private _manifestConfigPath: string;
 
   public constructor(context: vscode.ExtensionContext) {
-    this._manifestDirPath = vscode.Uri.joinPath(
-      context.globalStorageUri,
-      "manifest",
-    ).fsPath;
+    const storagePath = context.storageUri?.fsPath ?? "";
+    if (!storagePath) {
+      throw new Error(
+        "Error initializing manifest manager: No storage path found\n\nPlease open a workspace and try again",
+      );
+    }
+    this._manifestDirPath = path.join(storagePath, "manifest");
 
     this._manifestConfigPath = path.join(this._manifestDirPath, "config.json");
 
@@ -84,17 +87,16 @@ export class ManifestManager {
   }
 
   public readManifests(): string[] {
-    const manifests = fs
-      .readdirSync(this._manifestDirPath)
+    const manifest_dir_path = this.loadManifestConfig()?.manifest_dir_path;
+    if (!manifest_dir_path) {
+      return [];
+    }
+    return fs
+      .readdirSync(manifest_dir_path)
       .filter(
         (file) =>
           file.endsWith(".json") && path.basename(file) !== "config.json",
       );
-
-    if (!manifests) {
-      return [];
-    }
-    return manifests;
   }
 
   public readManifestByCodeFilePath(codeFilePath: string): string | undefined {
@@ -113,10 +115,8 @@ export class ManifestManager {
       return undefined;
     }
     const manifests = this.readManifests();
-    console.log("manifests: ", manifests);
     for (const manifest of manifests) {
       const manifestData = this.readManifest(manifest);
-      console.log("manifestData: ", manifestData);
       if (manifestData.epictl.code_file) {
         if (manifestData.epictl.code_file.includes(codeFilePath))
           return manifest;
@@ -154,8 +154,6 @@ export class ManifestManager {
     manifestName: string,
     codeFilePath: string,
   ) {
-    console.log(`manifest name: ${manifestName}`);
-    console.log(`code file path: ${codeFilePath}`);
     if (path.extname(manifestName) !== ".json") {
       manifestName = `${manifestName}.json`;
     }
@@ -168,13 +166,10 @@ export class ManifestManager {
       throw new Error("Code file not found in manifest");
     }
 
-    console.log(`manifest code files: ${manifestCodeFiles}`);
-
     manifestCodeFiles = manifestCodeFiles.filter(
       (file: string) => file !== codeFilePath,
     );
     manifestData.epictl.code_file = manifestCodeFiles;
-    console.log(`manifest code files: ${manifestCodeFiles}`);
 
     const manifestFilePath = this.createManifestFilePath(manifestName);
     fs.writeFileSync(manifestFilePath, JSON.stringify(manifestData, null, 2));
