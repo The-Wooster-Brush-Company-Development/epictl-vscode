@@ -42,7 +42,8 @@ export const formatCommand: Record<string, (v: string) => string> = {
   name: (v: string) => `--name "${v}"`,
   description: (v: string) => `--description "${v}"`,
   codefile: (v: string) => `--bodyfile ${shellQuote(v)}`,
-  isenabled: (v: string) => `${v === "true" ? "--enabled" : "--disabled"}`,
+  isenabled: (v: string) =>
+    `${v.toLowerCase() === "true" || v.toLowerCase() === "y" ? "--enabled" : "--disabled"}`,
   group: (v: string) => `--group "${v}"`,
   order: (v: string) => `--order ${v}`,
   source: (v: string) => `--source "${v}"`,
