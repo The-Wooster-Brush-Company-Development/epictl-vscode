@@ -97,6 +97,9 @@ export const initManifestHandler = async (
   const updateResult = JSON.parse(
     await updateBpm(execPath, manifestPath, updateFields),
   );
+  if (!updateResult.success) {
+    throw new Error(updateResult.message);
+  }
 
   const applyResult = JSON.parse(await applyBpm(execPath, manifestPath));
   if (!applyResult.success) {
@@ -149,8 +152,6 @@ export const cloneManifestHandler = async (
       promptResult.manifest_dir_path,
     ),
   );
-
-  console.log("cloneManifestResult", cloneManifestResult);
 
   return cloneManifestResult;
 };
@@ -209,7 +210,6 @@ export const applyBpmHandler = async (
   }
   const manifestFilePath = manifestManager.createManifestFilePath(message.name);
   const applyResult = await applyBpm(execPath, manifestFilePath);
-  console.log("applyResult: ", applyResult);
   return applyResult;
 };
 

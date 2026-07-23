@@ -30,7 +30,6 @@ import {
   validateCode,
 } from "./commandHandlers";
 
-import { getActiveFilename } from "./utils/extensionUtils";
 import { fields, formatCommand } from "./utils/handlerUtils";
 
 import { VsCodeConfigManager } from "./managers/configManager";
@@ -50,6 +49,9 @@ import {
 import { PromptManager } from "./managers/promptManager";
 
 export const vsCodeConfigCommands = [
+  /*
+   * Exec path may fail if user enters a window path like "C:\Users\username\AppData\Local\epictl\epictl.exe"
+   */
   {
     name: "epictl.setExecPath",
     callback: async (
@@ -58,12 +60,26 @@ export const vsCodeConfigCommands = [
       promptManager: PromptManager,
     ) => {
       try {
-        const execPath = await promptManager.promptExecPath();
-        if (!execPath) {
+        const userPath = (await promptManager.promptExecPath())?.trim();
+        if (!userPath) {
           throw new Error("No exec path provided");
         }
-        setExecPath(vsCodeConfigManager, execPath);
-        notificationManager.success("Exec path set successfully");
+
+        if (path.isAbsolute(userPath)) {
+          setExecPath(vsCodeConfigManager, userPath);
+        } else {
+          const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+          if (!workspaceFolder) {
+            throw new Error(
+              "Error setting exec path: No workspace folder found",
+            );
+          }
+          const execPath = path.resolve(workspaceFolder.uri.fsPath, userPath);
+          setExecPath(vsCodeConfigManager, execPath);
+        }
+        notificationManager.success(
+          "Exec path set successfully to: " + userPath,
+        );
       } catch (err) {
         notificationManager.error(`Error setting exec path: ${err}`);
       }
@@ -118,12 +134,28 @@ export const vsCodeConfigCommands = [
       promptManager: PromptManager,
     ) => {
       try {
-        const codeDirPath = await promptManager.promptCodeDirPath();
-        if (!codeDirPath) {
+        const userInput = (await promptManager.promptCodeDirPath())?.trim();
+        if (!userInput) {
           throw new Error("No code directory path provided");
         }
-        setCodeDirPath(vsCodeConfigManager, codeDirPath);
-        notificationManager.success("Code directory path set successfully");
+        if (path.isAbsolute(userInput)) {
+          setCodeDirPath(vsCodeConfigManager, userInput);
+        } else {
+          const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+          if (!workspaceFolder) {
+            throw new Error(
+              "Error setting code directory path: No workspace folder found",
+            );
+          }
+          const codeDirPath = path.resolve(
+            workspaceFolder.uri.fsPath,
+            userInput,
+          );
+          setCodeDirPath(vsCodeConfigManager, codeDirPath);
+        }
+        notificationManager.success(
+          "Code directory path set successfully to: " + userInput,
+        );
       } catch (err: any) {
         notificationManager.error(`${err.message}`);
       }
@@ -211,7 +243,7 @@ export const cliConfigCommands = [
           notificationManager.success(result.message);
           if (result.config_id) {
             try {
-              const message = await setConfigCli(result.config_id, execPath);
+              const message = await setConfigCli(execPath, result.config_id);
               notificationManager.success(message);
             } catch (err: any) {
               notificationManager.error(`${err.message}`);
@@ -353,8 +385,15 @@ export const cliConfigCommands = [
         if (confirm !== "Yes") {
           throw new Error("Aborting delete config");
         }
-        const result = await deleteConfigCli(execPath, selection.id);
-        notificationManager.success(result);
+        const result = JSON.parse(
+          await deleteConfigCli(execPath, selection as unknown as string),
+        );
+
+        if (result.success) {
+          notificationManager.success(result.message);
+        } else {
+          notificationManager.error(result.message);
+        }
       } catch (err: any) {
         notificationManager.error(`${err.message}`);
       }
@@ -791,8 +830,10 @@ export const manifestCommands = [
             parsedResult.name,
           );
           if (parsedResult.codeLines) {
-            vsCodeConfigManager.writeToCodeFile(codeFilePath, codeFilePath);
-            //updateManifestMetadataWithCodeFile(manifestManager, codeFilePath);
+            vsCodeConfigManager.writeToCodeFile(
+              codeFilePath,
+              parsedResult.codeLines,
+            );
             manifestManager.writeManifestCodeFilePath(
               parsedResult.name,
               codeFilePath,
@@ -918,7 +959,11 @@ export const manifestCommands = [
       promptManager: PromptManager,
     ) => {
       try {
-        const openFilename = getActiveFilename();
+        const openFilename =
+          vscode.window.activeTextEditor?.document.uri.fsPath;
+        if (!openFilename) {
+          throw new Error("No open filename found");
+        }
         let manifestInput: string | undefined;
 
         const manifestFile =
@@ -972,11 +1017,14 @@ export const manifestCommands = [
       promptManager: PromptManager,
     ) => {
       try {
-        const openFilename = getActiveFilename();
+        const openFilename = vscode.window.activeTextEditor?.document.fileName;
+        if (!openFilename) {
+          throw new Error("No open filename found");
+        }
         let manifestInput: string | undefined =
           manifestManager.isCodeFileInManifests(openFilename);
-        const haveValidCodeFile =
-          !!openFilename && openFilename.endsWith(".cs");
+
+        const haveValidCodeFile = openFilename.endsWith(".cs");
         if (!manifestInput) {
           manifestInput = await vscode.window.showInputBox({
             prompt:
@@ -1127,7 +1175,6 @@ export const manifestCommands = [
         }
 
         const codeFilePath = editor.document.fileName;
-        console.log("codeFilePath: ", codeFilePath);
 
         const targetManifest =
           manifestManager.isCodeFileInManifests(codeFilePath);
@@ -1155,7 +1202,6 @@ export const manifestCommands = [
           codeFilePath,
           displayType,
         );
-        console.log(result);
 
         notificationManager.write(result);
       } catch (err) {
@@ -1171,77 +1217,80 @@ export const applyCodeCommands = async (
   notificationManager: NotificationManager,
   vsCodeConfigManager: VsCodeConfigManager,
 ) => {
-  console.log("applyCodeCommands");
-  // get code and its associated manifest file
-  const code = vscode.window.activeTextEditor?.document.getText();
-  if (!code) {
-    notificationManager.error("No code found");
-    return;
-  }
+  try {
+    const code = vscode.window.activeTextEditor?.document.getText();
+    if (!code) {
+      notificationManager.error("No code found");
+      return;
+    }
 
-  const codeFilePath = vscode.window.activeTextEditor?.document.fileName;
-  if (!codeFilePath) {
-    notificationManager.error("No code file path found");
-    return;
-  }
+    const codeFilePath = vscode.window.activeTextEditor?.document.fileName;
+    if (!codeFilePath) {
+      notificationManager.error("No code file path found");
+      return;
+    }
 
-  const codeFile = manifestManager.readManifestByCodeFilePath(codeFilePath);
-  if (!codeFile) {
-    notificationManager.error("No code file found");
-    return;
-  }
+    const codeFile = manifestManager.readManifestByCodeFilePath(codeFilePath);
+    if (!codeFile) {
+      notificationManager.error("No code file found");
+      return;
+    }
 
-  const targetManifest = manifestManager.isCodeFileInManifests(codeFilePath);
-  if (!targetManifest) {
-    notificationManager.error("No manifest file found");
-    return;
-  }
+    const targetManifest = manifestManager.isCodeFileInManifests(codeFilePath);
+    if (!targetManifest) {
+      notificationManager.error("No manifest file found");
+      return;
+    }
 
-  // validate code
-  const execPath = vsCodeConfigManager.readExecPath();
-  if (!execPath) {
-    notificationManager.error("No exec path set");
-    return;
-  }
+    // validate code
+    const execPath = vsCodeConfigManager.readExecPath();
+    if (!execPath) {
+      notificationManager.error("No exec path set");
+      return;
+    }
 
-  const entityType =
-    manifestManager.readManifest(targetManifest).epictl.parent_type;
-  const manifestPath = manifestManager.createManifestFilePath(targetManifest);
-  const bodyFilePath = codeFilePath;
+    const entityType =
+      manifestManager.readManifest(targetManifest).epictl.parent_type;
+    const manifestPath = manifestManager.createManifestFilePath(targetManifest);
+    const bodyFilePath = codeFilePath;
 
-  const validateResult = await validateCode(
-    execPath,
-    entityType,
-    manifestPath,
-    bodyFilePath,
-    "table",
-  );
+    const validateResult = await validateCode(
+      execPath,
+      entityType,
+      manifestPath,
+      bodyFilePath,
+      "table",
+    );
 
-  console.log("validateResult: ", validateResult);
+    console.log("validateResult: ", validateResult);
 
-  if (!validateResult.includes("No errors")) {
-    notificationManager.error(validateResult);
-    return;
-  }
+    if (!validateResult.includes("No errors")) {
+      notificationManager.error(validateResult);
+      return;
+    }
 
-  // update bpm
-  const updateResult = JSON.parse(
-    await updateBpm(execPath, manifestPath, [
-      formatCommand["codefile"](codeFilePath),
-    ]),
-  );
-  if (!updateResult.success) {
-    notificationManager.error(updateResult.message);
-    return;
-  }
+    // update bpm
+    const updateResult = JSON.parse(
+      await updateBpm(execPath, manifestPath, [
+        formatCommand["codefile"](codeFilePath),
+      ]),
+    );
+    console.log("updateResult: ", updateResult);
+    if (!updateResult.success) {
+      notificationManager.error(updateResult.message);
+      return;
+    }
 
-  // apply update
-  const applyResult = JSON.parse(await applyBpm(execPath, manifestPath));
-  console.log("applyResult: ", applyResult);
-  if (applyResult.success) {
-    notificationManager.success("Code applied successfully");
-  } else {
-    notificationManager.error("Failed to apply code");
-    notificationManager.error(applyResult.message);
+    // apply update
+    const applyResult = JSON.parse(await applyBpm(execPath, manifestPath));
+    console.log("applyResult: ", applyResult);
+    if (applyResult.success) {
+      notificationManager.success("Code applied successfully");
+    } else {
+      notificationManager.error("Failed to apply code");
+      notificationManager.error(applyResult.message);
+    }
+  } catch (err: any) {
+    notificationManager.error(`${err.message}`);
   }
 };

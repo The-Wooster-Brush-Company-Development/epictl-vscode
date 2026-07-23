@@ -98,8 +98,6 @@ export class BpmWebview implements vscode.WebviewViewProvider {
               message.data,
             );
 
-            console.log("result type", typeof result);
-
             if (result.success) {
               const codeFilePath = this.vsCodeConfigManager.createCodeFilePath(
                 result.results,
@@ -179,11 +177,11 @@ export class BpmWebview implements vscode.WebviewViewProvider {
             } else {
               this.notificationManager.error(result.message);
             }
+            this.disableApplyBpmButton();
           } catch (error: any) {
             this.notificationManager.error(error.message);
             return;
           }
-          this.disableApplyBpmButton();
           break;
         case "openCodeFile":
           try {
@@ -262,7 +260,6 @@ export class BpmWebview implements vscode.WebviewViewProvider {
   }
 
   private checkForCurrentDirective() {
-    console.log("checking for current directive");
     const state = this.stateManager.readState();
     if (state.Type === "bpm") {
       this.displayDirectiveBpm();
@@ -349,21 +346,17 @@ export class BpmWebview implements vscode.WebviewViewProvider {
     try {
       if (codeLines === "") {
         let manifestName = data.Name;
-        if (!manifestName.endsWith(".json")) {
-          manifestName += ".json";
-        }
 
         const manifest = this.manifestManager.readManifest(manifestName);
         if (!manifest) {
           return "No code found";
         }
 
-        const codeFilePaths =
-          manifest.extension?.code_file ?? manifest.epictl?.code_file ?? [];
+        const codeFilePaths = manifest.epictl?.code_file ?? [];
 
         let code = "";
 
-        if (codeLines.length < 1 || !codeLines) {
+        if (codeFilePaths.length < 1) {
           return "No code found";
         }
 
@@ -624,14 +617,14 @@ export class BpmWebview implements vscode.WebviewViewProvider {
         font-size: 10px;
         padding: 6px 8px;
         max-width: 100px;
-        max-height: 20px;
+        max-height: 30px;
 
       }
 
       button.wbc-btn.delete {
         font-size: 10px;
         padding: 6px 8px;
-        max-height: 20px;
+        max-height: 30px;
       }
 
       button.wbc-btn.hidden {
@@ -829,7 +822,6 @@ export class BpmWebview implements vscode.WebviewViewProvider {
               disableCloneManifestButton();
               break;
             default:
-              console.log("current directive data: ", currentDirectiveData);
               tempSection.classList.remove("section-hidden");
               tempSection.classList.add("section");
               break;

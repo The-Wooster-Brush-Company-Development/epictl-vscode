@@ -117,9 +117,12 @@ export const deleteConfigCli = async (
   execPath: string,
   configId: string,
 ): Promise<any> => {
-  const command = `${execPath} config-delete ${configId}`;
+  const command = `${execPath} config-delete ${configId} --output json`;
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
+      console.log("stdout: ", stdout);
+      console.log("stderr: ", stderr);
+      console.log("error: ", error);
       if (stderr) {
         reject(new Error(`Error deleting config: ${stderr}`));
         return;
@@ -445,7 +448,7 @@ export const updateBpm = async (
     command += ` ${field}`;
   }
   command += " --output json";
-  console.log(command);
+
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
@@ -473,6 +476,7 @@ export const deleteBpm = async (
         return;
       }
       if (error) {
+        5;
         reject(new Error(`Error executing ${command}: ${error}`));
         return;
       }
@@ -494,7 +498,6 @@ export const validateCode = async (
   outputType: string,
 ): Promise<any> => {
   const command = `${execPath} validate-code ${entityType} ${shellQuote(manifestPath)} ${shellQuote(bodyFilePath)} --output ${outputType}`;
-  console.log("validateCode command:", command);
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
       if (stderr) {
