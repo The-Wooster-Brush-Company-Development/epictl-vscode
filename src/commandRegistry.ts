@@ -37,8 +37,6 @@ import { VsCodeConfigManager } from "./managers/configManager";
 import { ManifestManager } from "./managers/manifestManager";
 import { NotificationManager } from "./managers/notificationManager";
 
-import fs from "fs";
-
 import {
   updateFileName,
   updateManifestMetadataWithCodeFile,
@@ -47,6 +45,7 @@ import {
   initCodeFile,
   ConfigQuickPickItem,
 } from "./utils/registryUtils";
+
 import { PromptManager } from "./managers/promptManager";
 
 export const vsCodeConfigCommands = [
@@ -1101,7 +1100,7 @@ export const manifestCommands = [
             oldName = manifestInput;
           }
 
-          flagsWithCmds.push(formatCommand[field.key](userInput));
+          flagsWithCmds.push(...formatCommand[field.key](userInput));
         }
 
         const execPath = vsCodeConfigManager.readExecPath();

@@ -1,8 +1,7 @@
 import * as vscode from "vscode";
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import { VsCodeConfigManager } from "./managers/configManager";
 import { ManifestManager } from "./managers/manifestManager";
-import { shellQuote } from "./utils/handlerUtils";
 import { formatCommand } from "./utils/handlerUtils";
 /**********************************************************
  * Create/Get/Delete a config file for the epictl command
@@ -18,14 +17,27 @@ export const createConfig = async (
   password: string,
   apiKey: string,
 ): Promise<any> => {
-  const command = `${execPath} config-create --base-url ${shellQuote(baseUrlPath)} --username ${username} --password ${password} --api-key ${apiKey} --output json`;
+  const args = [
+    "config-create",
+    "--base-url",
+    baseUrlPath,
+    "--username",
+    username,
+    "--password",
+    password,
+    "--api-key",
+    apiKey,
+    "--output",
+    "json",
+  ];
   return new Promise((resolve, reject) => {
-    exec(command, (error, stdout, stderr) => {
+    execFile(execPath, args, (error, stdout, stderr) => {
       if (stderr) {
-        reject(new Error(`Error creating config: ${stderr}`));
+        reject(new Error(`${stderr}`));
+        return;
       }
       if (error) {
-        reject(new Error(`Error executing ${command}: ${error}`));
+        reject(new Error(`${error}`));
         return;
       }
       resolve(stdout);
@@ -39,15 +51,15 @@ export const getConfig = async (
   execPath: string,
   outputType: string,
 ): Promise<any> => {
-  const command = `${execPath} config-get --output ${outputType}`;
+  const args = ["config-get", "--output", outputType];
   return new Promise((resolve, reject) => {
-    exec(command, (error, stdout, stderr) => {
+    execFile(execPath, args, (error, stdout, stderr) => {
       if (stderr) {
-        reject(new Error(`Error getting config: ${stderr}`));
+        reject(new Error(`${stderr}`));
         return;
       }
       if (error) {
-        reject(new Error(`Error executing ${command}: ${error}`));
+        reject(new Error(`${error}`));
         return;
       }
       resolve(stdout);
@@ -55,20 +67,19 @@ export const getConfig = async (
   });
 };
 
-// sets this config to the active config
 export const createConfigCli = async (
-  configId: string | undefined,
+  configId: string,
   execPath: string,
 ): Promise<any> => {
-  const command = `${execPath} config-set ${configId}`;
+  const args = ["config-set", configId];
   return new Promise((resolve, reject) => {
-    exec(command, (error, stdout, stderr) => {
+    execFile(execPath, args, (error, stdout, stderr) => {
       if (stderr) {
-        reject(new Error(`Error setting config: ${stderr}`));
+        reject(new Error(`${stderr}`));
         return;
       }
       if (error) {
-        reject(new Error(`Error executing ${command}: ${error}`));
+        reject(new Error(`${error}`));
         return;
       }
       resolve(stdout);
@@ -76,21 +87,19 @@ export const createConfigCli = async (
   });
 };
 
-// if we make it so the active config is the one that is set, will want to write it to the config file
-// and perform all of our actions on that config
 export const setConfigCli = async (
   execPath: string,
   configId: string,
 ): Promise<any> => {
-  const command = `${execPath} config-set ${configId}`;
+  const args = ["config-set", configId];
   return new Promise((resolve, reject) => {
-    exec(command, (error, stdout, stderr) => {
+    execFile(execPath, args, (error, stdout, stderr) => {
       if (stderr) {
-        reject(new Error(`Error executing ${command}: ${stderr}`));
+        reject(new Error(`${stderr}`));
         return;
       }
       if (error) {
-        reject(new Error(`Error executing ${command}: ${error}`));
+        reject(new Error(`${error}`));
         return;
       }
       resolve(stdout);
@@ -99,15 +108,15 @@ export const setConfigCli = async (
 };
 
 export const activeConfig = async (execPath: string): Promise<any> => {
-  const command = `${execPath} config-active --output json`;
+  const args = ["config-active", "--output", "json"];
   return new Promise((resolve, reject) => {
-    exec(command, (error, stdout, stderr) => {
+    execFile(execPath, args, (error, stdout, stderr) => {
       if (stderr) {
-        reject(new Error(`Error active config: ${stderr}`));
+        reject(new Error(`${stderr}`));
         return;
       }
       if (error) {
-        reject(new Error(`Error executing ${command}: ${error}`));
+        reject(new Error(`${error}`));
         return;
       }
       resolve(stdout);
@@ -119,18 +128,15 @@ export const deleteConfigCli = async (
   execPath: string,
   configId: string,
 ): Promise<any> => {
-  const command = `${execPath} config-delete ${configId} --output json`;
+  const args = ["config-delete", configId, "--output", "json"];
   return new Promise((resolve, reject) => {
-    exec(command, (error, stdout, stderr) => {
-      console.log("stdout: ", stdout);
-      console.log("stderr: ", stderr);
-      console.log("error: ", error);
+    execFile(execPath, args, (error, stdout, stderr) => {
       if (stderr) {
-        reject(new Error(`Error deleting config: ${stderr}`));
+        reject(new Error(`${stderr}`));
         return;
       }
       if (error) {
-        reject(new Error(`Error executing ${command}: ${error}`));
+        reject(new Error(`${error}`));
         return;
       }
       resolve(stdout);
@@ -248,15 +254,24 @@ export const initManifest = async (
   parentId: string,
   manifestPath: string,
 ): Promise<any> => {
-  const command = `${execPath} init-manifest ${entityType} ${parentId} --file ${shellQuote(manifestPath)} --output json`;
+  //const command = `${execPath} init-manifest ${entityType} ${parentId} --file ${shellQuote(manifestPath)} --output json`;
+  const args = [
+    "init-manifest",
+    entityType,
+    parentId,
+    "--file",
+    manifestPath,
+    "--output",
+    "json",
+  ];
   return new Promise((resolve, reject) => {
-    exec(command, (error, stdout, stderr) => {
+    execFile(execPath, args, (error, stdout, stderr) => {
       if (stderr) {
-        reject(new Error(`Error initializing manifest: ${stderr}`));
+        reject(new Error(`${stderr}`));
         return;
       }
       if (error) {
-        reject(new Error(`Error executing ${command}: ${error}`));
+        reject(new Error(`${error}`));
         return;
       }
       resolve(stdout);
@@ -271,15 +286,25 @@ export const cloneManifest = async (
   parentId: string,
   manifestPath: string,
 ): Promise<any> => {
-  const command = `${execPath} clone-manifest ${entityType} ${bpmId} ${parentId} --manifest-file ${shellQuote(manifestPath)} --for-extension --output json`;
+  const args = [
+    "clone-manifest",
+    entityType,
+    bpmId,
+    parentId,
+    "--manifest-file",
+    manifestPath,
+    "--for-extension",
+    "--output",
+    "json",
+  ];
   return new Promise((resolve, reject) => {
-    exec(command, (error, stdout, stderr) => {
+    execFile(execPath, args, (error, stdout, stderr) => {
       if (stderr) {
-        reject(new Error(`Error cloning manifest: ${stderr}`));
+        reject(new Error(`${stderr}`));
         return;
       }
       if (error) {
-        reject(new Error(`Error executing ${command}: ${error}`));
+        reject(new Error(`${error}`));
         return;
       }
       resolve(stdout);
@@ -296,16 +321,16 @@ export const getBoms = async (
   execPath: string,
   outputType: string,
 ): Promise<any> => {
-  const command = `${execPath} get boms --output ${outputType}`;
+  const args = ["get", "boms", "--output", outputType];
 
   return new Promise((resolve, reject) => {
-    exec(command, (error, stdout, stderr) => {
+    execFile(execPath, args, (error, stdout, stderr) => {
       if (stderr) {
         reject(new Error(`${stderr}`));
         return;
       }
       if (error) {
-        reject(new Error(`Error executing ${command}: ${error}`));
+        reject(new Error(`${error}`));
         return;
       }
       resolve(stdout);
@@ -317,15 +342,15 @@ export const getTables = async (
   execPath: string,
   outputType: string,
 ): Promise<any> => {
-  const command = `${execPath} get tables --output ${outputType}`;
+  const args = ["get", "tables", "--output", outputType];
   return new Promise((resolve, reject) => {
-    exec(command, (error, stdout, stderr) => {
+    execFile(execPath, args, (error, stdout, stderr) => {
       if (stderr) {
-        reject(new Error(`Error getting tables: ${stderr}`));
+        reject(new Error(`${stderr}`));
         return;
       }
       if (error) {
-        reject(new Error(`Error executing ${command}: ${error}`));
+        reject(new Error(`${error}`));
         return;
       }
       resolve(stdout);
@@ -343,15 +368,23 @@ export const describeBom = async (
   bomId: string,
   outputType: string,
 ): Promise<any> => {
-  const command = `${execPath} describe bom --entity-id ${bomId} --output ${outputType}`;
+  //const command = `${execPath} describe bom --entity-id ${bomId} --output ${outputType}`;
+  const args = [
+    "describe",
+    "bom",
+    "--entity-id",
+    bomId,
+    "--output",
+    outputType,
+  ];
   return new Promise((resolve, reject) => {
-    exec(command, (error, stdout, stderr) => {
+    execFile(execPath, args, (error, stdout, stderr) => {
       if (stderr) {
-        reject(new Error(`Error describing bom: ${stderr}`));
+        reject(new Error(`${stderr}`));
         return;
       }
       if (error) {
-        reject(new Error(`Error executing ${command}: ${error}`));
+        reject(new Error(`${error}`));
         return;
       }
       resolve(stdout);
@@ -364,15 +397,23 @@ export const describeTable = async (
   tableId: string,
   outputType: string,
 ): Promise<any> => {
-  const command = `${execPath} describe table --entity-id ${tableId} --output ${outputType}`;
+  //const command = `${execPath} describe table --entity-id ${tableId} --output ${outputType}`;
+  const args = [
+    "describe",
+    "table",
+    "--entity-id",
+    tableId,
+    "--output",
+    outputType,
+  ];
   return new Promise((resolve, reject) => {
-    exec(command, (error, stdout, stderr) => {
+    execFile(execPath, args, (error, stdout, stderr) => {
       if (stderr) {
-        reject(new Error(`Error describing table: ${stderr}`));
+        reject(new Error(`${stderr}`));
         return;
       }
       if (error) {
-        reject(new Error(`Error executing ${command}: ${error}`));
+        reject(new Error(`${error}`));
         return;
       }
       resolve(stdout);
@@ -393,21 +434,46 @@ export const describeBpm = async (
   parentId: string | undefined,
   outputType: string,
 ): Promise<any> => {
-  let command: string;
+  let args: string[];
   if (manifestInput) {
-    command = `${execPath} describe bpm --file ${shellQuote(manifestInput)} --with-code --output ${outputType}`;
+    args = [
+      "describe",
+      "bpm",
+      "--file",
+      manifestInput,
+      "--with-code",
+      "--output",
+      outputType,
+    ];
   } else {
-    command = `${execPath} describe bpm --entity-id ${bpmId} --parent-type ${parentType} --parent-id ${parentId} --with-code --output ${outputType}`;
+    if (!bpmId || !parentType || !parentId) {
+      throw new Error(
+        "entity id, parent type, and parent id are required when no manifest file is provided",
+      );
+    }
+    args = [
+      "describe",
+      "bpm",
+      "--entity-id",
+      bpmId,
+      "--parent-type",
+      parentType,
+      "--parent-id",
+      parentId,
+      "--with-code",
+      "--output",
+      outputType,
+    ];
   }
 
   return new Promise((resolve, reject) => {
-    exec(command, (error, stdout, stderr) => {
+    execFile(execPath, args, (error, stdout, stderr) => {
       if (stderr) {
-        reject(new Error(`Error describing bpm: ${stderr}`));
+        reject(new Error(`${stderr}`));
         return;
       }
       if (error) {
-        reject(new Error(`Error executing ${command}: ${error}`));
+        reject(new Error(`${error}`));
         return;
       }
       resolve(stdout);
@@ -425,14 +491,14 @@ export const applyBpm = async (
   manifestPath: string,
 ): Promise<any> => {
   return new Promise((resolve, reject) => {
-    const command = `${execPath} apply bpm --file ${shellQuote(manifestPath)} --output json`;
-    exec(command, (error, stdout, stderr) => {
+    const args = ["apply", "bpm", "--file", manifestPath, "--output", "json"];
+    execFile(execPath, args, (error, stdout, stderr) => {
       if (stderr) {
-        reject(new Error(`Error applying manifest: ${stderr}`));
+        reject(new Error(`${stderr}`));
         return;
       }
       if (error) {
-        reject(new Error(`Error executing ${command}: ${error}`));
+        reject(new Error(`${error}`));
         return;
       }
       resolve(stdout);
@@ -445,21 +511,20 @@ export const updateBpm = async (
   manifestPath: string,
   flagsWithCmds: string[],
 ): Promise<any> => {
-  let command = `${execPath} update bpm --file ${shellQuote(manifestPath)}`;
+  let args = ["update", "bpm", "--file", manifestPath];
   for (const field of flagsWithCmds) {
-    command += ` ${field}`;
+    args.push(field);
   }
-  command += " --output json";
-  console.log("command: ", command);
+  args.push("--output", "json");
 
   return new Promise((resolve, reject) => {
-    exec(command, (error, stdout, stderr) => {
+    execFile(execPath, args, (error, stdout, stderr) => {
       if (stderr) {
-        reject(new Error(`Error updating bpm: ${stderr}`));
+        reject(new Error(`${stderr}`));
         return;
       }
       if (error) {
-        reject(new Error(`Error executing ${command}: ${error}`));
+        reject(new Error(`${error}`));
         return;
       }
       resolve(stdout);
@@ -472,15 +537,14 @@ export const deleteBpm = async (
   manifestPath: string,
 ): Promise<any> => {
   return new Promise((resolve, reject) => {
-    const command = `${execPath} delete bpm --file ${shellQuote(manifestPath)} --output json`;
-    exec(command, (error, stdout, stderr) => {
+    const args = ["delete", "bpm", "--file", manifestPath, "--output", "json"];
+    execFile(execPath, args, (error, stdout, stderr) => {
       if (stderr) {
-        reject(new Error(`Error deleting bpm: ${stderr}`));
+        reject(new Error(`${stderr}`));
         return;
       }
       if (error) {
-        5;
-        reject(new Error(`Error executing ${command}: ${error}`));
+        reject(new Error(`${error}`));
         return;
       }
       resolve(stdout);
@@ -500,15 +564,22 @@ export const validateCode = async (
   bodyFilePath: string,
   outputType: string,
 ): Promise<any> => {
-  const command = `${execPath} validate-code ${entityType} ${shellQuote(manifestPath)} ${shellQuote(bodyFilePath)} --output ${outputType}`;
+  const args = [
+    "validate-code",
+    entityType,
+    manifestPath,
+    bodyFilePath,
+    "--output",
+    outputType,
+  ];
   return new Promise((resolve, reject) => {
-    exec(command, (error, stdout, stderr) => {
+    execFile(execPath, args, (error, stdout, stderr) => {
       if (stderr) {
-        reject(new Error(`Error validating code: ${stderr}`));
+        reject(new Error(`${stderr}`));
         return;
       }
       if (error) {
-        reject(new Error(`Error executing ${command}: ${error}`));
+        reject(new Error(`${error}`));
         return;
       }
       resolve(stdout);
@@ -520,15 +591,19 @@ export const applyCode = async (
   vsCodeConfigManager: VsCodeConfigManager,
   manifestManager: ManifestManager,
 ): Promise<any> => {
-  const code = vscode.window.activeTextEditor?.document.getText();
+  const editor = vscode.window.activeTextEditor;
+  if (!editor) {
+    throw new Error("No editor open");
+  }
+
+  const code = editor.document.getText();
   if (!code) {
     throw new Error("No code found");
   }
 
-  const editor = vscode.window.activeTextEditor;
-  editor?.document.save();
+  await editor.document.save();
 
-  const codeFilePath = vscode.window.activeTextEditor?.document.fileName;
+  const codeFilePath = editor.document.fileName;
   if (!codeFilePath) {
     throw new Error("No code file path found");
   }
@@ -538,7 +613,6 @@ export const applyCode = async (
     throw new Error("No manifest file found");
   }
 
-  // validate code
   const execPath = vsCodeConfigManager.readExecPath();
   if (!execPath) {
     throw new Error("No exec path set");
@@ -557,25 +631,23 @@ export const applyCode = async (
     "table",
   );
 
-  console.log("validateResult: ", validateResult);
-
   if (!validateResult.includes("No errors")) {
     throw new Error(validateResult);
   }
 
   // update bpm
   const updateResult = JSON.parse(
-    await updateBpm(execPath, manifestPath, [
+    await updateBpm(
+      execPath,
+      manifestPath,
       formatCommand["codefile"](codeFilePath),
-    ]),
+    ),
   );
-  console.log("updateResult: ", updateResult);
   if (!updateResult.success) {
     throw new Error(updateResult.message);
   }
   // apply update
   const applyResult = JSON.parse(await applyBpm(execPath, manifestPath));
-  console.log("applyResult: ", applyResult);
   if (applyResult.success) {
     return true;
   }
