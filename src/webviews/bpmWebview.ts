@@ -345,82 +345,52 @@ export class BpmWebview implements vscode.WebviewViewProvider {
     await this.enableRefreshBpmButton(data);
   }
 
+  private truncateCodePreview(code: string): string {
+    const lines = code.split("\n");
+    let preview = lines.slice(0, 15).join("\n");
+    if (lines.length > 15) {
+      preview += "\n\n";
+      preview += "                       .\n";
+      preview += "                       .\n";
+      preview += "                       .\n";
+      preview += `${lines.length - 15} more lines\n`;
+    }
+    return preview;
+  }
+
   private async getCodeToDisplay(data: any): Promise<string> {
-    let codeLines: string = "";
+    // Prefer local code file when a manifest is associated
     try {
-      codeLines = JSON.parse(
-        await describeBpm(
-          this.vsCodeConfigManager.readExecPath() ?? "",
-          "",
-          data.DirectiveID,
-          data.ParentType,
-          data.ParentSysRowId,
-          "json",
-        ),
-      ).code;
-      console.log("codeLines: ", codeLines);
+      const manifest = this.manifestManager.readManifest(data.Name);
+      const codeFilePaths = manifest?.epictl?.code_file ?? [];
+      if (codeFilePaths.length > 0 && fs.existsSync(codeFilePaths[0])) {
+        const code = fs.readFileSync(codeFilePaths[0], "utf8");
+        return this.truncateCodePreview(code);
+      }
+    } catch {}
+
+    try {
+      const code =
+        JSON.parse(
+          await describeBpm(
+            this.vsCodeConfigManager.readExecPath() ?? "",
+            "",
+            data.DirectiveID,
+            data.ParentType,
+            data.ParentSysRowId,
+            "json",
+          ),
+        ).code ?? "";
+
+      if (!code) {
+        return "No code found";
+      }
+      return this.truncateCodePreview(code);
     } catch (error: any) {
       this.notificationManager.error(
         "Error fetching code lines: " + error.message,
       );
-    }
-    try {
-      if (codeLines === "") {
-        let manifestName = data.Name;
-
-        const manifest = this.manifestManager.readManifest(manifestName);
-        if (!manifest) {
-          return "No code found";
-        }
-
-        console.log("manifest: ", manifest);
-
-        const codeFilePaths = manifest.epictl?.code_file ?? [];
-
-        console.log("codeFilePaths: ", codeFilePaths);
-
-        if (codeFilePaths.length < 1) {
-          return "No code found";
-        }
-
-        let codeFromManifest = fs.readFileSync(codeFilePaths[0], "utf8");
-        codeFromManifest = codeFromManifest.split("\n").slice(0, 15).join("\n");
-        if (15 <= codeFromManifest.split("\n").length) {
-          codeFromManifest += "\n\n";
-          codeFromManifest += "                       .\n";
-          codeFromManifest += "                       .\n";
-          codeFromManifest += "                       .\n";
-          codeFromManifest += `${codeFromManifest.split("\n").length - 15} more lines\n`;
-        }
-
-        // for (const filePath of codeFilePaths) {
-        //   code += `${path.basename(filePath)}:\n`;
-        //   const csCode = fs.readFileSync(filePath, "utf8");
-        //   const lines = csCode.split("\n");
-        //   code += lines.slice(0, 15).join("\n");
-        //   code += "\n\n";
-        //   code += "                       .\n";
-        //   code += "                       .\n";
-        //   code += "                       .\n";
-        //   code += `${lines.length - 15} more lines\n`;
-        // }
-
-        console.log("codeFromManifest: ", codeFromManifest);
-
-        return codeFromManifest;
-      } else {
-        let code = codeLines.split("\n").slice(0, 15).join("\n");
-        if (15 <= codeLines.split("\n").length) {
-          code += "\n\n";
-          code += "                       .\n";
-          code += "                       .\n";
-          code += "                       .\n";
-          code += `${codeLines.split("\n").length - 15} more lines\n`;
-        }
-        return code;
-      }
-    } catch {
-      return "Error getting code";
+      return "No code found";
     }
   }
 
@@ -640,19 +610,15 @@ export class BpmWebview implements vscode.WebviewViewProvider {
         background-color: var(--wbc-red-dark);
         border-color: var(--wbc-red-dark);
       }
-
-      button.wbc-btn.primary .dot {
-        background: #ffffff;
+     
+      button.wbc-btn .dot {
+        background:rgb(207, 14, 14);
       }
-
+        
       button.wbc-btn.disabled {
         background-color: var(--vscode-button-secondaryBackground);
         border-color: var(--vscode-widget-border);
         cursor: not-allowed;
-      }
-
-      button.wbc-btn.disabled .dot {
-        background: var(--vscode-button-secondaryBackground);
       }
 
       button.wbc-btn.small {
@@ -821,6 +787,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
          applyBpmButton.disabled = true;
          refreshBpmButton.disabled = true;
 
+
          let currentDirectiveData = null;
          
          window.addEventListener('message', (event) => {
@@ -876,6 +843,16 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           }
         });
 
+        /*
+         * Helper Functions
+        */
+        
+        const setButtonLabel = (button, label) => {
+          const dot = document.createElement('span');
+          dot.className = 'dot';
+          button.replaceChildren(dot, document.createTextNode(label));
+         };
+
 
         /*
          * Disable Buttons
@@ -884,15 +861,13 @@ export class BpmWebview implements vscode.WebviewViewProvider {
         const disableCloneManifestButton = () => {
           cloneManifestButton.disabled = true;
           cloneManifestButton.classList.add("disabled");
-          cloneManifestButton.textContent = "";
-          cloneManifestButton.textContent = "Clone Manifest";
+          setButtonLabel(cloneManifestButton, "Clone Manifest");
         }
 
         const disableApplyBpmButton = () => {
           applyBpmButton.disabled = true;
           applyBpmButton.classList.add("disabled");
-          applyBpmButton.textContent = "";
-          applyBpmButton.textContent = "Apply BPM";
+          setButtonLabel(applyBpmButton, "Apply BPM");
         }
 
         const clearBpmWebview = () => {
@@ -929,16 +904,14 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           refreshBpmButton.disabled = false;
           refreshBpmButton.classList.remove("hidden");
           refreshBpmButton.classList.add("small");
-          refreshBpmButton.textContent = ""
-          refreshBpmButton.textContent = "Refresh BPM";
+          setButtonLabel(refreshBpmButton, "Refresh BPM");
         }
 
         const enableDeleteBpmButton = (data) => {
           deleteBpmButton.disabled = false;
           deleteBpmButton.classList.remove("hidden");
           deleteBpmButton.classList.add("delete", "danger");      
-          deleteBpmButton.textContent = ""
-          deleteBpmButton.textContent = "Delete BPM for " + data.Name;
+          setButtonLabel(deleteBpmButton, "Delete BPM for " + data.Name);
           deleteBpmButton.setAttribute("data-directiveId", data.DirectiveID);
           deleteBpmButton.setAttribute("data-sysRowId", data.SysRowID);
         }
@@ -947,8 +920,10 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           initManifestButton.disabled = false;
           initManifestButton.classList.remove("disabled");
           initManifestButton.classList.add("wbc-btn");
-          initManifestButton.textContent = ""
-          initManifestButton.textContent = "Init Manifest for " +  (data.Type === "bom" ? data.Name : data.BusinessObject);;
+          setButtonLabel(
+            initManifestButton,
+            "Init Manifest for " + (data.Type === "bom" ? data.Name : data.BusinessObject),
+          );
           initManifestButton.setAttribute("data-type", data.Type);
           initManifestButton.setAttribute("data-parentType", data.ParentType);
           initManifestButton.setAttribute("data-SysRowID", data.SysRowID);
@@ -959,8 +934,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           cloneManifestButton.disabled = false;
           cloneManifestButton.classList.remove("disabled");
           cloneManifestButton.classList.add("wbc-btn");
-          cloneManifestButton.textContent = ""
-          cloneManifestButton.textContent = "Clone Manifest for " + data.Name;
+          setButtonLabel(cloneManifestButton, "Clone Manifest for " + data.Name);
           cloneManifestButton.setAttribute("data-type", data.Type);
           cloneManifestButton.setAttribute("data-directiveID", data.DirectiveID);
           cloneManifestButton.setAttribute("data-parentId", data.ParentSysRowId);
@@ -1043,7 +1017,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           const openCodeFileButton = document.createElement("button");
           openCodeFileButton.className = "wbc-btn small";
           openCodeFileButton.classList.add("wbc-btn");
-          openCodeFileButton.textContent = "Open Code File";
+          setButtonLabel(openCodeFileButton, "Open Code File");
           openCodeFileButton.addEventListener("click", () => {
             vscode.postMessage({
               command: "openCodeFile",
@@ -1121,8 +1095,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           applyBpmButton.disabled = false;
           applyBpmButton.classList.remove("disabled");
           applyBpmButton.classList.add("wbc-btn");
-          applyBpmButton.textContent = ""
-          applyBpmButton.textContent = "Apply BPM for " + data.name;
+          setButtonLabel(applyBpmButton, "Apply BPM for " + data.name);
           applyBpmButton.setAttribute("data-directiveId", data.directiveId);
           applyBpmButton.setAttribute("data-sysRowId", data.sysRowId);
           applyBpmButton.setAttribute("data-name", data.name);

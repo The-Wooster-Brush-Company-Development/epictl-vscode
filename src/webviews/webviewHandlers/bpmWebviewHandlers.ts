@@ -95,7 +95,7 @@ export const initManifestHandler = async (
     const value = promptResult[field as keyof typeof promptResult];
     const formatKey = formatKeyByField[field];
     if (value && formatKey) {
-      updateFields.push(formatCommand[formatKey](String(value)));
+      updateFields.push(...formatCommand[formatKey](String(value)));
     }
   }
 
@@ -183,7 +183,7 @@ export const updateFieldHandler = async (
   ](message.value);
 
   const updateResult = JSON.parse(
-    await updateBpm(execPath, manifestFilePath, [flag]),
+    await updateBpm(execPath, manifestFilePath, flag),
   );
 
   let currentName = message.name;
@@ -276,6 +276,14 @@ export const refreshBpm = async (
 
   if (currentState.Type !== "bpm") {
     throw new Error("Current state is not a bpm");
+  }
+
+  if (
+    !currentState.DirectiveID ||
+    !currentState.ParentType ||
+    !currentState.ParentSysRowId
+  ) {
+    throw new Error("BPM state is missing directive or parent identifiers");
   }
 
   // Not using manifest manager want to get most recent data from the server
