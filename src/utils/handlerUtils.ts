@@ -38,26 +38,31 @@ export const fields = [
   { label: "Directive Type", key: "directivetype" },
 ];
 
-export const formatCommand: Record<string, (v: string) => string> = {
-  name: (v: string) => `--name "${v}"`,
-  description: (v: string) => `--description "${v}"`,
-  codefile: (v: string) => `--bodyfile ${shellQuote(v)}`,
-  isenabled: (v: string) =>
-    `${v.toLowerCase() === "true" || v.toLowerCase() === "y" ? "--enabled" : "--disabled"}`,
-  group: (v: string) => `--group "${v}"`,
-  order: (v: string) => `--order ${v}`,
-  source: (v: string) => `--source "${v}"`,
-  "reenter-max": (v: string) => `--reenter-max ${v}`,
-  preventdeadloops: (v: string) =>
-    `${v === "true" ? "--preventdeadloops" : "--no-preventdeadloops"}`,
-  visibilityscope: (v: string) => `--visibilityscope "${v}"`,
-  company: (v: string) => `--company "${v}"`,
-  directivegroup: (v: string) => `--directivegroup "${v}"`,
-  isuptodate: (v: string) => `${v === "true" ? "--uptodate" : "--outdated"}`,
-  cgccode: (v: string) => `--cgccode "${v}"`,
-  thumbnail: (v: string) => `--thumbnail "${v}"`,
-  compilerdiagnostics: (v: string) => `--compilerdiagnostics "${v}"`,
-  bitflag: (v: string) => `--bitflag ${v}`,
-  rowmod: (v: string) => `--rowmod ${v}`,
-  directivetype: (v: string) => `--directivetype "${v}"`,
+/** Returns argv tokens for execFile (no shell quoting). */
+export const formatCommand: Record<string, (v: string) => string[]> = {
+  name: (v: string) => ["--name", v],
+  description: (v: string) => ["--description", v],
+  codefile: (v: string) => ["--bodyfile", v],
+  isenabled: (v: string) => [
+    v.toLowerCase() === "true" || v.toLowerCase() === "y"
+      ? "--enabled"
+      : "--disabled",
+  ],
+  group: (v: string) => ["--group", v],
+  order: (v: string) => ["--order", v],
+  source: (v: string) => ["--source", v],
+  "reenter-max": (v: string) => ["--reenter-max", v],
+  preventdeadloops: (v: string) => [
+    v === "true" ? "--preventdeadloops" : "--no-preventdeadloops",
+  ],
+  visibilityscope: (v: string) => ["--visibilityscope", v],
+  company: (v: string) => ["--company", v],
+  directivegroup: (v: string) => ["--directivegroup", v],
+  isuptodate: (v: string) => [v === "true" ? "--uptodate" : "--outdated"],
+  cgccode: (v: string) => ["--cgccode", v],
+  thumbnail: (v: string) => ["--thumbnail", v],
+  compilerdiagnostics: (v: string) => ["--compilerdiagnostics", v],
+  bitflag: (v: string) => ["--bitflag", v],
+  rowmod: (v: string) => ["--rowmod", v],
+  directivetype: (v: string) => ["--directivetype", v],
 };
