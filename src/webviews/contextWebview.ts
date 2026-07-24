@@ -21,7 +21,7 @@ export class ContextWebview implements vscode.WebviewViewProvider {
     this._promptManager = promptManager;
   }
 
-  public resolveWebviewView(
+  public async resolveWebviewView(
     webviewView: vscode.WebviewView,
     _context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken,
@@ -37,6 +37,9 @@ export class ContextWebview implements vscode.WebviewViewProvider {
     webviewView.webview.onDidReceiveMessage(async (message) => {
       console.log("Received message: ", message);
       switch (message.command) {
+        case "ready":
+          await this.displayConfigInfo();
+          break;
         case "setConfig":
           await vscode.commands.executeCommand("epictl.setConfig");
           await this.displayConfigInfo();
@@ -64,11 +67,19 @@ export class ContextWebview implements vscode.WebviewViewProvider {
       }
     });
 
-    this.displayConfigInfo();
+    webviewView.onDidChangeVisibility(() => {
+      if (webviewView.visible) {
+        void this.displayConfigInfo();
+      }
+    });
   }
 
   private async displayConfigInfo() {
-    let message: any;
+    if (!this._webviewView) {
+      return;
+    }
+
+    console.log("calling displayConfigInfo");
     let execPath: string | undefined;
     let activeConfigResult: string | undefined;
     let codeDirPath: string | undefined;
@@ -88,14 +99,14 @@ export class ContextWebview implements vscode.WebviewViewProvider {
     } catch (error) {
       activeConfigResult = "No active config (possibly bad exec path)";
     }
+
     try {
       codeDirPath = this._configManager.readManifestCodeDirPath();
-      console.log("codeDirPath: ", codeDirPath);
     } catch (error) {
       codeDirPath = "No code directory path";
     }
 
-    message = {
+    const message = {
       command: "displayConfigInfo",
       execPath: execPath,
       activeConfig: activeConfigResult,
@@ -315,8 +326,11 @@ export class ContextWebview implements vscode.WebviewViewProvider {
 
 
         const displayConfigInfo = (message) => {
+          console.log("calling displayConfigInfo");
           const configSection = document.getElementById('config-info');
           configSection.replaceChildren();
+
+          console.log("message ", message);
 
           const execPath = document.createElement('h4');
           execPath.textContent = "Exec path: " + (message.execPath || "No exec path");
@@ -326,6 +340,12 @@ export class ContextWebview implements vscode.WebviewViewProvider {
 
           const codeDirPath = document.createElement('h4');
           codeDirPath.textContent = "Code directory path: " + (message.codeDirPath || "No code directory path");
+
+          configInfo = {
+            execPath: message.execPath,
+            activeConfig: message.activeConfig,
+            codeDirPath: message.codeDirPath,
+          };
 
           configSection.append(execPath, activeConfig, codeDirPath); 
         }
@@ -337,6 +357,8 @@ export class ContextWebview implements vscode.WebviewViewProvider {
             vscode.postMessage({ command });
           });
         });
+
+        vscode.postMessage({ command: 'ready' });
       </script>
     </body>
     </html>
