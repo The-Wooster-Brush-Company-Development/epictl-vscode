@@ -26,6 +26,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
   private notificationManager: NotificationManager;
   private promptManager: PromptManager;
   private stateManager: StateManager;
+  private ready: boolean;
 
   constructor(
     private readonly _extensionUri: vscode.Uri,
@@ -40,6 +41,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
     this.notificationManager = notificationManager;
     this.promptManager = promptManager;
     this.stateManager = stateManager;
+    this.ready = false;
   }
 
   public resolveWebviewView(
@@ -55,6 +57,16 @@ export class BpmWebview implements vscode.WebviewViewProvider {
     webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
     webviewView.webview.onDidReceiveMessage(async (message) => {
+      if (message.command === "ready") {
+        this.ready = true;
+        this.checkForCurrentDirective();
+        return;
+      }
+
+      if (!this.ready) {
+        return;
+      }
+
       switch (message.command) {
         case "initManifest":
           try {
@@ -239,11 +251,11 @@ export class BpmWebview implements vscode.WebviewViewProvider {
             );
             if (result.success) {
               this.notificationManager.success(result.message);
+              this.stateManager.clearState();
+              this.clearBpmWebview();
             } else {
               this.notificationManager.error(result.message);
             }
-            this.stateManager.clearState();
-            this.clearBpmWebview();
           } catch (error: any) {
             this.notificationManager.error(error.message);
             return;
@@ -261,7 +273,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
             );
             this.stateManager.writeState(newState);
             this.displayDirectiveBpm();
-            this.notificationManager.success("BPM refreshed successfully");
+            this.notificationManager.notifySuccess("Success");
           } catch (error: any) {
             this.notificationManager.error(error.message);
             return;
@@ -269,8 +281,6 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           break;
       }
     });
-    this.checkForCurrentDirective();
-
     this._webviewView.onDidChangeVisibility(() => {
       if (this._webviewView?.visible) {
         this.checkForCurrentDirective();
@@ -1147,6 +1157,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
             });
           }
         });
+        vscode.postMessage({ command: 'ready' });
       </script>
     </body>
     </html>

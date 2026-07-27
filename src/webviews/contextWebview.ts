@@ -35,7 +35,6 @@ export class ContextWebview implements vscode.WebviewViewProvider {
     webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
     webviewView.webview.onDidReceiveMessage(async (message) => {
-      console.log("Received message: ", message);
       switch (message.command) {
         case "ready":
           await this.displayConfigInfo();
