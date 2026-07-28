@@ -89,6 +89,10 @@ export interface BpmStateManagerInterface {
 export class StateManager {
   private _statePath: string;
 
+  private readonly _onDidChangeState = new vscode.EventEmitter<void>();
+
+  public readonly onDidChangeState = this._onDidChangeState.event;
+
   constructor(context: vscode.ExtensionContext) {
     const storagePath = context.storageUri?.fsPath ?? "";
     if (!storagePath) {
@@ -130,6 +134,10 @@ export class StateManager {
   ) {
     //const currentState = this.loadState();
     fs.writeFileSync(this._statePath, JSON.stringify(newState, null, 2));
+
+    console.log("newState: ", newState);
+
+    this._onDidChangeState.fire();
   }
 
   public readState(): Partial<

@@ -47,6 +47,10 @@ import {
 } from "./utils/registryUtils";
 
 import { PromptManager } from "./managers/promptManager";
+import {
+  BpmStateManagerInterface,
+  StateManager,
+} from "./managers/stateManager";
 
 export const vsCodeConfigCommands = [
   /*
@@ -720,8 +724,6 @@ export const manifestCommands = [
       notificationManager: NotificationManager,
       promptManager: PromptManager,
     ) => {
-      //TODO: Eventually, will want to change this so that only have to provide one name (manifest/code file)
-      // and use it in both places, manifest name and code file name
       try {
         const entityType = await promptManager.promptEntityType();
 
@@ -824,7 +826,9 @@ export const manifestCommands = [
         );
         const parsedResult = JSON.parse(result);
         if (parsedResult.success) {
-          notificationManager.success("Manifest cloned successfully");
+          if (!vsCodeConfigManager.readManifestCodeDirPath()) {
+            throw new Error("No manifest code directory path set");
+          }
           const filePath = formatMessage(parsedResult.results);
           const codeFilePath = vsCodeConfigManager.createCodeFilePath(
             parsedResult.name,
@@ -839,6 +843,7 @@ export const manifestCommands = [
               codeFilePath,
             );
           }
+          notificationManager.notifySuccess("Success");
           notificationManager.success(
             "Manifest cloned successfully at " +
               filePath +
@@ -847,7 +852,7 @@ export const manifestCommands = [
               codeFilePath,
           );
         } else {
-          notificationManager.error("Failed to clone manifest");
+          notificationManager.notifyError("Error");
           notificationManager.error(parsedResult.message);
         }
       } catch (err) {
@@ -862,7 +867,7 @@ export const manifestCommands = [
       _vsCodeConfigManager: VsCodeConfigManager,
       manifestManager: ManifestManager,
       notificationManager: NotificationManager,
-      promptManager: PromptManager,
+      _promptManager: PromptManager,
     ) => {
       try {
         const manifests = manifestManager.readManifests();
@@ -971,12 +976,9 @@ export const manifestCommands = [
         }
 
         const manifestFile =
-          manifestManager.isCodeFileInManifests(openFilename);
+          manifestManager.findCodeFileInManifests(openFilename);
 
         let manifestInput: string | undefined;
-
-        console.log("openFilename: ", openFilename);
-        console.log("manifestFile: ", manifestFile);
 
         if (!manifestFile) {
           manifestInput = await vscode.window.showInputBox({
@@ -1031,7 +1033,7 @@ export const manifestCommands = [
           throw new Error("No open filename found");
         }
         let manifestInput: string | undefined =
-          manifestManager.isCodeFileInManifests(openFilename);
+          manifestManager.findCodeFileInManifests(openFilename);
 
         const haveValidCodeFile = openFilename.endsWith(".cs");
         if (!manifestInput) {
@@ -1179,7 +1181,7 @@ export const manifestCommands = [
         const codeFilePath = editor.document.fileName;
 
         const targetManifest =
-          manifestManager.isCodeFileInManifests(codeFilePath);
+          manifestManager.findCodeFileInManifests(codeFilePath);
 
         if (!targetManifest) {
           throw new Error("No manifest file found");
@@ -1239,6 +1241,53 @@ export const manifestCommands = [
             }
           },
         );
+      } catch (err: any) {
+        notificationManager.error(`${err.message}`);
+      }
+    },
+  },
+];
+
+export const stateCommands = [
+  {
+    name: "epictl.getManifestFromCodeFile",
+    callback: async (
+      stateManager: StateManager,
+      manifestManager: ManifestManager,
+      notificationManager: NotificationManager,
+    ) => {
+      try {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+          throw new Error("No editor open");
+        }
+
+        const codeFilePath = editor.document.fileName;
+
+        const manifest = manifestManager.findCodeFileInManifests(codeFilePath);
+        if (!manifest) {
+          throw new Error("No manifest file found");
+        }
+
+        const manifestData = manifestManager.readManifest(manifest);
+        if (!manifestData) {
+          throw new Error("No manifest data found");
+        }
+
+        const bpmData = manifestData.bpmConfig;
+
+        const state = {
+          ...bpmData,
+          Type: "bpm",
+          ParentType: manifestData.epictl.parent_type,
+          ParentSysRowId:
+            bpmData.ParentType === "bom"
+              ? manifestData.epictl.bomId
+              : manifestData.epictl.tableId,
+        };
+        stateManager.writeState(state);
+
+        notificationManager.success("Found manifest data");
       } catch (err: any) {
         notificationManager.error(`${err.message}`);
       }

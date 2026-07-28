@@ -42,6 +42,16 @@ export class BpmWebview implements vscode.WebviewViewProvider {
     this.promptManager = promptManager;
     this.stateManager = stateManager;
     this.ready = false;
+
+    this.stateManager.onDidChangeState(() => {
+      if (!this.ready) {
+        return;
+      }
+      const state = this.stateManager.readState();
+      if (state.Type === "bpm") {
+        this.displayDirectiveBpm();
+      }
+    });
   }
 
   public resolveWebviewView(
@@ -110,6 +120,9 @@ export class BpmWebview implements vscode.WebviewViewProvider {
               this.manifestManager,
               message.data,
             );
+            if (!this.vsCodeConfigManager.readManifestCodeDirPath()) {
+              throw new Error("No manifest code directory path set");
+            }
 
             if (result.success) {
               const codeFilePath = this.vsCodeConfigManager.createCodeFilePath(
@@ -187,10 +200,10 @@ export class BpmWebview implements vscode.WebviewViewProvider {
             if (result.success) {
               this.notificationManager.notifySuccess("Success");
               this.notificationManager.success(result.message);
+              this.disableApplyBpmButton();
             } else {
               this.notificationManager.error(result.message);
             }
-            this.disableApplyBpmButton();
           } catch (error: any) {
             this.notificationManager.error(error.message);
             return;
@@ -967,6 +980,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
                 directiveId: currentDirectiveData.DirectiveID,
                 sysRowId: currentDirectiveData.SysRowID,
               });
+              currentDirectiveData.IsEnabled = newEnabled;
             });
           } else {
             element.addEventListener("click", () => {

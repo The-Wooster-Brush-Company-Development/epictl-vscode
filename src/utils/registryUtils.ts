@@ -19,11 +19,56 @@ export const updateFileName = (
     oldName = `${oldName}.json`;
   }
 
+  const oldBaseName = path.parse(oldName).name;
+  const newBaseName = path.parse(newName).name;
+
   try {
+    const manifestData = manifestManager.readManifest(oldName);
+    const codeFiles: string[] = manifestData?.epictl?.code_file ?? [];
+
+    const updatedCodeFiles: string[] = [];
+    for (const codeFilePath of codeFiles) {
+      const parsed = path.parse(codeFilePath);
+      if (parsed.name === oldBaseName) {
+        const newCodeFilePath = path.join(
+          parsed.dir,
+          `${newBaseName}${parsed.ext || ".cs"}`,
+        );
+        if (fs.existsSync(codeFilePath)) {
+          if (
+            newCodeFilePath !== codeFilePath &&
+            fs.existsSync(newCodeFilePath)
+          ) {
+            throw new Error(
+              `Cannot rename code file: ${newCodeFilePath} already exists`,
+            );
+          }
+          fs.renameSync(codeFilePath, newCodeFilePath);
+        }
+        updatedCodeFiles.push(newCodeFilePath);
+      } else {
+        updatedCodeFiles.push(codeFilePath);
+      }
+    }
+
     fs.renameSync(
       manifestManager.createManifestFilePath(oldName),
       manifestManager.createManifestFilePath(newName),
     );
+
+    if (updatedCodeFiles.length > 0) {
+      const renamedManifest = manifestManager.readManifest(newName);
+      if (renamedManifest.epictl) {
+        renamedManifest.epictl.code_file = updatedCodeFiles;
+      }
+      if (renamedManifest.extension?.code_file) {
+        renamedManifest.extension.code_file = updatedCodeFiles;
+      }
+      fs.writeFileSync(
+        manifestManager.createManifestFilePath(newName),
+        JSON.stringify(renamedManifest, null, 2),
+      );
+    }
   } catch (error) {
     throw new Error(`Error updating file name: ${error}`);
   }

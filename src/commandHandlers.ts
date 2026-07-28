@@ -608,7 +608,7 @@ export const applyCode = async (
     throw new Error("No code file path found");
   }
 
-  const targetManifest = manifestManager.isCodeFileInManifests(codeFilePath);
+  const targetManifest = manifestManager.findCodeFileInManifests(codeFilePath);
   if (!targetManifest) {
     throw new Error("No manifest file found");
   }

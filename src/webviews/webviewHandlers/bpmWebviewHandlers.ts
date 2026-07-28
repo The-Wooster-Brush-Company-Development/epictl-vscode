@@ -94,7 +94,7 @@ export const initManifestHandler = async (
   ) as (keyof UpdateDataInterface)[]) {
     const value = promptResult[field as keyof typeof promptResult];
     const formatKey = formatKeyByField[field];
-    if (value && formatKey) {
+    if (value !== undefined && formatKey) {
       updateFields.push(...formatCommand[formatKey](String(value)));
     }
   }
