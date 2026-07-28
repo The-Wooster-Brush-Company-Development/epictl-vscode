@@ -163,7 +163,13 @@ export class PromptManager {
             ignoreFocusOut: true,
           },
         );
-        return result === "Pre" ? 0 : result === "Base" ? 1 : 2;
+        return result === "Pre"
+          ? 1
+          : result === "Base"
+            ? 2
+            : result === "Post"
+              ? 3
+              : undefined;
       },
       directive_type__table: async () => {
         const result = await vscode.window.showQuickPick(
@@ -173,7 +179,11 @@ export class PromptManager {
             ignoreFocusOut: true,
           },
         );
-        return result === "Standard" ? 1 : 0;
+        return result === "Standard"
+          ? 1
+          : result === "In-Transaction"
+            ? 0
+            : undefined;
       },
       description: async () => {
         return await vscode.window.showInputBox({
@@ -201,7 +211,11 @@ export class PromptManager {
             ignoreFocusOut: true,
           },
         );
-        return result === "Company Specific (0)" ? 0 : 1;
+        return result === "Company Specific (0)"
+          ? 0
+          : result === "Company Independent (1)"
+            ? 1
+            : undefined;
       },
     };
   }
@@ -250,7 +264,10 @@ export class PromptManager {
 
     // check one more time for null values
     for (const field of Object.keys(fullState)) {
-      if (fullState[field as keyof typeof fullState] === null) {
+      if (
+        fullState[field as keyof typeof fullState] === null ||
+        fullState[field as keyof typeof fullState] === undefined
+      ) {
         if (!ALLOWED_NULL_VALUES.includes(field)) {
           throw new Error(`${field} is required`);
         }
@@ -274,7 +291,10 @@ export class PromptManager {
 
     // check one more time for null values
     for (const field of Object.keys(fullState)) {
-      if (fullState[field as keyof typeof fullState] === null) {
+      if (
+        fullState[field as keyof typeof fullState] === null ||
+        fullState[field as keyof typeof fullState] === undefined
+      ) {
         throw new Error(`${field} is required`);
       }
     }

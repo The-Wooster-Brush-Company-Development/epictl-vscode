@@ -99,7 +99,7 @@ export class ManifestManager {
       );
   }
 
-  public isCodeFileInManifests(
+  public findCodeFileInManifests(
     codeFilePath: string | undefined,
   ): string | undefined {
     if (!codeFilePath) {
