@@ -7,6 +7,7 @@ import {
   manifestCommands,
   cliConfigCommands,
   vsCodeConfigCommands,
+  stateCommands,
   // applyCodeCommands,
 } from "./commandRegistry";
 import { VsCodeConfigManager } from "./managers/configManager";
@@ -100,6 +101,13 @@ export function activate(context: vscode.ExtensionContext) {
         notificationManager,
         promptManager,
       );
+    });
+    context.subscriptions.push(disposable);
+  });
+
+  stateCommands.forEach(({ name, callback }) => {
+    let disposable = vscode.commands.registerCommand(name, async () => {
+      await callback(stateManager, manifestManager, notificationManager);
     });
     context.subscriptions.push(disposable);
   });

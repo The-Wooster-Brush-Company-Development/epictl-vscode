@@ -211,6 +211,11 @@
         "category": "Epictl"
       },
       {
+        "command": "epictl.getManifestFromCodeFile",
+        "title": "Get Manifest from Code File",
+        "category": "Epictl"
+      },
+      {
         "command": "epictl.refreshTreeView",
         "title": "Refresh Tree View",
         "icon": "$(refresh)",
