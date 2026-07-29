@@ -135,6 +135,8 @@ Currently `epictl-vscode` and `epictl` only support the modification of Data and
 
 Once an update method has been chosen either BPM View or command palette, apply must be invoked using the same method.
 
+Once initialized, a BPM is perminantly attached to the Bom or Table it was created for.
+
 ## Requirements
 
 This extension requires a binary to `epictl`. A command-line interface for managing Epicor custom-code.
