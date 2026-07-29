@@ -2,7 +2,7 @@
   "name": "epictl-vscode",
   "displayName": "Epictl-VSCode",
   "description": "",
-  "publisher": "WBC",
+  "publisher": "Epictl",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.105.0"
@@ -25,14 +25,14 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "wbc",
-          "title": "WBC",
+          "id": "epictl",
+          "title": "Epictl",
           "icon": "$(zap)"
         }
       ]
     },
     "views": {
-      "wbc": [
+      "epictl": [
         {
           "type": "webview",
           "id": "bpmMenu",

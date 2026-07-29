@@ -478,11 +478,11 @@ export class BpmWebview implements vscode.WebviewViewProvider {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>WBC</title>
+      <title>Epictl</title>
      <style>
       :root {
-        --wbc-red: #e53935;
-        --wbc-red-dark: #b71c1c;
+        --epictl-red: #e53935;
+        --epictl-red-dark: #b71c1c;
       }
 
       * {
@@ -522,7 +522,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
       .accent-bar {
         height: 3px;
         width: 75%;
-        background: var(--wbc-red);
+        background: var(--epictl-red);
         border-radius: 2px;
         margin-bottom: 20px;
       }
@@ -575,7 +575,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
         gap: 8px;
       }
 
-      button.wbc-btn {
+      button.epictl-btn {
         display: flex;
         align-items: center;
         gap: 10px;
@@ -592,76 +592,76 @@ export class BpmWebview implements vscode.WebviewViewProvider {
         transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.1s ease;
       }
 
-      button.wbc-btn:hover {
-        border-color: var(--wbc-red);
+      button.epictl-btn:hover {
+        border-color: var(--epictl-red);
         background-color: var(--vscode-list-hoverBackground);
       }
 
-      button.wbc-btn:active {
+      button.epictl-btn:active {
         transform: scale(0.98);
       }
 
-      button.wbc-btn .dot {
+      button.epictl-btn .dot {
         width: 6px;
         height: 6px;
         border-radius: 50%;
-        background: var(--wbc-red);
+        background: var(--epictl-red);
         flex-shrink: 0;
       }
 
-      button.wbc-btn {
-        border-color: color-mix(in srgb, var(--wbc-red-dark) 40%, transparent);
+      button.epictl-btn {
+        border-color: color-mix(in srgb, var(--epictl-red-dark) 40%, transparent);
       }
 
-      button.wbc-btn.danger:hover {
-        border-color: var(--wbc-red-dark);
-        background-color: color-mix(in srgb, var(--wbc-red-dark) 12%, var(--vscode-editor-background));
+      button.epictl-btn.danger:hover {
+        border-color: var(--epictl-red-dark);
+        background-color: color-mix(in srgb, var(--epictl-red-dark) 12%, var(--vscode-editor-background));
       }
 
-      button.wbc-btn.danger .dot {
-        background: var(--wbc-red-dark);
+      button.epictl-btn.danger .dot {
+        background: var(--epictl-red-dark);
       }
 
-      button.wbc-btn.primary {
-        background-color: var(--wbc-red);
-        border-color: var(--wbc-red);
+      button.epictl-btn.primary {
+        background-color: var(--epictl-red);
+        border-color: var(--epictl-red);
         color: #ffffff;
       }
 
-      button.wbc-btn.primary:hover {
-        background-color: var(--wbc-red-dark);
-        border-color: var(--wbc-red-dark);
+      button.epictl-btn.primary:hover {
+        background-color: var(--epictl-red-dark);
+        border-color: var(--epictl-red-dark);
       }
      
-      button.wbc-btn .dot {
+      button.epictl-btn .dot {
         background:rgb(207, 14, 14);
       }
         
-      button.wbc-btn.disabled {
+      button.epictl-btn.disabled {
         background-color: var(--vscode-button-secondaryBackground);
         border-color: var(--vscode-widget-border);
         cursor: not-allowed;
       }
 
-      button.wbc-btn.small {
+      button.epictl-btn.small {
         font-size: 10px;
         padding: 6px 8px;
         max-height: 30px;
       }
 
-      button.wbc-btn.disabled.small {
+      button.epictl-btn.disabled.small {
         font-size: 10px;
         padding: 6px 8px;
         max-height: 30px;
       }
 
-      button.wbc-btn.delete {
+      button.epictl-btn.delete {
         font-size: 10px;
         padding: 6px 8px;
         max-height: 30px;
       }
 
-      button.wbc-btn.hidden {
+      button.epictl-btn.hidden {
         display: none;
       }
 
@@ -715,7 +715,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
 
       .modal-input:focus {
         outline: none;
-        border-color: var(--wbc-red);
+        border-color: var(--epictl-red);
       }
 
       .modal-actions {
@@ -737,18 +737,18 @@ export class BpmWebview implements vscode.WebviewViewProvider {
       }
 
       .modal-btn:hover {
-        border-color: var(--wbc-red);
+        border-color: var(--epictl-red);
       }
 
       .modal-btn.primary {
-        background: var(--wbc-red);
-        border-color: var(--wbc-red);
+        background: var(--epictl-red);
+        border-color: var(--epictl-red);
         color: #ffffff;
       }
 
       .modal-btn.primary:hover {
-        background: var(--wbc-red-dark);
-        border-color: var(--wbc-red-dark);
+        background: var(--epictl-red-dark);
+        border-color: var(--epictl-red-dark);
       }
       #status {
         margin-top: 20px;
@@ -760,19 +760,19 @@ export class BpmWebview implements vscode.WebviewViewProvider {
     </head>
     <body>
       <div id="btn-section" class="section-buttons">
-        <button id="init-manifest-button" class="wbc-btn disabled" data-command="initManifest" disabled>
+        <button id="init-manifest-button" class="epictl-btn disabled" data-command="initManifest" disabled>
           <span class="dot"></span> Init Manifest
         </button>
-        <button id="clone-manifest-button" class="wbc-btn disabled" data-command="cloneManifest" disabled>
+        <button id="clone-manifest-button" class="epictl-btn disabled" data-command="cloneManifest" disabled>
           <span class="dot"></span> Clone Manifest
         </button>
-        <button id="apply-bpm-button" class="wbc-btn disabled" data-command="applyBpm" disabled>
+        <button id="apply-bpm-button" class="epictl-btn disabled" data-command="applyBpm" disabled>
           <span class="dot"></span> Apply BPM
         </button>
-        <button id="delete-bpm-button" class="wbc-btn hidden" data-command="deleteBpm" disabled>
+        <button id="delete-bpm-button" class="epictl-btn hidden" data-command="deleteBpm" disabled>
           <span class="dot"></span> Delete BPM
         </button>
-        <button id="refresh-bpm-button" class="wbc-btn hidden" data-command="refreshBpm" disabled>
+        <button id="refresh-bpm-button" class="epictl-btn hidden" data-command="refreshBpm" disabled>
           <span class="dot"></span> Refresh BPM
         </button>
       </div>
@@ -949,7 +949,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
         const setInitManifestButton = (data) => {
           initManifestButton.disabled = false;
           initManifestButton.classList.remove("disabled");
-          initManifestButton.classList.add("wbc-btn");
+          initManifestButton.classList.add("epictl-btn");
           setButtonLabel(
             initManifestButton,
             "Init Manifest for " + (data.Type === "bom" ? data.Name : data.BusinessObject),
@@ -963,7 +963,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
         const setCloneManifestButton = (data) => {
           cloneManifestButton.disabled = false;
           cloneManifestButton.classList.remove("disabled");
-          cloneManifestButton.classList.add("wbc-btn");
+          cloneManifestButton.classList.add("epictl-btn");
           setButtonLabel(cloneManifestButton, "Clone Manifest for " + data.Name);
           cloneManifestButton.setAttribute("data-type", data.Type);
           cloneManifestButton.setAttribute("data-directiveID", data.DirectiveID);
@@ -1046,8 +1046,8 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           codeHeader.textContent = "Code (15 lines):";
 
           const openCodeFileButton = document.createElement("button");
-          openCodeFileButton.className = "wbc-btn small";
-          openCodeFileButton.classList.add("wbc-btn");
+          openCodeFileButton.className = "epictl-btn small";
+          openCodeFileButton.classList.add("epictl-btn");
           setButtonLabel(openCodeFileButton, "Open Code File");
           openCodeFileButton.addEventListener("click", () => {
             vscode.postMessage({
@@ -1125,7 +1125,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
         const enableApplyBpmButton = (data) => {
           applyBpmButton.disabled = false;
           applyBpmButton.classList.remove("disabled");
-          applyBpmButton.classList.add("wbc-btn");
+          applyBpmButton.classList.add("epictl-btn");
           setButtonLabel(applyBpmButton, "Apply BPM for " + data.name);
           applyBpmButton.setAttribute("data-directiveId", data.directiveId);
           applyBpmButton.setAttribute("data-sysRowId", data.sysRowId);
@@ -1136,7 +1136,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
          * Button Click Events
          */
 
-        document.querySelectorAll('.wbc-btn').forEach(btn => {
+        document.querySelectorAll('.epictl-btn').forEach(btn => {
           if (btn.id === 'init-manifest-button') {
             btn.addEventListener('click', () => { 
               const command = btn.getAttribute('data-command');

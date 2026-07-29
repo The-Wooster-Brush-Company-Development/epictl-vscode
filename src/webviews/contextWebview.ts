@@ -123,11 +123,11 @@ export class ContextWebview implements vscode.WebviewViewProvider {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>WBC</title>
+      <title>Epictl</title>
     <style>
       :root {
-        --wbc-red: #e53935;
-        --wbc-red-dark: #b71c1c;
+        --epictl-red: #e53935;
+        --epictl-red-dark: #b71c1c;
       }
 
       * {
@@ -168,7 +168,7 @@ export class ContextWebview implements vscode.WebviewViewProvider {
       .accent-bar {
         height: 3px;
         width: 100%;
-        background: var(--wbc-red);
+        background: var(--epictl-red);
         border-radius: 2px;
         margin-bottom: 20px;
       }
@@ -192,7 +192,7 @@ export class ContextWebview implements vscode.WebviewViewProvider {
         gap: 8px;
       }
 
-      button.wbc-btn {
+      button.epictl-btn {
         display: flex;
         align-items: center;
         gap: 10px;
@@ -209,48 +209,48 @@ export class ContextWebview implements vscode.WebviewViewProvider {
         transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.1s ease;
       }
 
-      button.wbc-btn:hover {
-        border-color: var(--wbc-red);
+      button.epictl-btn:hover {
+        border-color: var(--epictl-red);
         background-color: var(--vscode-list-hoverBackground);
       }
 
-      button.wbc-btn:active {
+      button.epictl-btn:active {
         transform: scale(0.98);
       }
 
-      button.wbc-btn .dot {
+      button.epictl-btn .dot {
         width: 6px;
         height: 6px;
         border-radius: 50%;
-        background: var(--wbc-red);
+        background: var(--epictl-red);
         flex-shrink: 0;
       }
 
-      button.wbc-btn.danger {
-        border-color: color-mix(in srgb, var(--wbc-red-dark) 40%, transparent);
+      button.epictl-btn.danger {
+        border-color: color-mix(in srgb, var(--epictl-red-dark) 40%, transparent);
       }
 
-      button.wbc-btn.danger:hover {
-        border-color: var(--wbc-red-dark);
-        background-color: color-mix(in srgb, var(--wbc-red-dark) 12%, var(--vscode-editor-background));
+      button.epictl-btn.danger:hover {
+        border-color: var(--epictl-red-dark);
+        background-color: color-mix(in srgb, var(--epictl-red-dark) 12%, var(--vscode-editor-background));
       }
 
-      button.wbc-btn.danger .dot {
-        background: var(--wbc-red-dark);
+      button.epictl-btn.danger .dot {
+        background: var(--epictl-red-dark);
       }
 
-      button.wbc-btn.primary {
-        background-color: var(--wbc-red);
-        border-color: var(--wbc-red);
+      button.epictl-btn.primary {
+        background-color: var(--epictl-red);
+        border-color: var(--epictl-red);
         color: #ffffff;
       }
 
-      button.wbc-btn.primary:hover {
-        background-color: var(--wbc-red-dark);
-        border-color: var(--wbc-red-dark);
+      button.epictl-btn.primary:hover {
+        background-color: var(--epictl-red-dark);
+        border-color: var(--epictl-red-dark);
       }
 
-      button.wbc-btn.primary .dot {
+      button.epictl-btn.primary .dot {
         background: #ffffff;
       }
 
@@ -272,10 +272,10 @@ export class ContextWebview implements vscode.WebviewViewProvider {
       <div class="section">
       <p class="section-label">Epictl Path</p>
       <div class="btn-group">
-        <button class="wbc-btn" data-command="setExecPath">
+        <button class="epictl-btn" data-command="setExecPath">
           <span class="dot"></span> Set exec path
         </button>
-        <button class="wbc-btn danger" data-command="deleteExecPath">
+        <button class="epictl-btn danger" data-command="deleteExecPath">
           <span class="dot"></span> Delete exec path
         </button>
       </div>
@@ -284,10 +284,10 @@ export class ContextWebview implements vscode.WebviewViewProvider {
       <div class="section">
         <p class="section-label">Epicor Config</p>
         <div class="btn-group">
-          <button class="wbc-btn" data-command="setConfig">
+          <button class="epictl-btn" data-command="setConfig">
             <span class="dot"></span> Set config
           </button>
-          <button class="wbc-btn danger" data-command="deleteConfig">
+          <button class="epictl-btn danger" data-command="deleteConfig">
             <span class="dot"></span> Delete config
           </button>
         </div>
@@ -296,10 +296,10 @@ export class ContextWebview implements vscode.WebviewViewProvider {
       <div class="section">
         <p class="section-label">Extension Config</p>
         <div class="btn-group">
-          <button class="wbc-btn" data-command="setCodeDirPath">
+          <button class="epictl-btn" data-command="setCodeDirPath">
             <span class="dot"></span> Set code directory path
           </button>
-          <button class="wbc-btn danger" data-command="deleteCodeDirPath">
+          <button class="epictl-btn danger" data-command="deleteCodeDirPath">
             <span class="dot"></span> Delete code directory path
           </button>
         </div>
@@ -349,7 +349,7 @@ export class ContextWebview implements vscode.WebviewViewProvider {
           configSection.append(execPath, activeConfig, codeDirPath); 
         }
 
-        document.querySelectorAll('.wbc-btn').forEach(btn => {
+        document.querySelectorAll('.epictl-btn').forEach(btn => {
           btn.addEventListener('click', () => {
             console.log("Button clicked: ", btn.getAttribute('data-command'));
             const command = btn.getAttribute('data-command');

@@ -78,7 +78,7 @@ Epictl-vscode supports the end-to-end development of Epicor BPMs through the **E
 - Once launched, the Epictl Sidebar will open with three views:
   - **BPM Menu**
   - **Context Menu**
-  - **Tree View**
+  - **Epictl Explorer**
 
 ### Configuring your Work Environment
 
@@ -116,6 +116,13 @@ Epictl-vscode supports the end-to-end development of Epicor BPMs through the **E
 
 - Validate your code using **Epictl: Validate Code** from the **Command Palette**.
 - Alternatively, use the **Apply** button in the **BPM Menu** to validate, update, and apply your BPM code in a single action.
+
+### Navigating the BPM Menu
+
+- Delete, navigate and manage your BPMs with the following BPM Menu buttorns:
+  - **Delete BPM for 'BPM Name'**
+  - **Refresh BPM**
+  - **Open Code File**
 
 ### Managing your Manifests
 

@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 
 export class NotificationManager {
-  private outputChannel = vscode.window.createOutputChannel("WBC");
+  private outputChannel = vscode.window.createOutputChannel("Epictl");
 
   public error(message: string) {
     this.outputChannel.clear();
