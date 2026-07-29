@@ -28,7 +28,7 @@ export class ManifestManager {
 
     if (!fs.existsSync(this._manifestConfigPath)) {
       const data = {
-        manifest_dir_path: this._manifestDirPath, //set as default, user can change later
+        manifest_dir_path: this._manifestDirPath,
       };
       fs.writeFileSync(this._manifestConfigPath, JSON.stringify(data, null, 2));
     }

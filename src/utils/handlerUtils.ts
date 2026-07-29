@@ -1,20 +1,5 @@
-import * as vscode from "vscode";
-
-const CONFIG_SECTION = "epictl";
-const CONFIG_KEY_MANIFEST_DIR_PATH = "manifest_dir_path";
-
 export const shellQuote = (value: string): string =>
   `'${value.replace(/'/g, `'\\''`)}'`;
-
-export const manifestDirPath = () => {
-  const manifestDirPath = vscode.workspace
-    .getConfiguration(CONFIG_SECTION)
-    .get<string>(CONFIG_KEY_MANIFEST_DIR_PATH);
-  if (!manifestDirPath) {
-    return false;
-  }
-  return true;
-};
 
 export const fields = [
   { label: "Name", key: "name" },

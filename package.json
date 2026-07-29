@@ -19,10 +19,6 @@
         "epictl.command_path": {
           "type": "string",
           "default": ""
-        },
-        "epictl.manifest_dir_path": {
-          "type": "string",
-          "default": ""
         }
       }
     },
@@ -123,11 +119,6 @@
       {
         "command": "epictl.deleteCodeDirPath",
         "title": "Delete Code Directory Path",
-        "category": "Epictl"
-      },
-      {
-        "command": "epictl.getManifestDirPath",
-        "title": "Get Manifest Directory",
         "category": "Epictl"
       },
       {

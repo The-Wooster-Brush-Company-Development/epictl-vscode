@@ -16,8 +16,6 @@ import {
   deleteCodeFileFromManifest,
   initManifest,
   cloneManifest,
-  setManifestDirPath,
-  getManifestDirPath,
   deleteLocalManifest,
   getBoms,
   getTables,
@@ -560,6 +558,7 @@ export const commands = [
 
 // Currently not used
 export const manifestCommands = [
+  /**
   {
     name: "epictl.setManifestDirPath",
     callback: async (
@@ -599,6 +598,7 @@ export const manifestCommands = [
       }
     },
   },
+  */
 
   {
     name: "epictl.deleteLocalManifest",
