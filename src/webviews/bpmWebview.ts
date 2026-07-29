@@ -114,15 +114,15 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           break;
         case "cloneManifest":
           try {
+            if (!this.vsCodeConfigManager.readManifestCodeDirPath()) {
+              throw new Error("No manifest code directory path set");
+            }
             const result = await cloneManifestHandler(
               this.vsCodeConfigManager,
               this.promptManager,
               this.manifestManager,
               message.data,
             );
-            if (!this.vsCodeConfigManager.readManifestCodeDirPath()) {
-              throw new Error("No manifest code directory path set");
-            }
 
             if (result.success) {
               const codeFilePath = this.vsCodeConfigManager.createCodeFilePath(
@@ -158,6 +158,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           }
           break;
         case "fieldClicked":
+          console.log("field clicked: ", message);
           try {
             const result = await updateFieldHandler(
               this.vsCodeConfigManager.readExecPath() ?? "",
@@ -308,7 +309,6 @@ export class BpmWebview implements vscode.WebviewViewProvider {
     } else {
       this.stateManager.clearState();
       this.clearBpmWebview();
-      this.disableDeleteBpmButton();
     }
   }
 
@@ -450,7 +450,6 @@ export class BpmWebview implements vscode.WebviewViewProvider {
     });
   }
   private async enableRefreshBpmButton(message: any) {
-    console.log("can now enable refresh bpm button");
     this._webviewView!.webview.postMessage({
       command: "enableRefreshBpmButton",
       data: message,
@@ -469,12 +468,6 @@ export class BpmWebview implements vscode.WebviewViewProvider {
   private async disableApplyBpmButton() {
     this._webviewView!.webview.postMessage({
       command: "disableApplyBpmButton",
-    });
-  }
-
-  private async disableDeleteBpmButton() {
-    this._webviewView!.webview.postMessage({
-      command: "disableDeleteBpmButton",
     });
   }
 
@@ -892,13 +885,6 @@ export class BpmWebview implements vscode.WebviewViewProvider {
         /*
          * Disable Buttons
          */
-     
-        const disableDeleteBpmButton = () => {
-          deleteBpmButton.disabled = true;
-          deleteBpmButton.classList.add("disabled");
-          deleteBpmButton.classList.add("small");
-          setButtonLabel(deleteBpmButton, "Delete BPM");
-        }
 
         const disableCloneManifestButton = () => {
           cloneManifestButton.disabled = true;

@@ -135,8 +135,6 @@ export class StateManager {
     //const currentState = this.loadState();
     fs.writeFileSync(this._statePath, JSON.stringify(newState, null, 2));
 
-    console.log("newState: ", newState);
-
     this._onDidChangeState.fire();
   }
 
@@ -190,7 +188,6 @@ export class StateManager {
   }
 
   public updateWithManifestData(manifestData: any) {
-    console.log("manifestData: ", manifestData);
     const currentState = this.loadState();
     if (!currentState) {
       throw new Error("Unable to load current state");

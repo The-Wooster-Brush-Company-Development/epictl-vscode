@@ -485,22 +485,21 @@ export const commands = [
       notificationManager: NotificationManager,
       promptManager: PromptManager,
     ) => {
-      const bomId = await promptManager.promptEntityId();
-      if (!bomId) {
-        throw new Error("No entity id provided");
-      }
-
-      const outputType = await promptManager.promptOutputType();
-      if (!outputType) {
-        throw new Error("No output type selected");
-      }
-
-      const execPath = getExecPath(vsCodeConfigManager);
-      if (!execPath) {
-        throw new Error("No exec path set");
-      }
-
       try {
+        const bomId = await promptManager.promptEntityId();
+        if (!bomId) {
+          throw new Error("No entity id provided");
+        }
+
+        const outputType = await promptManager.promptOutputType();
+        if (!outputType) {
+          throw new Error("No output type selected");
+        }
+
+        const execPath = getExecPath(vsCodeConfigManager);
+        if (!execPath) {
+          throw new Error("No exec path set");
+        }
         const result = await describeBom(execPath, bomId, outputType);
         if (outputType === "json") {
           notificationManager.notifySuccess("Bom described successfully");
@@ -559,6 +558,7 @@ export const commands = [
   },
 ];
 
+// Currently not used
 export const manifestCommands = [
   {
     name: "epictl.setManifestDirPath",
@@ -790,33 +790,32 @@ export const manifestCommands = [
       notificationManager: NotificationManager,
       promptManager: PromptManager,
     ) => {
-      const entityType = await promptManager.promptEntityType();
-
-      if (!entityType) {
-        throw new Error("No entity type selected");
-      }
-
-      const bpmId = await promptManager.promptEntityId();
-      if (!bpmId) {
-        throw new Error("No entity id provided");
-      }
-
-      const parentId = await promptManager.promptParentId();
-      if (!parentId) {
-        throw new Error("No parent id provided");
-      }
-
-      const manifestDirPath = manifestManager.readManifestDirPath();
-      if (!manifestDirPath) {
-        throw new Error("No manifest directory path set");
-      }
-
-      const execPath = vsCodeConfigManager.readExecPath();
-      if (!execPath) {
-        throw new Error("No exec path set");
-      }
-
       try {
+        const entityType = await promptManager.promptEntityType();
+
+        if (!entityType) {
+          throw new Error("No entity type selected");
+        }
+
+        const bpmId = await promptManager.promptEntityId();
+        if (!bpmId) {
+          throw new Error("No entity id provided");
+        }
+
+        const parentId = await promptManager.promptParentId();
+        if (!parentId) {
+          throw new Error("No parent id provided");
+        }
+
+        const manifestDirPath = manifestManager.readManifestDirPath();
+        if (!manifestDirPath) {
+          throw new Error("No manifest directory path set");
+        }
+
+        const execPath = vsCodeConfigManager.readExecPath();
+        if (!execPath) {
+          throw new Error("No exec path set");
+        }
         const result = await cloneManifest(
           execPath,
           entityType,
