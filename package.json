@@ -126,11 +126,6 @@
         "category": "Epictl"
       },
       {
-        "command": "epictl.setManifestDirPath",
-        "title": "Set Manifest Directory",
-        "category": "Epictl"
-      },
-      {
         "command": "epictl.getManifestDirPath",
         "title": "Get Manifest Directory",
         "category": "Epictl"

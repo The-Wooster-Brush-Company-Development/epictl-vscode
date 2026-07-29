@@ -70,24 +70,57 @@ All major functionality is available from the Command Palette
 
 ## Usage
 
-Epictl-vscode supports the end-to-end development of BPMs.
+Epictl-vscode supports the end-to-end development of Epicor BPMs through the **Epictl Sidebar** and the **VS Code Command Palette**. Most functionality is available from either interface, allowing you to choose the workflow that best fits your development style.
+
+### Opening the Epictl Sidebar
+
+- Navigate to and click on the lightning bolt icon in the **Primary Side Bar**.
+- Once launched, the Epictl Sidebar will open with three views:
+  - **BPM Menu**
+  - **Context Menu**
+  - **Tree View**
+
+### Configuring your Work Environment
+
+- Use **Epictl: Create Config** to create a workspace configuration.
+- Configure your Epicor connection, executable path, and code directory using either the **Context Menu** view or the corresponding **Command Palette** commands.
+  - **Epictl: Set Config**
+  - **Epictl: Get Config**
+  - **Epictl: Active Config**
+  - **Epictl: Delete Config**
+  - **Epictl: Set Executable Path**
+  - **Epictl: Get Executable Path**
+  - **Epictl: Delete Executable Path**
+  - **Epictl: Set Code Directory Path**
+  - **Epictl: Get Code Directory Path**
+  - **Epictl: Delete Code Directory Path**
 
 ### Creating a new BPM and code file
 
-- Initialize a new manifest file using the BPM View
-- Set preliminary information following the provided input fields
-- Refresh the Tree View to observe the newly created BPMs
+- Initialize a new manifest file using the **BPM Menu** or by running the corresponding **Command Palette** command.
+- Set the preliminary information using the provided input fields.
+- Refresh the **Tree View** to view the newly created BPM.
 
 ### Cloning an existing BPM
 
-- Clone an existing BPM using the BPM View's clone button
-- Immediately gain access to the BPM's data and code file
-- Update and apply changes directly from the workspace
+- Clone an existing BPM using the **BPM Menu** or the corresponding **Command Palette** command.
+- Immediately gain access to the BPM's data and associated code file.
+- Update and apply changes directly from your workspace.
 
 ### Updating and applying BPM edits
 
-- Update a BPM using the BPM View's inline editing, or with the **Epictl: Update BPM** palette command for additional options.
-- Apply edits using the BPM View's apply button or the **Epictl: Apply BPM** palette command
+- Update a BPM using the **BPM Menu**'s inline editing or the **Epictl: Update BPM** Command Palette command for additional update options.
+- Apply changes using the **Apply** button in the **BPM Menu** or the **Epictl: Apply BPM** Command Palette command.
+
+### Validating a BPM's Code File
+
+- Validate your code using **Epictl: Validate Code** from the **Command Palette**.
+- Alternatively, use the **Apply** button in the **BPM Menu** to validate, update, and apply your BPM code in a single action.
+
+### Managing your Manifests
+
+- List your local manifest files using **Epictl: Get Manifests**.
+- Quickly display the BPM associated with the active code file using **Epictl: Get Manifest From Code File**.
 
 ## Known Limitations
 
