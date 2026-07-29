@@ -86,7 +86,18 @@ export class EpictlTreeView implements vscode.TreeDataProvider<EpicorNode> {
   }
 
   private get execPath(): string | undefined {
-    return this.vscodeConfigManager.readExecPath();
+    const execPath = this.vscodeConfigManager.readExecPath();
+    return execPath || undefined;
+  }
+
+  private requireExecPath(): string {
+    const execPath = this.execPath;
+    if (!execPath) {
+      throw new Error(
+        "Epictl executable path is not set. Use the Context Menu or Epictl: Set Executable Path, then refresh the tree.",
+      );
+    }
+    return execPath;
   }
 
   private getDirectiveTypeNumber(directiveType: string): number {
@@ -166,7 +177,7 @@ export class EpictlTreeView implements vscode.TreeDataProvider<EpicorNode> {
   }
 
   private async getBoms(): Promise<DirectiveNode[]> {
-    const boms = JSON.parse(await getBoms(this.execPath ?? "", "json"));
+    const boms = JSON.parse(await getBoms(this.requireExecPath(), "json"));
 
     return boms.map(
       (bom: any) =>
@@ -180,7 +191,7 @@ export class EpictlTreeView implements vscode.TreeDataProvider<EpicorNode> {
   }
 
   private async getTables(): Promise<DirectiveNode[]> {
-    const tables = JSON.parse(await getTables(this.execPath ?? "", "json"));
+    const tables = JSON.parse(await getTables(this.requireExecPath(), "json"));
 
     return tables.map(
       (table: any) =>
@@ -242,7 +253,7 @@ export class EpictlTreeView implements vscode.TreeDataProvider<EpicorNode> {
     directiveType: number,
   ): Promise<BpmNode[]> {
     const bomData = JSON.parse(
-      await describeBom(this.execPath ?? "", parentSysRowId, "json"),
+      await describeBom(this.requireExecPath(), parentSysRowId, "json"),
     );
 
     return bomData[1].returnObj.BpDirective.filter(
@@ -261,7 +272,7 @@ export class EpictlTreeView implements vscode.TreeDataProvider<EpicorNode> {
     directiveType: number,
   ): Promise<BpmNode[]> {
     const bpmData = JSON.parse(
-      await describeTable(this.execPath ?? "", parentSysRowId, "json"),
+      await describeTable(this.requireExecPath(), parentSysRowId, "json"),
     );
 
     return bpmData[1].returnObj.BpDirective.filter(
