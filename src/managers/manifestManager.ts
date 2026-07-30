@@ -105,7 +105,6 @@ export class ManifestManager {
     if (!codeFilePath) {
       return undefined;
     }
-    console.log("codeFilePath in isCodeFileInManifests: ", codeFilePath);
     const manifests = this.readManifests();
     for (const manifest of manifests) {
       const manifestData = this.readManifest(manifest);

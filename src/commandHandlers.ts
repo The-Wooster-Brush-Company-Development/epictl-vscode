@@ -9,7 +9,6 @@ import { formatCommand } from "./utils/handlerUtils";
  ***********************************************************
  */
 
-// creates and sets the config as the current active config
 export const createConfig = async (
   execPath: string,
   baseUrlPath: string,
@@ -45,8 +44,6 @@ export const createConfig = async (
   });
 };
 
-// Retrieves the config from the cli config file
-// Might need to change this to not expose all of the config data
 export const getConfig = async (
   execPath: string,
   outputType: string,

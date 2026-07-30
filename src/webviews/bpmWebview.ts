@@ -370,6 +370,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
     switch (message.command) {
       case "describeDirectiveBpm":
         this.displayDirectiveBpm();
+        this.disableApplyBpmButton();
         break;
       case "canInitManifest":
         this.enableInitManifestButton();
@@ -464,6 +465,12 @@ export class BpmWebview implements vscode.WebviewViewProvider {
       );
       return "No code found";
     }
+  }
+
+  private clearApplyBpmButton() {
+    this._webviewView!.webview.postMessage({
+      command: "disableApplyBpmButton",
+    });
   }
 
   /**
@@ -713,7 +720,6 @@ export class BpmWebview implements vscode.WebviewViewProvider {
       transition: background-color var(--epictl-transition);
     }
     .editable:hover {
-      background: var(--vscode-editor-hoverHighlightBackground, rgba(255, 255, 255, 0.08));
       outline: 1px dashed var(--vscode-focusBorder, #888);
     }
 

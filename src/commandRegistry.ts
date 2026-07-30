@@ -876,7 +876,7 @@ export const manifestCommands = [
           notificationManager.error("No manifests found");
         } else {
           for (const manifest of manifests) {
-            output.push(`- ${manifest}`);
+            output.push(`- ${path.basename(manifest, path.extname(manifest))}`);
           }
           notificationManager.success(output.join("\n"));
         }
