@@ -1,11 +1,11 @@
 {
   "name": "epictl-vscode",
-  "displayName": "Epictl-VSCode",
+  "displayName": "Epictl",
   "description": "",
   "publisher": "Epictl",
   "version": "0.0.1",
   "engines": {
-    "vscode": "^1.105.0"
+    "vscode": "^1.125.0"
   },
   "categories": [
     "Other"
@@ -238,5 +238,8 @@
     "eslint": "^9.39.3",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.56.1"
+  },
+  "dependencies": {
+    "@vscode/vsce": "^3.9.2"
   }
 }
