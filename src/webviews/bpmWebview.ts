@@ -80,11 +80,19 @@ export class BpmWebview implements vscode.WebviewViewProvider {
       switch (message.command) {
         case "initManifest":
           try {
-            const result = await initManifestHandler(
-              this.vsCodeConfigManager,
-              this.promptManager,
-              this.manifestManager,
-              message.data,
+            const result = await vscode.window.withProgress(
+              {
+                location: vscode.ProgressLocation.Notification,
+                title: "Initializing Manifest...",
+                cancellable: false,
+              },
+              () =>
+                initManifestHandler(
+                  this.vsCodeConfigManager,
+                  this.promptManager,
+                  this.manifestManager,
+                  message.data,
+                ),
             );
 
             if (result.success && result.updateResult.success) {
@@ -117,11 +125,19 @@ export class BpmWebview implements vscode.WebviewViewProvider {
             if (!this.vsCodeConfigManager.readManifestCodeDirPath()) {
               throw new Error("No manifest code directory path set");
             }
-            const result = await cloneManifestHandler(
-              this.vsCodeConfigManager,
-              this.promptManager,
-              this.manifestManager,
-              message.data,
+            const result = await vscode.window.withProgress(
+              {
+                location: vscode.ProgressLocation.Notification,
+                title: "Cloning Manifest...",
+                cancellable: false,
+              },
+              () =>
+                cloneManifestHandler(
+                  this.vsCodeConfigManager,
+                  this.promptManager,
+                  this.manifestManager,
+                  message.data,
+                ),
             );
 
             if (result.success) {
@@ -158,12 +174,19 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           }
           break;
         case "fieldClicked":
-          console.log("field clicked: ", message);
           try {
-            const result = await updateFieldHandler(
-              this.vsCodeConfigManager.readExecPath() ?? "",
-              message,
-              this.manifestManager,
+            const result = await vscode.window.withProgress(
+              {
+                location: vscode.ProgressLocation.Notification,
+                title: "Updating Field...",
+                cancellable: false,
+              },
+              () =>
+                updateFieldHandler(
+                  this.vsCodeConfigManager.readExecPath() ?? "",
+                  message,
+                  this.manifestManager,
+                ),
             );
             if (result.success) {
               this.notificationManager.notifySuccess("Success");
@@ -192,10 +215,14 @@ export class BpmWebview implements vscode.WebviewViewProvider {
               throw new Error("Exec path not found");
             }
             const result = JSON.parse(
-              await applyBpmHandler(
-                execPath,
-                message.data,
-                this.manifestManager,
+              await vscode.window.withProgress(
+                {
+                  location: vscode.ProgressLocation.Notification,
+                  title: "Applying BPM...",
+                  cancellable: false,
+                },
+                () =>
+                  applyBpmHandler(execPath, message.data, this.manifestManager),
               ),
             );
             if (result.success) {
@@ -258,10 +285,20 @@ export class BpmWebview implements vscode.WebviewViewProvider {
             const manifestPath = this.manifestManager.createManifestFilePath(
               message.data.name ?? "",
             );
-            const result = await deleteBpmHandler(
-              execPath,
-              manifestPath,
-              this.promptManager,
+            let result: any;
+            await vscode.window.withProgress(
+              {
+                location: vscode.ProgressLocation.Notification,
+                title: "Deleting BPM...",
+                cancellable: false,
+              },
+              async () => {
+                result = await deleteBpmHandler(
+                  execPath,
+                  manifestPath,
+                  this.promptManager,
+                );
+              },
             );
             if (result.success) {
               this.notificationManager.success(result.message);
@@ -281,13 +318,24 @@ export class BpmWebview implements vscode.WebviewViewProvider {
             if (!execPath) {
               throw new Error("Exec path not found");
             }
-            const newState = await refreshBpmHandler(
-              execPath,
-              this.stateManager,
+            let result: any;
+            await vscode.window.withProgress(
+              {
+                location: vscode.ProgressLocation.Notification,
+                title: "Refreshing BPM...",
+                cancellable: false,
+              },
+              async () => {
+                result = await refreshBpmHandler(execPath, this.stateManager);
+              },
             );
-            this.stateManager.writeState(newState);
-            this.displayDirectiveBpm();
-            this.notificationManager.notifySuccess("Success");
+            if (result.success) {
+              this.stateManager.writeState(result.newState);
+              this.displayDirectiveBpm();
+              this.notificationManager.notifySuccess("Success");
+            } else {
+              this.notificationManager.error("Error refreshing BPM");
+            }
           } catch (error: any) {
             this.notificationManager.error(error.message);
             return;
@@ -481,13 +529,15 @@ export class BpmWebview implements vscode.WebviewViewProvider {
       <title>Epictl</title>
      <style>
       :root {
-        --epictl-red: #e53935;
-        --epictl-red-dark: #b71c1c;
-      }
+      --epictl-red: #e53935;
+      --epictl-red-dark: #b71c1c;
+      --epictl-radius: 6px;
+      --epictl-transition: 0.15s ease;
+    }
 
-      * {
-        box-sizing: border-box;
-      }
+    * {
+      box-sizing: border-box;
+    }
 
     body {
       margin: 0;
@@ -505,257 +555,251 @@ export class BpmWebview implements vscode.WebviewViewProvider {
       color: #ffffff;
     }
 
-      h1 {
-        font-size: 15px;
-        font-weight: 600;
-        letter-spacing: 0.08em;
-        margin: 0 0 4px 0;
-        color: inherit;
-      }
+    h1 {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      margin: 0 0 4px 0;
+      color: inherit;
+    }
 
-      .subtitle {
-        font-size: 11px;
-        color: var(--vscode-descriptionForeground);
-        margin: 0 0 20px 0;
-      }
+    .subtitle {
+      font-size: 11px;
+      color: var(--vscode-descriptionForeground);
+      margin: 0 0 20px 0;
+    }
 
-      .accent-bar {
-        height: 3px;
-        width: 75%;
-        background: var(--epictl-red);
-        border-radius: 2px;
-        margin-bottom: 20px;
-      }
+    .accent-bar {
+      height: 3px;
+      width: 75%;
+      background: linear-gradient(90deg, var(--epictl-red), var(--epictl-red-dark));
+      border-radius: 2px;
+      margin-bottom: 20px;
+    }
 
-      .section-buttons {
-        margin-bottom: 10px;
-      }
+    .section-buttons {
+      margin-bottom: 10px;
+    }
 
-      .section {
-        margin-bottom: 18px;
-      }
+    .section {
+      margin-bottom: 18px;
+    }
 
-      #btn-section {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-      }
+    #btn-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
 
-      .section-label {
-        font-size: 10px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        color: var(--vscode-descriptionForeground);
-        margin: 0 0 8px 2px;
-      }
+    .section-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--vscode-descriptionForeground);
+      margin: 0 0 8px 2px;
+    }
 
-      .section-hidden {
-        display: none;
-      }
-      
+    .section-hidden {
+      display: none;
+    }
 
-      .description-row {
-        display: flex;
-        align-items: baseline;
-        gap: 8px;
-      }
+    .description-row {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
 
-      .description-row h4 {
-        margin: 0;
-      }
+    .description-row h4 {
+      margin: 0;
+    }
 
-      .description-row span {
-        margin: 0;
-      }
+    .description-row span {
+      margin: 0;
+    }
 
-      .btn-group {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-      }
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
 
-      button.epictl-btn {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        width: 100%;
-        padding: 10px 12px;
-        font-size: 12px;
-        font-weight: 500;
-        color: var(--vscode-editor-foreground);
-        background-color: var(--vscode-button-secondaryBackground, var(--vscode-input-background));
-        border: 1px solid var(--vscode-widget-border, var(--vscode-contrastBorder, transparent));
-        border-radius: 6px;
-        cursor: pointer;
-        text-align: left;
-        transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.1s ease;
-      }
+    button.epictl-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: inherit;
+      color: var(--vscode-editor-foreground);
+      background-color: var(--vscode-button-secondaryBackground, var(--vscode-input-background));
+      border: 1px solid color-mix(in srgb, var(--epictl-red-dark) 40%, transparent);
+      border-radius: var(--epictl-radius);
+      cursor: pointer;
+      text-align: left;
+      transition: border-color var(--epictl-transition), background-color var(--epictl-transition),
+        transform 0.1s ease, box-shadow var(--epictl-transition);
+    }
 
-      button.epictl-btn:hover {
-        border-color: var(--epictl-red);
-        background-color: var(--vscode-list-hoverBackground);
-      }
+    button.epictl-btn:hover {
+      border-color: var(--epictl-red);
+      background-color: var(--vscode-list-hoverBackground);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
 
-      button.epictl-btn:active {
-        transform: scale(0.98);
-      }
+    button.epictl-btn:active {
+      transform: scale(0.98);
+      box-shadow: none;
+    }
 
-      button.epictl-btn .dot {
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: var(--epictl-red);
-        flex-shrink: 0;
-      }
+    button.epictl-btn:focus-visible {
+      outline: 2px solid var(--vscode-focusBorder, var(--epictl-red));
+      outline-offset: 1px;
+    }
 
-      button.epictl-btn {
-        border-color: color-mix(in srgb, var(--epictl-red-dark) 40%, transparent);
-      }
+    button.epictl-btn .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--epictl-red);
+      flex-shrink: 0;
+    }
 
-      button.epictl-btn.danger:hover {
-        border-color: var(--epictl-red-dark);
-        background-color: color-mix(in srgb, var(--epictl-red-dark) 12%, var(--vscode-editor-background));
-      }
+    button.epictl-btn.danger:hover {
+      border-color: var(--epictl-red-dark);
+      background-color: color-mix(in srgb, var(--epictl-red-dark) 12%, var(--vscode-editor-background));
+    }
 
-      button.epictl-btn.danger .dot {
-        background: var(--epictl-red-dark);
-      }
+    button.epictl-btn.danger .dot {
+      background: var(--epictl-red-dark);
+    }
 
-      button.epictl-btn.primary {
-        background-color: var(--epictl-red);
-        border-color: var(--epictl-red);
-        color: #ffffff;
-      }
+    button.epictl-btn.primary {
+      background-color: var(--epictl-red);
+      border-color: var(--epictl-red);
+      color: #ffffff;
+    }
 
-      button.epictl-btn.primary:hover {
-        background-color: var(--epictl-red-dark);
-        border-color: var(--epictl-red-dark);
-      }
-     
-      button.epictl-btn .dot {
-        background:rgb(207, 14, 14);
-      }
-        
-      button.epictl-btn.disabled {
-        background-color: var(--vscode-button-secondaryBackground);
-        border-color: var(--vscode-widget-border);
-        cursor: not-allowed;
-      }
+    button.epictl-btn.primary:hover {
+      background-color: var(--epictl-red-dark);
+      border-color: var(--epictl-red-dark);
+    }
 
-      button.epictl-btn.small {
-        font-size: 10px;
-        padding: 6px 8px;
-        max-height: 30px;
-      }
+    button.epictl-btn.disabled {
+      background-color: var(--vscode-button-secondaryBackground);
+      border-color: var(--vscode-widget-border);
+      cursor: not-allowed;
+      pointer-events: none;
+      opacity: 0.5;
+    }
 
-      button.epictl-btn.disabled.small {
-        font-size: 10px;
-        padding: 6px 8px;
-        max-height: 30px;
-      }
+    button.epictl-btn.small,
+    button.epictl-btn.disabled.small,
+    button.epictl-btn.delete {
+      font-size: 10px;
+      padding: 6px 8px;
+      max-height: 30px;
+    }
 
-      button.epictl-btn.delete {
-        font-size: 10px;
-        padding: 6px 8px;
-        max-height: 30px;
-      }
+    button.epictl-btn.hidden {
+      display: none;
+    }
 
-      button.epictl-btn.hidden {
-        display: none;
-      }
+    .editable {
+      cursor: pointer;
+      border-radius: 3px;
+      transition: background-color var(--epictl-transition);
+    }
+    .editable:hover {
+      background: var(--vscode-editor-hoverHighlightBackground, rgba(255, 255, 255, 0.08));
+      outline: 1px dashed var(--vscode-focusBorder, #888);
+    }
 
-      .editable { cursor: pointer; }
-      .editable:hover { background: var(--vscode-editor-hoverHighlightBackground, rgba(255,255,255,0.08)); outline: 1px dashed var(--vscode-focusBorder, #888); }
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
 
-      .modal-overlay {
-        display: none;
-        position: fixed;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(0, 0, 0, 0.5);
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-      }
+    .modal-overlay.visible {
+      display: flex;
+    }
 
-      .modal-overlay.visible {
-        display: flex;
-      }
+    .modal-box {
+      background: var(--vscode-editor-background);
+      border: 1px solid var(--vscode-widget-border, var(--vscode-contrastBorder, #444));
+      border-radius: 8px;
+      width: min(320px, 90%);
+      padding: 16px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
 
-      .modal-box {
-        background: var(--vscode-editor-background);
-        border: 1px solid var(--vscode-widget-border, var(--vscode-contrastBorder, #444));
-        border-radius: 8px;
-        width: min(320px, 90%);
-        padding: 16px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-      }
+    .modal-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--vscode-descriptionForeground);
+      margin: 0 0 10px 0;
+    }
 
-      .modal-title {
-        font-size: 11px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        color: var(--vscode-descriptionForeground);
-        margin: 0 0 10px 0;
-      }
+    .modal-input {
+      width: 100%;
+      font: inherit;
+      font-size: 13px;
+      padding: 8px;
+      background: var(--vscode-input-background);
+      color: var(--vscode-input-foreground);
+      border: 1px solid var(--vscode-input-border, #555);
+      border-radius: 4px;
+      resize: vertical;
+      min-height: 34px;
+    }
 
-      .modal-input {
-        width: 100%;
-        font: inherit;
-        font-size: 13px;
-        padding: 8px;
-        background: var(--vscode-input-background);
-        color: var(--vscode-input-foreground);
-        border: 1px solid var(--vscode-input-border, #555);
-        border-radius: 4px;
-        resize: vertical;
-        min-height: 34px;
-      }
+    .modal-input:focus {
+      outline: none;
+      border-color: var(--epictl-red);
+    }
 
-      .modal-input:focus {
-        outline: none;
-        border-color: var(--epictl-red);
-      }
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 14px;
+    }
 
-      .modal-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 8px;
-        margin-top: 14px;
-      }
+    .modal-btn {
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      border-radius: 5px;
+      cursor: pointer;
+      border: 1px solid var(--vscode-widget-border, transparent);
+      background: var(--vscode-button-secondaryBackground, var(--vscode-input-background));
+      color: var(--vscode-editor-foreground);
+      transition: border-color var(--epictl-transition);
+    }
 
-      .modal-btn {
-        padding: 6px 14px;
-        font-size: 12px;
-        font-weight: 500;
-        border-radius: 5px;
-        cursor: pointer;
-        border: 1px solid var(--vscode-widget-border, transparent);
-        background: var(--vscode-button-secondaryBackground, var(--vscode-input-background));
-        color: var(--vscode-editor-foreground);
-      }
+    .modal-btn:hover {
+      border-color: var(--epictl-red);
+    }
 
-      .modal-btn:hover {
-        border-color: var(--epictl-red);
-      }
+    .modal-btn.primary {
+      background: var(--epictl-red);
+      border-color: var(--epictl-red);
+      color: #ffffff;
+    }
 
-      .modal-btn.primary {
-        background: var(--epictl-red);
-        border-color: var(--epictl-red);
-        color: #ffffff;
-      }
-
-      .modal-btn.primary:hover {
-        background: var(--epictl-red-dark);
-        border-color: var(--epictl-red-dark);
-      }
-      #status {
-        margin-top: 20px;
-        font-size: 11px;
-        color: var(--vscode-descriptionForeground);
-        min-height: 14px;
-      }
+    .modal-btn.primary:hover {
+      background: var(--epictl-red-dark);
+      border-color: var(--epictl-red-dark);
+    }
     </style>
     </head>
     <body>
@@ -864,6 +908,9 @@ export class BpmWebview implements vscode.WebviewViewProvider {
             case "enableRefreshBpmButton":
               enableRefreshBpmButton();
               break;
+            case "revertEnableButton":
+              revertEnabledToggle(message.data.previousValue);
+              break;
             default:
               tempSection.classList.remove("section-hidden");
               tempSection.classList.add("section");
@@ -880,6 +927,12 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           dot.className = 'dot';
           button.replaceChildren(dot, document.createTextNode(label));
          };
+
+        const revertEnabledToggle = (previousValue) => {
+          const element = document.getElementById('enabled-toggle');
+          element.textContent = "Enabled: " + (previousValue ? "✅" : "❌");
+          currentDirectiveData.IsEnabled = previousValue;
+        };
 
 
         /*
@@ -975,6 +1028,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           element.classList.add("editable");
           element.setAttribute("data-field", fieldKey);
           if (fieldKey === "IsEnabled") {
+            if (element.style.pointerEvents === "none") return;
             element.addEventListener("click", () => {
               const currentlyEnabled = currentDirectiveData?.IsEnabled;
               const newEnabled = !currentlyEnabled;
@@ -986,6 +1040,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
                 name: currentDirectiveData.Name,
                 directiveId: currentDirectiveData.DirectiveID,
                 sysRowId: currentDirectiveData.SysRowID,
+                previousValue: currentlyEnabled,
               });
               currentDirectiveData.IsEnabled = newEnabled;
             });
@@ -1019,6 +1074,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           bodySection.replaceChildren();
 
           const enabled = document.createElement("h4");
+          enabled.id = "enabled-toggle";
           enabled.textContent = "Enabled: " + (data.IsEnabled ? "✅" : "❌");
           makeClickable(enabled, "IsEnabled");
 
@@ -1142,7 +1198,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
               const command = btn.getAttribute('data-command');
               const type = btn.getAttribute('data-type');
               const parentId = btn.getAttribute('data-SysRowID');
-              data = {
+              const data = {
                 type: type, 
                 SysRowID: parentId,
               }
@@ -1155,7 +1211,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
               const parentType = btn.getAttribute('data-parentType');
               const directiveId = btn.getAttribute('data-directiveID');
               const parentId = btn.getAttribute('data-parentId');
-              data = {
+              const data = {
                 parentType: parentType, 
                 directiveId: directiveId,
                 parentId: parentId,
@@ -1166,7 +1222,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
             btn.addEventListener('click', () => {
               const command = btn.getAttribute('data-command');
               const name = btn.getAttribute('data-name');
-              data = {
+              const data = {
                 name: name,
               }
               vscode.postMessage({ command, data });
@@ -1175,7 +1231,7 @@ export class BpmWebview implements vscode.WebviewViewProvider {
             btn.addEventListener('click', () => {
               const command = btn.getAttribute('data-command');
               const name = btn.getAttribute('data-name');
-              data = {
+              const data = {
                 name: name,
               }
               vscode.postMessage({ command, data });

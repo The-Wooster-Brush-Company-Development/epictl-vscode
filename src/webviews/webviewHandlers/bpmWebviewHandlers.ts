@@ -310,7 +310,6 @@ export const refreshBpmHandler = async (
   execPath: string,
   stateManager: StateManager,
 ): Promise<any> => {
-  console.log("refreshing bpm");
   const currentState = stateManager.readState() as BpmStateManagerInterface;
   if (!currentState) {
     throw new Error("No state found");
@@ -332,12 +331,12 @@ export const refreshBpmHandler = async (
     ),
   ) as BpmStateManagerInterface;
 
-  console.log("new state type: ", typeof newState);
-  console.log("newState: ", newState);
-
   newState.Type = "bpm";
   newState.ParentType = currentState.ParentType;
   newState.ParentSysRowId = currentState.ParentSysRowId;
 
-  return newState;
+  return {
+    newState: newState,
+    success: true,
+  };
 };
