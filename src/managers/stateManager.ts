@@ -146,37 +146,36 @@ export class StateManager {
     return this.loadState();
   }
 
-  public updateFromTree(
-    element: DirectiveNode | BpmNode,
-    type: "bom" | "table" | "bpm",
-    parentSysRowId: string | undefined,
-    parentType: "bom" | "table" | undefined,
-  ) {
-    if (!(element instanceof DirectiveNode || element instanceof BpmNode)) {
+  public updateFromTree(data: any) {
+    if (
+      !(
+        data.element instanceof DirectiveNode || data.element instanceof BpmNode
+      )
+    ) {
       return;
     }
     let hasUpdated = false;
-    switch (element.type) {
+    switch (data.element.type) {
       case "bom":
-        element.data.Type = "bom";
+        data.element.data.Type = "bom";
         this.writeState({
-          ...element.data,
+          ...data.element.data,
         });
         hasUpdated = true;
         break;
       case "table":
-        element.data.Type = "table";
+        data.element.data.Type = "table";
         this.writeState({
-          ...element.data,
+          ...data.element.data,
         });
         hasUpdated = true;
         break;
       case "bpm":
-        element.data.Type = "bpm";
-        element.data.ParentType = parentType!;
-        element.data.ParentSysRowId = parentSysRowId!;
+        data.element.data.Type = "bpm";
+        data.element.data.ParentType = data.parentType!;
+        data.element.data.ParentSysRowId = data.parentSysRowId!;
         this.writeState({
-          ...element.data,
+          ...data.element.data,
         });
         hasUpdated = true;
         break;

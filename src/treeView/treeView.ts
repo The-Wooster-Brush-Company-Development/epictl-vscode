@@ -30,21 +30,17 @@ export const registerTreeEvents = (
     let hasUpdated: boolean | undefined = false;
 
     if (element instanceof DirectiveNode) {
-      hasUpdated =
-        stateManager.updateFromTree(
-          element,
-          element.type,
-          undefined,
-          undefined,
-        ) ?? false;
+      const data = {
+        element: element,
+      };
+      hasUpdated = stateManager.updateFromTree(data) ?? false;
     } else if (element instanceof BpmNode) {
-      hasUpdated =
-        stateManager.updateFromTree(
-          element,
-          element.type,
-          element.parentSysRowId,
-          element.parentType,
-        ) ?? false;
+      const data = {
+        element: element,
+        parentSysRowId: element.parentSysRowId,
+        parentType: element.parentType,
+      };
+      hasUpdated = stateManager.updateFromTree(data) ?? false;
     }
 
     if (hasUpdated) {
