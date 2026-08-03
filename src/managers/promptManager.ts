@@ -241,11 +241,6 @@ export class PromptManager {
   public async resolveInitManifest(
     inputState: Partial<InitManifestInterface>,
   ): Promise<InitManifestInterface> {
-    console.log("inputState: ", inputState);
-    console.log(
-      "inputState.entity_type: ",
-      `prompts[directive_type__${inputState.entity_type}]`,
-    );
     let fullState: Partial<InitManifestInterface>;
     if (!inputState.directivetype) {
       inputState.directivetype =

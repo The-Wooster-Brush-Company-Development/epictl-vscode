@@ -198,7 +198,7 @@
       },
       {
         "command": "epictl.getManifestFromCodeFile",
-        "title": "Get Manifest from Code File",
+        "title": "Get Manifest From Code File",
         "category": "Epictl"
       },
       {

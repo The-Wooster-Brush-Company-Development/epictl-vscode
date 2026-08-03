@@ -133,6 +133,8 @@ Epictl-vscode supports the end-to-end development of Epicor BPMs through the **E
 
 - If an update operation fails from the **BPM Menu**, click the **Refresh BPM** button to reload the BPM from Epicor and restore the current server values.
 
+- To quickly locate a BPM, use **Epictl: Get Manifest From Code File** while focusing on the BPM's code file path.
+
 ## Known Limitations
 
 Currently `epictl-vscode` and `epictl` only support the modification of Data and Method Directive BPMs. In the future there may be support for managing functions as well.

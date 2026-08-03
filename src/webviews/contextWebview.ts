@@ -78,7 +78,6 @@ export class ContextWebview implements vscode.WebviewViewProvider {
       return;
     }
 
-    console.log("calling displayConfigInfo");
     let execPath: string | undefined;
     let activeConfigResult: string | undefined;
     let codeDirPath: string | undefined;
@@ -112,7 +111,6 @@ export class ContextWebview implements vscode.WebviewViewProvider {
       codeDirPath: codeDirPath,
     };
 
-    console.log("message: ", message);
     this._webviewView!.webview.postMessage(message);
   }
 
@@ -315,7 +313,6 @@ export class ContextWebview implements vscode.WebviewViewProvider {
 
         window.addEventListener('message', (event) => {
           const message = event.data;
-          console.log("message in javascript: ", message);
           switch (message.command) {
             case "displayConfigInfo":
               displayConfigInfo(message);
@@ -325,11 +322,8 @@ export class ContextWebview implements vscode.WebviewViewProvider {
 
 
         const displayConfigInfo = (message) => {
-          console.log("calling displayConfigInfo");
           const configSection = document.getElementById('config-info');
           configSection.replaceChildren();
-
-          console.log("message ", message);
 
           const execPath = document.createElement('h4');
           execPath.textContent = "Exec path: " + (message.execPath || "No exec path");
@@ -351,7 +345,6 @@ export class ContextWebview implements vscode.WebviewViewProvider {
 
         document.querySelectorAll('.epictl-btn').forEach(btn => {
           btn.addEventListener('click', () => {
-            console.log("Button clicked: ", btn.getAttribute('data-command'));
             const command = btn.getAttribute('data-command');
             vscode.postMessage({ command });
           });

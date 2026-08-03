@@ -189,7 +189,6 @@ export class BpmWebview implements vscode.WebviewViewProvider {
                 ),
             );
             if (result.success) {
-              this.notificationManager.notifySuccess("Success");
               this.notificationManager.success(result.successMessage);
               this._webviewView!.webview.postMessage({
                 command: "enableApplyBpmButton",
@@ -226,7 +225,6 @@ export class BpmWebview implements vscode.WebviewViewProvider {
               ),
             );
             if (result.success) {
-              this.notificationManager.notifySuccess("Success");
               this.notificationManager.success(result.message);
               this.disableApplyBpmButton();
             } else {
@@ -285,21 +283,17 @@ export class BpmWebview implements vscode.WebviewViewProvider {
             const manifestPath = this.manifestManager.createManifestFilePath(
               message.data.name ?? "",
             );
-            let result: any;
-            await vscode.window.withProgress(
+
+            const result = await vscode.window.withProgress(
               {
                 location: vscode.ProgressLocation.Notification,
                 title: "Deleting BPM...",
                 cancellable: false,
               },
-              async () => {
-                result = await deleteBpmHandler(
-                  execPath,
-                  manifestPath,
-                  this.promptManager,
-                );
-              },
+              () =>
+                deleteBpmHandler(execPath, manifestPath, this.promptManager),
             );
+
             if (result.success) {
               this.notificationManager.success(result.message);
               this.stateManager.clearState();
@@ -318,21 +312,17 @@ export class BpmWebview implements vscode.WebviewViewProvider {
             if (!execPath) {
               throw new Error("Exec path not found");
             }
-            let result: any;
-            await vscode.window.withProgress(
+            const result = await vscode.window.withProgress(
               {
                 location: vscode.ProgressLocation.Notification,
                 title: "Refreshing BPM...",
                 cancellable: false,
               },
-              async () => {
-                result = await refreshBpmHandler(execPath, this.stateManager);
-              },
+              () => refreshBpmHandler(execPath, this.stateManager),
             );
             if (result.success) {
               this.stateManager.writeState(result.newState);
               this.displayDirectiveBpm();
-              this.notificationManager.notifySuccess("Success");
             } else {
               this.notificationManager.error("Error refreshing BPM");
             }
@@ -872,8 +862,6 @@ export class BpmWebview implements vscode.WebviewViewProvider {
           const message = event.data;
           tempSection.classList.remove("section");
           tempSection.classList.add("section-hidden");
-
-          console.log("message: ", message);
           
           switch (message.command) {
             case "displayDirectiveBpm": 
@@ -987,7 +975,6 @@ export class BpmWebview implements vscode.WebviewViewProvider {
          */
 
         const enableRefreshBpmButton = () => {
-          console.log("can now enable refresh bpm button");
           refreshBpmButton.disabled = false;
           refreshBpmButton.classList.remove("hidden");
           refreshBpmButton.classList.add("small");

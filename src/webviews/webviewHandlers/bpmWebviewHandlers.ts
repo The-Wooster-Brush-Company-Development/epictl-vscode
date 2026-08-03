@@ -270,7 +270,6 @@ export const refreshBpm = async (
   stateManager: StateManager,
   manifestManager: ManifestManager,
 ): Promise<any> => {
-  console.log("refreshing bpm");
   const currentState = stateManager.readState();
   if (!currentState) {
     throw new Error("No state found");
@@ -299,9 +298,6 @@ export const refreshBpm = async (
       "json",
     ),
   );
-
-  console.log("new state type: ", newState.Type);
-  console.log("newState: ", newState);
 
   return newState;
 };

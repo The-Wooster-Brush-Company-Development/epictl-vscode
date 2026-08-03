@@ -25,7 +25,9 @@ export const registerTreeEvents = (
 ) => {
   tree.onDidChangeSelection((event) => {
     const element = event.selection[0];
-    if (!element) return;
+    if (!element) {
+      return;
+    }
 
     let hasUpdated: boolean | undefined = false;
 

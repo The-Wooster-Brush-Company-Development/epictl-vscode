@@ -109,8 +109,9 @@ export class ManifestManager {
     for (const manifest of manifests) {
       const manifestData = this.readManifest(manifest);
       if (manifestData.epictl.code_file) {
-        if (manifestData.epictl.code_file.includes(codeFilePath))
+        if (manifestData.epictl.code_file.includes(codeFilePath)) {
           return manifest;
+        }
       }
     }
     return undefined;

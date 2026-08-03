@@ -1054,9 +1054,6 @@ export const manifestCommands = [
         const manifestPath =
           manifestManager.createManifestFilePath(manifestInput);
 
-        console.log("manifest", manifestPath);
-        console.log("openFilename", openFilename);
-
         const flagsWithCmds: string[] = [];
 
         const selectedFields = await promptManager.promptUpdateFields(fields);
@@ -1280,10 +1277,11 @@ export const stateCommands = [
           Type: "bpm",
           ParentType: manifestData.epictl.parent_type,
           ParentSysRowId:
-            bpmData.ParentType === "bom"
+            manifestData.epictl.parent_type === "bom"
               ? manifestData.epictl.bomId
               : manifestData.epictl.tableId,
         };
+
         stateManager.writeState(state);
 
         notificationManager.success("Found manifest data");
