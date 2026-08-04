@@ -4,10 +4,8 @@ on:
   push:
     tags:
       - "v*" # Triggers the workflow when you push a version tag like v1.0.0
-  push:
     branches:
       - development
-
 
 jobs:
   build-and-release:
