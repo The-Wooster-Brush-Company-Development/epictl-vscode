@@ -1,0 +1,36 @@
+name: Package and Release to GitHub
+
+on:
+  push:
+    tags:
+      - "v*" # Triggers the workflow when you push a version tag like v1.0.0
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Crucial permission required to create GitHub Releases
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "yarn"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Package Extension (.vsix)
+        run: npx @vscode/vsce package
+
+      - name: Create GitHub Release and Upload VSIX
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Automatically provided by GitHub Actions
+        run: |
+          gh release create ${{ github.ref_name }} *.vsix \
+            --title "Release ${{ github.ref_name }}" \
+            --generate-notes
