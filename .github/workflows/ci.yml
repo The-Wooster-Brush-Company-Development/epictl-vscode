@@ -24,7 +24,7 @@ jobs:
           cache: "yarn"
 
       - name: Install dependencies
-        run: npm ci
+        run: yarn install --frozen-lockfile
 
       - name: Package Extension (.vsix)
         run: npx @vscode/vsce package
