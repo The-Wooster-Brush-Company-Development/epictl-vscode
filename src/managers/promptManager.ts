@@ -135,6 +135,12 @@ export class PromptManager {
           ignoreFocusOut: true,
         });
       },
+      config_company: async () => {
+        return await vscode.window.showInputBox({
+          prompt: "Enter the Epicor company ID",
+          ignoreFocusOut: true,
+        });
+      },
       output_type: async () => {
         return await vscode.window.showQuickPick(["table", "json"], {
           placeHolder: "Select the output type",
@@ -367,6 +373,10 @@ export class PromptManager {
 
   public async promptConfigApiKey(): Promise<string | undefined> {
     return await this.prompts.config_api_key();
+  }
+
+  public async promptConfigCompany(): Promise<string | undefined> {
+    return await this.prompts.config_company();
   }
 
   public async promptOutputType(): Promise<string | undefined> {

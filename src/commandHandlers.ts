@@ -15,6 +15,7 @@ export const createConfig = async (
   username: string,
   password: string,
   apiKey: string,
+  company: string,
 ): Promise<any> => {
   const args = [
     "config-create",
@@ -26,6 +27,8 @@ export const createConfig = async (
     password,
     "--api-key",
     apiKey,
+    "--company",
+    company,
     "--output",
     "json",
   ];

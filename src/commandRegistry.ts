@@ -234,12 +234,24 @@ export const cliConfigCommands = [
           throw new Error("No api key provided");
         }
 
+        const company = await promptManager.promptConfigCompany();
+        if (!company) {
+          throw new Error("No company ID provided");
+        }
+
         const execPath = vsCodeConfigManager.readExecPath();
         if (!execPath) {
           throw new Error("No exec path set");
         }
         const result = JSON.parse(
-          await createConfig(execPath, baseUrlPath, username, password, apiKey),
+          await createConfig(
+            execPath,
+            baseUrlPath,
+            username,
+            password,
+            apiKey,
+            company,
+          ),
         );
         if (result.success) {
           notificationManager.success(result.message);
@@ -308,7 +320,7 @@ export const cliConfigCommands = [
 
         const configOptions: ConfigQuickPickItem[] = configsParsed.map(
           (config: any) => ({
-            label: `${path.basename(config.base_url)} : ${config.id.slice(0, 6)}`,
+            label: `${path.basename(config.base_url)} : ${config.company ?? "?"} : ${config.id.slice(0, 6)}`,
             id: config.id,
           }),
         );
